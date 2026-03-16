@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
 import { Copy, Check, ExternalLink, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface URLParams {
   ubicacion: string;
@@ -11,37 +18,122 @@ interface URLParams {
   fecha: string;
 }
 
+const dropdownOptions: Record<keyof URLParams, { value: string; label: string }[]> = {
+  ubicacion: [
+    { value: "home", label: "Home" },
+    { value: "categoria", label: "Categoría" },
+    { value: "producto", label: "Producto" },
+    { value: "landing", label: "Landing" },
+    { value: "checkout", label: "Checkout" },
+    { value: "carrito", label: "Carrito" },
+    { value: "buscador", label: "Buscador" },
+    { value: "mi-cuenta", label: "Mi Cuenta" },
+  ],
+  componente: [
+    { value: "banner-hero", label: "Banner Hero" },
+    { value: "banner-secondary", label: "Banner Secundario" },
+    { value: "banner-strip", label: "Banner Strip" },
+    { value: "slider", label: "Slider / Carrusel" },
+    { value: "popup", label: "Pop-up" },
+    { value: "boton-cta", label: "Botón CTA" },
+    { value: "card", label: "Card / Tarjeta" },
+    { value: "menu", label: "Menú / Navegación" },
+    { value: "footer", label: "Footer" },
+    { value: "header", label: "Header" },
+    { value: "modal", label: "Modal" },
+    { value: "sidebar", label: "Sidebar" },
+    { value: "floating", label: "Floating / Flotante" },
+  ],
+  campana: [
+    { value: "cyber-day", label: "Cyber Day" },
+    { value: "cyber-monday", label: "Cyber Monday" },
+    { value: "black-friday", label: "Black Friday" },
+    { value: "navidad", label: "Navidad" },
+    { value: "dia-madre", label: "Día de la Madre" },
+    { value: "dia-padre", label: "Día del Padre" },
+    { value: "fiestas-patrias", label: "Fiestas Patrias" },
+    { value: "vuelta-clases", label: "Vuelta a Clases" },
+    { value: "semana-santa", label: "Semana Santa" },
+    { value: "san-valentin", label: "San Valentín" },
+    { value: "aniversario", label: "Aniversario" },
+    { value: "liquidacion", label: "Liquidación" },
+    { value: "oferta-semanal", label: "Oferta Semanal" },
+    { value: "promo-especial", label: "Promo Especial" },
+  ],
+  oferta: [
+    { value: "2x1", label: "2x1" },
+    { value: "3x2", label: "3x2" },
+    { value: "dcto-10", label: "10% Descuento" },
+    { value: "dcto-20", label: "20% Descuento" },
+    { value: "dcto-30", label: "30% Descuento" },
+    { value: "dcto-40", label: "40% Descuento" },
+    { value: "dcto-50", label: "50% Descuento" },
+    { value: "envio-gratis", label: "Envío Gratis" },
+    { value: "combo", label: "Combo / Pack" },
+    { value: "cuotas-sin-interes", label: "Cuotas sin Interés" },
+    { value: "regalo", label: "Regalo con Compra" },
+    { value: "precio-especial", label: "Precio Especial" },
+  ],
+  semana: Array.from({ length: 52 }, (_, i) => ({
+    value: `s${String(i + 1).padStart(2, "0")}`,
+    label: `Semana ${i + 1}`,
+  })),
+  fecha: (() => {
+    const dates: { value: string; label: string }[] = [];
+    const now = new Date();
+    for (let i = 0; i < 90; i++) {
+      const d = new Date(now);
+      d.setDate(d.getDate() + i);
+      const dd = String(d.getDate()).padStart(2, "0");
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const yyyy = d.getFullYear();
+      dates.push({
+        value: `${dd}${mm}${yyyy}`,
+        label: `${dd}/${mm}/${yyyy}`,
+      });
+    }
+    return dates;
+  })(),
+};
+
 const paramFields: { key: keyof URLParams; label: string; placeholder: string }[] = [
-  { key: "ubicacion", label: "Ubicación", placeholder: "home" },
-  { key: "componente", label: "Componente", placeholder: "banner" },
-  { key: "campana", label: "Campaña", placeholder: "especial-semana-santa" },
-  { key: "oferta", label: "Oferta", placeholder: "salmon-filete-kg" },
-  { key: "semana", label: "Semana", placeholder: "s12" },
-  { key: "fecha", label: "Fecha", placeholder: "20032026" },
+  { key: "ubicacion", label: "Ubicación", placeholder: "Seleccionar ubicación" },
+  { key: "componente", label: "Componente", placeholder: "Seleccionar componente" },
+  { key: "campana", label: "Campaña", placeholder: "Seleccionar campaña" },
+  { key: "oferta", label: "Oferta", placeholder: "Seleccionar oferta" },
+  { key: "semana", label: "Semana", placeholder: "Seleccionar semana" },
+  { key: "fecha", label: "Fecha", placeholder: "Seleccionar fecha" },
 ];
 
-const InputField = ({
+const SelectField = ({
   label,
   value,
   onChange,
   placeholder,
+  options,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder: string;
+  options: { value: string; label: string }[];
 }) => (
   <div className="flex flex-col gap-1.5">
     <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
       {label}
     </label>
-    <input
-      type="text"
-      value={value}
-      onChange={(e) => onChange(e.target.value.replace(/\s+/g, "-"))}
-      placeholder={placeholder}
-      className="px-3 py-2 bg-secondary ring-1 ring-border focus:ring-2 focus:ring-ring rounded-md text-sm transition-all outline-none text-foreground placeholder:text-muted-foreground"
-    />
+    <Select value={value || undefined} onValueChange={onChange}>
+      <SelectTrigger className="bg-secondary ring-1 ring-border focus:ring-2 focus:ring-ring text-sm">
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent className="max-h-60">
+        {options.map((opt) => (
+          <SelectItem key={opt.value} value={opt.value}>
+            {opt.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   </div>
 );
 
@@ -90,6 +182,10 @@ const URLBuilder = () => {
     setParams((prev) => ({ ...prev, [key]: value }));
   };
 
+  const clearAll = () => {
+    setParams({ ubicacion: "", componente: "", campana: "", oferta: "", semana: "", fecha: "" });
+  };
+
   return (
     <div className="flex-1 p-6 md:p-8 lg:p-12 max-w-5xl mx-auto w-full overflow-y-auto">
       <header className="mb-10">
@@ -103,21 +199,40 @@ const URLBuilder = () => {
         {/* Form Card */}
         <div className="bg-card shadow-card rounded-xl p-6">
           <div className="space-y-6">
-            <InputField
-              label="URL Base de Destino"
-              placeholder="https://www.paris.cl/busca?fq=H%3A27791"
-              value={baseUrl}
-              onChange={setBaseUrl}
-            />
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                URL Base de Destino
+              </label>
+              <input
+                type="text"
+                value={baseUrl}
+                onChange={(e) => setBaseUrl(e.target.value)}
+                placeholder="https://www.paris.cl/busca?fq=H%3A27791"
+                className="px-3 py-2 bg-secondary ring-1 ring-border focus:ring-2 focus:ring-ring rounded-md text-sm transition-all outline-none text-foreground placeholder:text-muted-foreground"
+              />
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t border-border">
+            <div className="flex items-center justify-between pt-4 border-t border-border">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Parámetros de Nomenclatura
+              </span>
+              <button
+                onClick={clearAll}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors underline"
+              >
+                Limpiar todo
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {paramFields.map((field) => (
-                <InputField
+                <SelectField
                   key={field.key}
                   label={field.label}
                   placeholder={field.placeholder}
                   value={params[field.key]}
                   onChange={(v) => updateParam(field.key, v)}
+                  options={dropdownOptions[field.key]}
                 />
               ))}
             </div>
