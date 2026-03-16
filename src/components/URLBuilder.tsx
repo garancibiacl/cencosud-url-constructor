@@ -1,13 +1,19 @@
-import { useState, useEffect } from "react";
-import { Copy, Check, ExternalLink, AlertCircle } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Copy, Check, ExternalLink, AlertCircle, ChevronsUpDown, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
 interface URLParams {
   ubicacion: string;
