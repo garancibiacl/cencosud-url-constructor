@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Link, Image, History, Settings, ChevronLeft, ChevronRight, Moon, Sun, Droplets } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, Image, History, Settings, ChevronLeft, ChevronRight, Moon, Sun, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface NavItem {
@@ -10,10 +10,10 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { id: "url-generator", label: "Generador de URLs", icon: Link },
-  { id: "optimizer", label: "Optimizador de Imágenes", icon: Image, comingSoon: true },
-  { id: "history", label: "Historial de Campañas", icon: History },
-  { id: "settings", label: "Configuración", icon: Settings },
+  { id: "url-generator", label: "Constructor de URLs", icon: Link },
+  { id: "optimizer", label: "Optimizador de Imagenes", icon: Image, comingSoon: true },
+  { id: "history", label: "Historial de Campanas", icon: History },
+  { id: "settings", label: "Configuracion", icon: Settings },
 ];
 
 interface AppSidebarProps {
@@ -36,13 +36,11 @@ const DarkModeToggle = ({ isOpen }: { isOpen: boolean }) => {
   return (
     <button
       onClick={() => setIsDark(!isDark)}
-      className="w-full flex items-center gap-3 px-6 py-3 text-muted-foreground hover:text-foreground transition-colors"
-      title={isOpen ? undefined : (isDark ? "Light Mode" : "Dark Mode")}
+      className="flex w-full items-center gap-3 px-6 py-3 text-muted-foreground transition-colors hover:text-foreground"
+      title={isOpen ? undefined : isDark ? "Light Mode" : "Dark Mode"}
     >
       {isDark ? <Sun size={20} className="shrink-0" /> : <Moon size={20} className="shrink-0" />}
-      {isOpen && (
-        <span className="text-sm whitespace-nowrap">{isDark ? "Light Mode" : "Dark Mode"}</span>
-      )}
+      {isOpen && <span className="whitespace-nowrap text-sm">{isDark ? "Light Mode" : "Dark Mode"}</span>}
     </button>
   );
 };
@@ -53,46 +51,50 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
   return (
     <motion.aside
       initial={false}
-      animate={{ width: isOpen ? 260 : 72 }}
+      animate={{ width: isOpen ? 280 : 78 }}
       transition={{ duration: 0.15, ease: [0.25, 0.1, 0.25, 1] }}
-      className="relative border-r border-sidebar-border bg-sidebar flex flex-col shrink-0 z-20 overflow-hidden"
+      className="relative z-20 flex shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar"
     >
-      <div className="p-5 flex items-center gap-3 h-16">
-        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-          <Droplets size={18} className="text-primary-foreground" />
+      <div className="flex h-20 items-center gap-3 px-5">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary shadow-sm">
+          <Sparkles size={18} className="text-primary-foreground" />
         </div>
         {isOpen && (
-          <motion.span
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="font-bold tracking-tight text-lg text-sidebar-foreground whitespace-nowrap"
-          >
-            aguApp
-          </motion.span>
+          <div className="min-w-0">
+            <motion.span
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="block whitespace-nowrap text-lg font-bold tracking-tight text-sidebar-foreground"
+            >
+              Agencia Aua
+            </motion.span>
+            <span className="block whitespace-nowrap text-xs uppercase tracking-[0.24em] text-muted-foreground">
+              Cencosud URL Suite
+            </span>
+          </div>
         )}
       </div>
 
-      <nav className="flex-1 px-3 space-y-1 mt-2">
+      <nav className="mt-2 flex-1 space-y-1 px-3">
         {navItems.map((item) => {
           const isActive = activeTab === item.id;
+
           return (
             <button
               key={item.id}
               onClick={() => !item.comingSoon && onTabChange(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+              className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 transition-colors ${
                 isActive
-                  ? "bg-sidebar-accent text-sidebar-primary font-medium"
+                  ? "bg-sidebar-accent text-sidebar-primary"
                   : "text-muted-foreground hover:bg-sidebar-accent/50"
               } ${item.comingSoon ? "cursor-not-allowed opacity-50" : ""}`}
               disabled={item.comingSoon}
               title={isOpen ? undefined : item.label}
             >
               <item.icon size={20} className="shrink-0" />
-              {isOpen && (
-                <span className="text-sm flex-1 text-left whitespace-nowrap">{item.label}</span>
-              )}
+              {isOpen && <span className="flex-1 whitespace-nowrap text-left text-sm font-medium">{item.label}</span>}
               {isOpen && item.comingSoon && (
-                <span className="text-[10px] bg-secondary px-1.5 py-0.5 rounded uppercase tracking-tight font-medium text-muted-foreground">
+                <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
                   Soon
                 </span>
               )}
@@ -105,7 +107,7 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
         <DarkModeToggle isOpen={isOpen} />
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="w-full p-4 border-t border-sidebar-border flex justify-center text-muted-foreground hover:text-foreground transition-colors"
+          className="flex w-full justify-center border-t border-sidebar-border p-4 text-muted-foreground transition-colors hover:text-foreground"
         >
           {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
         </button>

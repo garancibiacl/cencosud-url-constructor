@@ -1,11 +1,17 @@
-import { useState, useEffect, useRef } from "react";
-import { Copy, Check, ExternalLink, AlertCircle, ChevronsUpDown, Plus } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  AlertCircle,
+  Check,
+  ChevronsUpDown,
+  Copy,
+  ExternalLink,
+  Layers3,
+  Plus,
+  Rows3,
+  Settings2,
+} from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Command,
   CommandEmpty,
@@ -14,20 +20,26 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { toast } from "@/hooks/use-toast";
+import type { URLParams } from "@/lib/url-builder";
+import type { BatchRow } from "@/hooks/useUrlHydrator";
+import { useUrlHydrator } from "@/hooks/useUrlHydrator";
 
-interface URLParams {
-  ubicacion: string;
-  componente: string;
-  campana: string;
-  oferta: string;
-  semana: string;
-  fecha: string;
-}
+type GlobalParamKey = Exclude<keyof URLParams, "descripcion">;
 
-const dropdownOptions: Record<keyof URLParams, { value: string; label: string }[]> = {
+const dropdownOptions: Record<GlobalParamKey, { value: string; label: string }[]> = {
   ubicacion: [
     { value: "home", label: "Home" },
-    { value: "categoria", label: "Categoría" },
+    { value: "categoria", label: "Categoria" },
     { value: "producto", label: "Producto" },
     { value: "landing", label: "Landing" },
     { value: "checkout", label: "Checkout" },
@@ -36,49 +48,27 @@ const dropdownOptions: Record<keyof URLParams, { value: string; label: string }[
     { value: "mi-cuenta", label: "Mi Cuenta" },
   ],
   componente: [
+    { value: "grilla", label: "Grilla" },
+    { value: "banner", label: "Banner" },
     { value: "banner-hero", label: "Banner Hero" },
     { value: "banner-secondary", label: "Banner Secundario" },
     { value: "banner-strip", label: "Banner Strip" },
     { value: "slider", label: "Slider / Carrusel" },
     { value: "popup", label: "Pop-up" },
-    { value: "boton-cta", label: "Botón CTA" },
+    { value: "boton-cta", label: "Boton CTA" },
     { value: "card", label: "Card / Tarjeta" },
-    { value: "menu", label: "Menú / Navegación" },
+    { value: "menu", label: "Menu / Navegacion" },
     { value: "footer", label: "Footer" },
     { value: "header", label: "Header" },
-    { value: "modal", label: "Modal" },
-    { value: "sidebar", label: "Sidebar" },
-    { value: "floating", label: "Floating / Flotante" },
   ],
   campana: [
+    { value: "especial", label: "Especial" },
+    { value: "semanasanta", label: "Semana Santa" },
     { value: "cyber-day", label: "Cyber Day" },
-    { value: "cyber-monday", label: "Cyber Monday" },
     { value: "black-friday", label: "Black Friday" },
     { value: "navidad", label: "Navidad" },
-    { value: "dia-madre", label: "Día de la Madre" },
-    { value: "dia-padre", label: "Día del Padre" },
-    { value: "fiestas-patrias", label: "Fiestas Patrias" },
-    { value: "vuelta-clases", label: "Vuelta a Clases" },
-    { value: "semana-santa", label: "Semana Santa" },
-    { value: "san-valentin", label: "San Valentín" },
     { value: "aniversario", label: "Aniversario" },
-    { value: "liquidacion", label: "Liquidación" },
     { value: "oferta-semanal", label: "Oferta Semanal" },
-    { value: "promo-especial", label: "Promo Especial" },
-  ],
-  oferta: [
-    { value: "2x1", label: "2x1" },
-    { value: "3x2", label: "3x2" },
-    { value: "dcto-10", label: "10% Descuento" },
-    { value: "dcto-20", label: "20% Descuento" },
-    { value: "dcto-30", label: "30% Descuento" },
-    { value: "dcto-40", label: "40% Descuento" },
-    { value: "dcto-50", label: "50% Descuento" },
-    { value: "envio-gratis", label: "Envío Gratis" },
-    { value: "combo", label: "Combo / Pack" },
-    { value: "cuotas-sin-interes", label: "Cuotas sin Interés" },
-    { value: "regalo", label: "Regalo con Compra" },
-    { value: "precio-especial", label: "Precio Especial" },
   ],
   semana: Array.from({ length: 52 }, (_, i) => ({
     value: `s${String(i + 1).padStart(2, "0")}`,
@@ -88,11 +78,11 @@ const dropdownOptions: Record<keyof URLParams, { value: string; label: string }[
     const dates: { value: string; label: string }[] = [];
     const now = new Date();
     for (let i = 0; i < 90; i++) {
-      const d = new Date(now);
-      d.setDate(d.getDate() + i);
-      const dd = String(d.getDate()).padStart(2, "0");
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const yyyy = d.getFullYear();
+      const date = new Date(now);
+      date.setDate(date.getDate() + i);
+      const dd = String(date.getDate()).padStart(2, "0");
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const yyyy = date.getFullYear();
       dates.push({
         value: `${dd}${mm}${yyyy}`,
         label: `${dd}/${mm}/${yyyy}`,
@@ -102,56 +92,53 @@ const dropdownOptions: Record<keyof URLParams, { value: string; label: string }[
   })(),
 };
 
-const paramFields: { key: keyof URLParams; label: string; placeholder: string }[] = [
-  { key: "ubicacion", label: "Ubicación", placeholder: "Seleccionar ubicación" },
+const globalFieldOrder: { key: GlobalParamKey; label: string; placeholder: string }[] = [
+  { key: "ubicacion", label: "Ubicacion", placeholder: "Seleccionar ubicacion" },
   { key: "componente", label: "Componente", placeholder: "Seleccionar componente" },
-  { key: "campana", label: "Campaña", placeholder: "Seleccionar campaña" },
-  { key: "oferta", label: "Oferta", placeholder: "Seleccionar oferta" },
+  { key: "campana", label: "Campana", placeholder: "Seleccionar campana" },
   { key: "semana", label: "Semana", placeholder: "Seleccionar semana" },
   { key: "fecha", label: "Fecha", placeholder: "Seleccionar fecha" },
 ];
 
-const ComboField = ({
-  label,
-  value,
-  onChange,
-  placeholder,
-  options,
-}: {
+interface ComboFieldProps {
   label: string;
   value: string;
-  onChange: (v: string) => void;
+  onChange: (value: string) => void;
   placeholder: string;
   options: { value: string; label: string }[];
-}) => {
+}
+
+const ComboField = ({ label, value, onChange, placeholder, options }: ComboFieldProps) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
-  const selectedLabel = options.find((o) => o.value === value)?.label;
+  const selectedLabel = options.find((option) => option.value === value)?.label;
 
   const handleCustomValue = () => {
-    if (search.trim()) {
-      onChange(search.trim().replace(/\s+/g, "-").toLowerCase());
-      setSearch("");
-      setOpen(false);
+    const nextValue = search.trim().replace(/\s+/g, "-").toLowerCase();
+    if (!nextValue) {
+      return;
     }
+    onChange(nextValue);
+    setSearch("");
+    setOpen(false);
   };
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+    <div className="flex flex-col gap-2">
+      <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
         {label}
       </label>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <button className="flex h-10 w-full items-center justify-between rounded-md bg-secondary ring-1 ring-border px-3 py-2 text-sm transition-all outline-none focus:ring-2 focus:ring-ring text-left">
+          <button className="flex h-12 w-full items-center justify-between rounded-2xl border border-border bg-secondary px-4 text-left text-sm text-foreground transition-all outline-none focus:border-primary focus:ring-4 focus:ring-primary/15">
             <span className={value ? "text-foreground" : "text-muted-foreground"}>
               {selectedLabel || value || placeholder}
             </span>
-            <ChevronsUpDown className="h-4 w-4 opacity-50 shrink-0" />
+            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+        <PopoverContent className="w-[var(--radix-popover-trigger-width)] rounded-2xl border border-border p-0 shadow-card" align="start">
           <Command>
             <CommandInput
               placeholder="Buscar o escribir..."
@@ -162,36 +149,31 @@ const ComboField = ({
               <CommandEmpty>
                 <button
                   onClick={handleCustomValue}
-                  className="flex items-center gap-2 w-full px-2 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
                   <Plus size={14} />
                   Usar "{search}" como valor personalizado
                 </button>
               </CommandEmpty>
               <CommandGroup>
-                {options.map((opt) => (
+                {options.map((option) => (
                   <CommandItem
-                    key={opt.value}
-                    value={opt.label}
+                    key={option.value}
+                    value={option.label}
                     onSelect={() => {
-                      onChange(opt.value);
+                      onChange(option.value);
                       setSearch("");
                       setOpen(false);
                     }}
                   >
-                    <Check
-                      className={`mr-2 h-4 w-4 ${value === opt.value ? "opacity-100" : "opacity-0"}`}
-                    />
-                    {opt.label}
+                    <Check className={`mr-2 h-4 w-4 ${value === option.value ? "opacity-100" : "opacity-0"}`} />
+                    {option.label}
                   </CommandItem>
                 ))}
               </CommandGroup>
-              {search.trim() && !options.some((o) => o.label.toLowerCase() === search.toLowerCase()) && (
+              {search.trim() && !options.some((option) => option.label.toLowerCase() === search.toLowerCase()) && (
                 <CommandGroup heading="Personalizado">
-                  <CommandItem
-                    value={`custom-${search}`}
-                    onSelect={handleCustomValue}
-                  >
+                  <CommandItem value={`custom-${search}`} onSelect={handleCustomValue}>
                     <Plus className="mr-2 h-4 w-4" />
                     Usar "{search}"
                   </CommandItem>
@@ -205,166 +187,535 @@ const ComboField = ({
   );
 };
 
-const URLBuilder = () => {
-  const [baseUrl, setBaseUrl] = useState("");
-  const [params, setParams] = useState<URLParams>({
-    ubicacion: "",
-    componente: "",
-    campana: "",
-    oferta: "",
-    semana: "",
-    fecha: "",
+interface BulkEditableRowProps {
+  row: BatchRow;
+  defaultContext: Omit<URLParams, "descripcion">;
+  onCopy: (value: string, title: string, description: string) => Promise<void>;
+  onResolvedChange: (rowId: string, finalUrl: string) => void;
+}
+
+const BulkEditableRow = ({
+  row,
+  defaultContext,
+  onCopy,
+  onResolvedChange,
+}: BulkEditableRowProps) => {
+  const { hydrateUrl } = useUrlHydrator();
+  const rowId = `${row.index}-${row.baseUrl}-${row.rawDescription}`;
+  const [isOpen, setIsOpen] = useState(false);
+  const [localParams, setLocalParams] = useState<URLParams>({
+    ...defaultContext,
+    descripcion: row.slug,
   });
-  const [finalUrl, setFinalUrl] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [hasManualSlug, setHasManualSlug] = useState(false);
 
   useEffect(() => {
-    const promoName = [
-      params.ubicacion,
-      params.componente,
-      params.campana,
-      params.oferta,
-      params.semana,
-      params.fecha,
-    ]
-      .filter(Boolean)
-      .join("-");
+    setLocalParams({
+      ...defaultContext,
+      descripcion: row.slug,
+    });
+    setHasManualSlug(false);
+  }, [defaultContext, row.slug, row.baseUrl, row.rawDescription]);
 
-    // Strip protocol and domain, keep only path + query
-    let cleanUrl = baseUrl;
-    try {
-      const urlObj = new URL(baseUrl);
-      cleanUrl = urlObj.pathname + urlObj.search;
-    } catch {
-      // If not a full URL, use as-is (already a path)
+  const hasMissingUrl = !row.baseUrl && !!row.rawDescription;
+  const hasMissingDescription = !!row.baseUrl && !row.rawDescription;
+  const hasError = hasMissingUrl || hasMissingDescription;
+  const resolvedUrl =
+    !hasError && row.baseUrl && localParams.descripcion
+      ? hydrateUrl(row.baseUrl, localParams)
+      : "";
+
+  useEffect(() => {
+    onResolvedChange(rowId, resolvedUrl);
+  }, [onResolvedChange, resolvedUrl, rowId]);
+
+  const updateLocalParam = (key: keyof URLParams, value: string) => {
+    setLocalParams((current) => ({ ...current, [key]: value }));
+    if (key === "descripcion") {
+      setHasManualSlug(true);
     }
-
-    const separator = cleanUrl.includes("?") ? "&" : "?";
-    setFinalUrl(promoName ? `${cleanUrl}${separator}nombre_promo=${promoName}` : cleanUrl);
-  }, [baseUrl, params]);
-
-  const copyToClipboard = () => {
-    if (!finalUrl) return;
-    navigator.clipboard.writeText(finalUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
-  const updateParam = (key: keyof URLParams, value: string) => {
-    setParams((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const clearAll = () => {
-    setParams({ ubicacion: "", componente: "", campana: "", oferta: "", semana: "", fecha: "" });
+  const resetRow = () => {
+    setLocalParams({
+      ...defaultContext,
+      descripcion: row.slug,
+    });
+    setHasManualSlug(false);
   };
 
   return (
-    <div className="flex-1 p-6 md:p-8 lg:p-12 max-w-5xl mx-auto w-full overflow-y-auto">
-      <header className="mb-10">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-2">Constructor de URLs</h1>
-        <p className="text-muted-foreground">
-          Ecosistema Cencosud • Guía Maestra de Nomenclatura
-        </p>
-      </header>
-
-      <div className="grid gap-8">
-        {/* Form Card */}
-        <div className="bg-card shadow-card rounded-xl p-6">
-          <div className="space-y-6">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                URL Base de Destino
-              </label>
-              <input
-                type="text"
-                value={baseUrl}
-                onChange={(e) => setBaseUrl(e.target.value)}
-                placeholder="https://www.paris.cl/busca?fq=H%3A27791"
-                className="px-3 py-2 bg-secondary ring-1 ring-border focus:ring-2 focus:ring-ring rounded-md text-sm transition-all outline-none text-foreground placeholder:text-muted-foreground"
-              />
-            </div>
-
-            <div className="flex items-center justify-between pt-4 border-t border-border">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Parámetros de Nomenclatura
-              </span>
-              <button
-                onClick={clearAll}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors underline"
-              >
-                Limpiar todo
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {paramFields.map((field) => (
-                <ComboField
-                  key={field.key}
-                  label={field.label}
-                  placeholder={field.placeholder}
-                  value={params[field.key]}
-                  onChange={(v) => updateParam(field.key, v)}
-                  options={dropdownOptions[field.key]}
-                />
-              ))}
+    <>
+      <TableRow className={hasError ? "bg-destructive/5 hover:bg-destructive/10" : "hover:bg-muted/30"}>
+        <TableCell className="align-top">
+          <div className="flex items-start gap-3">
+            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+              {row.index + 1}
+            </span>
+            <div className="min-w-0 flex-1 space-y-2">
+              <p className="break-all font-mono text-xs text-foreground">{row.baseUrl || "Sin URL"}</p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsOpen((current) => !current)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/20 hover:text-foreground"
+                >
+                  <Settings2 size={14} className="text-primary" />
+                  Ajustes por fila
+                  <motion.span animate={{ rotate: isOpen ? 90 : 0 }} transition={{ duration: 0.18 }}>
+                    <ChevronsUpDown size={14} />
+                  </motion.span>
+                </button>
+                {hasError && (
+                  <span className="inline-flex rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive">
+                    {hasMissingUrl ? "Falta URL base" : "Falta descripcion"}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        </TableCell>
+        <TableCell className="align-top">
+          <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 font-mono text-xs text-primary">
+            {localParams.descripcion || "sin-slug"}
+          </span>
+          {hasManualSlug && (
+            <p className="mt-2 text-[11px] font-medium text-muted-foreground">Slug manual activo</p>
+          )}
+        </TableCell>
+        <TableCell className="align-top">
+          <div className="flex items-start gap-3">
+            <p className="min-w-0 flex-1 break-all font-mono text-xs text-foreground">
+              {resolvedUrl || "Link no disponible"}
+            </p>
+            <button
+              onClick={() =>
+                onCopy(resolvedUrl, "Link copiado", `Se copio el link de la fila ${row.index + 1}.`)
+              }
+              disabled={!resolvedUrl}
+              className="inline-flex h-9 shrink-0 items-center gap-2 rounded-xl border border-border px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/20 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Copy size={14} />
+              Copiar
+            </button>
+          </div>
+        </TableCell>
+      </TableRow>
 
-        {/* Preview */}
-        <section className="space-y-4">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
-            Live Preview
-          </h3>
-          <div className="bg-primary rounded-xl shadow-elevated overflow-hidden">
-            <div className="p-6">
-              <div className="flex items-start justify-between gap-4 mb-4">
-                <div className="p-2 bg-primary-foreground/10 rounded-lg">
-                  <ExternalLink size={20} className="text-primary-foreground" />
+      <TableRow className="hover:bg-transparent">
+        <TableCell colSpan={3} className="pt-0">
+          <AnimatePresence initial={false}>
+            {isOpen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
+                className="overflow-hidden"
+              >
+                <div className="rounded-2xl border border-border bg-secondary/40 p-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {globalFieldOrder.map((field) => (
+                      <ComboField
+                        key={`${rowId}-${field.key}`}
+                        label={field.label}
+                        placeholder={field.placeholder}
+                        value={localParams[field.key]}
+                        onChange={(value) => updateLocalParam(field.key, value)}
+                        options={dropdownOptions[field.key]}
+                      />
+                    ))}
+                    <div className="flex flex-col gap-2">
+                      <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                        Descripcion (Slug)
+                      </label>
+                      <input
+                        type="text"
+                        value={localParams.descripcion}
+                        onChange={(event) => updateLocalParam("descripcion", event.target.value)}
+                        placeholder={row.slug || "trutro-entero"}
+                        className="h-12 rounded-2xl border border-border bg-background px-4 font-mono text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-xs text-muted-foreground">
+                      {hasManualSlug
+                        ? "El slug fue editado manualmente y prevalece sobre la limpieza automatica."
+                        : "Este slug sigue el valor limpio calculado desde la descripcion masiva."}
+                    </p>
+                    <button
+                      onClick={resetRow}
+                      className="inline-flex h-10 items-center rounded-xl border border-border px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/20 hover:text-foreground"
+                    >
+                      Resetear Fila
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={copyToClipboard}
-                  disabled={!finalUrl}
-                  className="flex items-center gap-2 bg-accent hover:brightness-95 text-accent-foreground px-4 py-2 rounded-lg font-bold text-sm transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100"
-                >
-                  {copied ? <Check size={16} /> : <Copy size={16} />}
-                  {copied ? "Copiado" : "Copiar Link Completo"}
-                </button>
-              </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </TableCell>
+      </TableRow>
+    </>
+  );
+};
 
-              <div className="bg-foreground/20 rounded-lg p-4 min-h-[80px] break-all">
-                <code className="text-primary-foreground/90 font-mono text-sm leading-relaxed tabular-nums">
-                  {finalUrl || "Esperando parámetros..."}
-                </code>
+const URLBuilder = () => {
+  const { cleanTextToSlug, hydrateBatchRows, hydrateUrl } = useUrlHydrator();
+
+  const [activeTab, setActiveTab] = useState("individual");
+  const [globalParams, setGlobalParams] = useState<Omit<URLParams, "descripcion">>({
+    ubicacion: "",
+    componente: "",
+    campana: "",
+    semana: "",
+    fecha: "",
+  });
+  const [singleBaseUrl, setSingleBaseUrl] = useState("");
+  const [singleDescription, setSingleDescription] = useState("");
+  const [bulkDescriptions, setBulkDescriptions] = useState("");
+  const [bulkBaseUrls, setBulkBaseUrls] = useState("");
+  const [bulkResolvedLinks, setBulkResolvedLinks] = useState<Record<string, string>>({});
+
+  const singleSlug = cleanTextToSlug(singleDescription);
+  const singleFinalUrl = hydrateUrl(singleBaseUrl, {
+    ...globalParams,
+    descripcion: singleSlug,
+  });
+  const batchRows = useMemo(
+    () => hydrateBatchRows(bulkBaseUrls, bulkDescriptions, globalParams),
+    [bulkBaseUrls, bulkDescriptions, globalParams, hydrateBatchRows],
+  );
+
+  useEffect(() => {
+    setBulkResolvedLinks({});
+  }, [batchRows]);
+
+  const validBatchLinks = batchRows
+    .map((row) => bulkResolvedLinks[`${row.index}-${row.baseUrl}-${row.rawDescription}`] || "")
+    .filter(Boolean);
+
+  const updateGlobalParam = (key: GlobalParamKey, value: string) => {
+    setGlobalParams((current) => ({ ...current, [key]: value }));
+  };
+
+  const clearAll = () => {
+    setGlobalParams({
+      ubicacion: "",
+      componente: "",
+      campana: "",
+      semana: "",
+      fecha: "",
+    });
+    setSingleBaseUrl("");
+    setSingleDescription("");
+    setBulkDescriptions("");
+    setBulkBaseUrls("");
+  };
+
+  const copyValue = async (value: string, title: string, description: string) => {
+    if (!value) {
+      return;
+    }
+    await navigator.clipboard.writeText(value);
+    toast({ title, description });
+  };
+
+  const handleRowResolvedChange = (rowId: string, finalUrl: string) => {
+    setBulkResolvedLinks((current) => {
+      if (current[rowId] === finalUrl) {
+        return current;
+      }
+      return { ...current, [rowId]: finalUrl };
+    });
+  };
+
+  const contentVariants = {
+    initial: { opacity: 0, y: 10 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -10 },
+  };
+
+  return (
+    <div className="flex-1 overflow-y-auto">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 py-6 md:px-8 lg:px-12 lg:py-8">
+        <header className="rounded-[24px] border border-border bg-card px-6 py-6 shadow-card md:px-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
+              <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-primary">
+                Agencia Aua
+              </span>
+              <div className="space-y-2">
+                <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+                  Constructor de URLs Inteligente
+                </h1>
+                <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+                  Alterna entre construccion individual y procesamiento por lote para generar links promocionales consistentes.
+                </p>
               </div>
             </div>
+
+            <button
+              onClick={clearAll}
+              className="inline-flex h-11 items-center justify-center rounded-2xl border border-border px-4 text-sm font-semibold text-muted-foreground transition-colors hover:border-primary/20 hover:text-foreground"
+            >
+              Limpiar todo
+            </button>
+          </div>
+        </header>
+
+        <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
+          <div className="mb-5 flex items-center gap-3">
+            <Layers3 className="h-5 w-5 text-primary" />
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-foreground">
+                Contexto Global
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Estos selectores alimentan la nomenclatura individual y tambien el lote masivo.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+            {globalFieldOrder.map((field) => (
+              <ComboField
+                key={field.key}
+                label={field.label}
+                placeholder={field.placeholder}
+                value={globalParams[field.key]}
+                onChange={(value) => updateGlobalParam(field.key, value)}
+                options={dropdownOptions[field.key]}
+              />
+            ))}
           </div>
         </section>
 
-        {/* Warning */}
-        {!baseUrl && (
-          <div className="flex items-center gap-2 text-warning-foreground text-sm bg-warning-bg p-4 rounded-lg border border-warning-border">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <div className="flex items-center justify-between gap-4">
+            <TabsList className="h-auto rounded-2xl bg-card p-1 shadow-card">
+              <TabsTrigger
+                value="individual"
+                className="rounded-xl px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                Constructor Individual
+              </TabsTrigger>
+              <TabsTrigger
+                value="masivo"
+                className="rounded-xl px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                Constructor Masivo
+              </TabsTrigger>
+            </TabsList>
+
+            {activeTab === "masivo" && (
+              <button
+                onClick={() =>
+                  copyValue(
+                    validBatchLinks.join("\n"),
+                    "Links copiados",
+                    `${validBatchLinks.length} links validos copiados al portapapeles.`,
+                  )
+                }
+                disabled={validBatchLinks.length === 0}
+                className="inline-flex h-11 items-center gap-2 rounded-2xl bg-accent px-4 text-sm font-semibold text-accent-foreground transition-all hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Copy size={16} />
+                Copiar todos los links
+              </button>
+            )}
+          </div>
+
+          <AnimatePresence mode="wait">
+            {activeTab === "individual" ? (
+              <motion.div key="individual" variants={contentVariants} initial="initial" animate="animate" exit="exit">
+                <TabsContent value="individual" forceMount className="mt-4">
+                  <div className="grid gap-8 xl:grid-cols-[minmax(0,1.25fr)_minmax(340px,0.9fr)]">
+                    <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
+                      <div className="space-y-6">
+                        <div className="flex flex-col gap-2">
+                          <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                            URL Base
+                          </label>
+                          <input
+                            type="text"
+                            value={singleBaseUrl}
+                            onChange={(event) => setSingleBaseUrl(event.target.value)}
+                            placeholder="https://www.santaisabel.cl/santas-ofertas"
+                            className="h-12 rounded-2xl border border-border bg-secondary px-4 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
+                          />
+                        </div>
+
+                        <div className="rounded-[24px] border border-border bg-secondary/70 p-4 md:p-5">
+                          <div className="flex flex-col gap-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                                Descripcion del Banner / Grilla
+                              </label>
+                              <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">
+                                {singleSlug || "slug pendiente"}
+                              </span>
+                            </div>
+
+                            <textarea
+                              value={singleDescription}
+                              onChange={(event) => setSingleDescription(event.target.value)}
+                              placeholder='Pega un texto como: "Prensa/TV - TRUTRO ENTERO $2.790"'
+                              rows={4}
+                              className="min-h-[112px] rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
+                            />
+
+                            <span className="w-fit rounded-full bg-primary/10 px-3 py-1 font-mono text-xs text-primary">
+                              {singleSlug || "trutro-entero"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section className="rounded-[28px] border border-primary/10 bg-primary p-6 text-primary-foreground shadow-elevated md:p-8">
+                      <div className="mb-6 flex items-start justify-between gap-4">
+                        <div className="space-y-3">
+                          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-foreground/12">
+                            <ExternalLink size={20} className="text-primary-foreground" />
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-primary-foreground/72">
+                              Link Final
+                            </h3>
+                            <p className="mt-2 max-w-sm text-sm leading-6 text-primary-foreground/80">
+                              Preview inmediato con slug inteligente y concatenacion automatica.
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() =>
+                            copyValue(singleFinalUrl, "Link copiado", "El link individual fue copiado al portapapeles.")
+                          }
+                          disabled={!singleFinalUrl}
+                          className="inline-flex h-11 items-center gap-2 rounded-2xl bg-accent px-4 text-sm font-semibold text-accent-foreground transition-all hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Copy size={16} />
+                          Copiar Link
+                        </button>
+                      </div>
+
+                      <div className="rounded-2xl bg-black/10 p-4">
+                        <code className="block min-h-[96px] break-all font-mono text-sm leading-7 text-primary-foreground/95">
+                          {singleFinalUrl || "/santas-ofertas?nombre_promo=home-grilla-trutro-entero-s12-20032026"}
+                        </code>
+                      </div>
+                    </section>
+                  </div>
+                </TabsContent>
+              </motion.div>
+            ) : (
+              <motion.div key="masivo" variants={contentVariants} initial="initial" animate="animate" exit="exit">
+                <TabsContent value="masivo" forceMount className="mt-4">
+                  <div className="grid gap-8">
+                    <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
+                      <div className="mb-5 flex items-center gap-3">
+                        <Rows3 className="h-5 w-5 text-primary" />
+                        <div>
+                          <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-foreground">
+                            Procesamiento por Lote
+                          </h3>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            La linea 1 de descripciones se empareja con la linea 1 de URLs, y asi sucesivamente.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-4 lg:grid-cols-2">
+                        <div className="flex flex-col gap-2">
+                          <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                            Lista de Descripciones
+                          </label>
+                          <textarea
+                            value={bulkDescriptions}
+                            onChange={(event) => setBulkDescriptions(event.target.value)}
+                            rows={10}
+                            placeholder={"Prensa/TV - TRUTRO ENTERO $2.790\nCiclos - TODAS LAS OFERTAS CICLO 1"}
+                            className="min-h-[240px] rounded-2xl border border-border bg-secondary px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
+                          />
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                          <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                            Lista de URLs Base
+                          </label>
+                          <textarea
+                            value={bulkBaseUrls}
+                            onChange={(event) => setBulkBaseUrls(event.target.value)}
+                            rows={10}
+                            placeholder={"/busca?fq=H%3A27791\n/santas-ofertas"}
+                            className="min-h-[240px] rounded-2xl border border-border bg-secondary px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
+                          />
+                        </div>
+                      </div>
+                    </section>
+
+                    <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
+                      <div className="mb-4 flex items-center justify-between gap-4">
+                        <div>
+                          <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-foreground">
+                            Resultados Masivos
+                          </h3>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            Las filas incompletas se marcan en rojo para advertir inconsistencias.
+                          </p>
+                        </div>
+
+                        <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
+                          {batchRows.length} filas
+                        </span>
+                      </div>
+
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>URL Base</TableHead>
+                            <TableHead>Slug generado</TableHead>
+                            <TableHead>Link Final</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {batchRows.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-muted-foreground">
+                                Agrega descripciones y URLs para generar el lote.
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            batchRows.map((row) => (
+                              <BulkEditableRow
+                                key={`${row.index}-${row.baseUrl}-${row.rawDescription}-${globalParams.ubicacion}-${globalParams.componente}-${globalParams.campana}-${globalParams.semana}-${globalParams.fecha}`}
+                                row={row}
+                                defaultContext={globalParams}
+                                onCopy={copyValue}
+                                onResolvedChange={handleRowResolvedChange}
+                              />
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </section>
+                  </div>
+                </TabsContent>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </Tabs>
+
+        {activeTab === "individual" && !singleBaseUrl && (
+          <div className="flex items-center gap-2 rounded-2xl border border-warning-border bg-warning-bg p-4 text-sm text-warning-foreground">
             <AlertCircle size={16} className="shrink-0" />
-            <span>Ingresa una URL base para comenzar a generar la nomenclatura.</span>
+            <span>Ingresa una URL base para comenzar a construir el link.</span>
           </div>
         )}
       </div>
-
-      {/* Toast */}
-      <AnimatePresence>
-        {copied && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ duration: 0.15, ease: [0.25, 0.1, 0.25, 1] }}
-            className="fixed bottom-8 right-8 bg-foreground text-background px-6 py-3 rounded-xl shadow-elevated flex items-center gap-3 z-50"
-          >
-            <Check size={18} className="text-accent" />
-            <span className="font-medium">URL copiada al portapapeles</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };
