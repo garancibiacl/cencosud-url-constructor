@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Image, History, Settings, ChevronLeft, ChevronRight, Moon, Sun, Sparkles } from "lucide-react";
+import { Link, Image, History, Settings, ChevronLeft, ChevronRight, Moon, Sun, Droplets } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface NavItem {
@@ -57,7 +57,7 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
     >
       <div className="flex h-20 items-center gap-3 px-5">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary shadow-sm">
-          <Sparkles size={18} className="text-primary-foreground" />
+          <Droplets size={18} className="text-primary-foreground" />
         </div>
         {isOpen && (
           <div className="min-w-0">
@@ -66,7 +66,7 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
               animate={{ opacity: 1 }}
               className="block whitespace-nowrap text-lg font-bold tracking-tight text-sidebar-foreground"
             >
-              Agencia Aua
+              aguApp
             </motion.span>
             <span className="block whitespace-nowrap text-xs uppercase tracking-[0.24em] text-muted-foreground">
               Cencosud URL Suite
