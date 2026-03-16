@@ -111,7 +111,7 @@ const paramFields: { key: keyof URLParams; label: string; placeholder: string }[
   { key: "fecha", label: "Fecha", placeholder: "Seleccionar fecha" },
 ];
 
-const SelectField = ({
+const ComboField = ({
   label,
   value,
   onChange,
@@ -123,36 +123,87 @@ const SelectField = ({
   onChange: (v: string) => void;
   placeholder: string;
   options: { value: string; label: string }[];
-}) => (
-  <div className="flex flex-col gap-1.5">
-    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-      {label}
-    </label>
-    <Select value={value || undefined} onValueChange={onChange}>
-      <SelectTrigger className="bg-secondary ring-1 ring-border focus:ring-2 focus:ring-ring text-sm">
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent className="max-h-60">
-        {options.map((opt) => (
-          <SelectItem key={opt.value} value={opt.value}>
-            {opt.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  </div>
-);
+}) => {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
-const URLBuilder = () => {
-  const [baseUrl, setBaseUrl] = useState("");
-  const [params, setParams] = useState<URLParams>({
-    ubicacion: "",
-    componente: "",
-    campana: "",
-    oferta: "",
-    semana: "",
-    fecha: "",
-  });
+  const selectedLabel = options.find((o) => o.value === value)?.label;
+
+  const handleCustomValue = () => {
+    if (search.trim()) {
+      onChange(search.trim().replace(/\s+/g, "-").toLowerCase());
+      setSearch("");
+      setOpen(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        {label}
+      </label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button className="flex h-10 w-full items-center justify-between rounded-md bg-secondary ring-1 ring-border px-3 py-2 text-sm transition-all outline-none focus:ring-2 focus:ring-ring text-left">
+            <span className={value ? "text-foreground" : "text-muted-foreground"}>
+              {selectedLabel || value || placeholder}
+            </span>
+            <ChevronsUpDown className="h-4 w-4 opacity-50 shrink-0" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+          <Command>
+            <CommandInput
+              placeholder="Buscar o escribir..."
+              value={search}
+              onValueChange={setSearch}
+            />
+            <CommandList>
+              <CommandEmpty>
+                <button
+                  onClick={handleCustomValue}
+                  className="flex items-center gap-2 w-full px-2 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Plus size={14} />
+                  Usar "{search}" como valor personalizado
+                </button>
+              </CommandEmpty>
+              <CommandGroup>
+                {options.map((opt) => (
+                  <CommandItem
+                    key={opt.value}
+                    value={opt.label}
+                    onSelect={() => {
+                      onChange(opt.value);
+                      setSearch("");
+                      setOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={`mr-2 h-4 w-4 ${value === opt.value ? "opacity-100" : "opacity-0"}`}
+                    />
+                    {opt.label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+              {search.trim() && !options.some((o) => o.label.toLowerCase() === search.toLowerCase()) && (
+                <CommandGroup heading="Personalizado">
+                  <CommandItem
+                    value={`custom-${search}`}
+                    onSelect={handleCustomValue}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Usar "{search}"
+                  </CommandItem>
+                </CommandGroup>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+};
   const [finalUrl, setFinalUrl] = useState("");
   const [copied, setCopied] = useState(false);
 
