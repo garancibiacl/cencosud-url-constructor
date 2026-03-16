@@ -230,13 +230,17 @@ const URLBuilder = () => {
       .filter(Boolean)
       .join("-");
 
-    if (!baseUrl) {
-      setFinalUrl("");
-      return;
+    // Strip protocol and domain, keep only path + query
+    let cleanUrl = baseUrl;
+    try {
+      const urlObj = new URL(baseUrl);
+      cleanUrl = urlObj.pathname + urlObj.search;
+    } catch {
+      // If not a full URL, use as-is (already a path)
     }
 
-    const separator = baseUrl.includes("?") ? "&" : "?";
-    setFinalUrl(promoName ? `${baseUrl}${separator}nombre_promo=${promoName}` : baseUrl);
+    const separator = cleanUrl.includes("?") ? "&" : "?";
+    setFinalUrl(promoName ? `${cleanUrl}${separator}nombre_promo=${promoName}` : cleanUrl);
   }, [baseUrl, params]);
 
   const copyToClipboard = () => {
