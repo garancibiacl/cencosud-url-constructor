@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, Image, History, Settings, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Link, Image, History, Settings, ChevronLeft, ChevronRight, Moon, Sun } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface NavItem {
