@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, Image, History, Settings, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Link, Image, History, Settings, ChevronLeft, ChevronRight, Moon, Sun } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface NavItem {
@@ -20,6 +20,29 @@ interface AppSidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
 }
+
+const DarkModeToggle = ({ isOpen }: { isOpen: boolean }) => {
+  const [isDark, setIsDark] = useState(() =>
+    document.documentElement.classList.contains("dark")
+  );
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+  }, [isDark]);
+
+  return (
+    <button
+      onClick={() => setIsDark(!isDark)}
+      className="w-full flex items-center gap-3 px-6 py-3 text-muted-foreground hover:text-foreground transition-colors"
+      title={isOpen ? undefined : (isDark ? "Light Mode" : "Dark Mode")}
+    >
+      {isDark ? <Sun size={20} className="shrink-0" /> : <Moon size={20} className="shrink-0" />}
+      {isOpen && (
+        <span className="text-sm whitespace-nowrap">{isDark ? "Light Mode" : "Dark Mode"}</span>
+      )}
+    </button>
+  );
+};
 
 const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
   const [isOpen, setIsOpen] = useState(true);
@@ -75,12 +98,15 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
         })}
       </nav>
 
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="p-4 border-t border-sidebar-border flex justify-center text-muted-foreground hover:text-foreground transition-colors"
-      >
-        {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
-      </button>
+      <div className="mt-auto border-t border-sidebar-border">
+        <DarkModeToggle isOpen={isOpen} />
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full p-4 border-t border-sidebar-border flex justify-center text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+        </button>
+      </div>
     </motion.aside>
   );
 };
