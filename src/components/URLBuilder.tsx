@@ -204,6 +204,17 @@ const ComboField = ({
     </div>
   );
 };
+
+const URLBuilder = () => {
+  const [baseUrl, setBaseUrl] = useState("");
+  const [params, setParams] = useState<URLParams>({
+    ubicacion: "",
+    componente: "",
+    campana: "",
+    oferta: "",
+    semana: "",
+    fecha: "",
+  });
   const [finalUrl, setFinalUrl] = useState("");
   const [copied, setCopied] = useState(false);
 
