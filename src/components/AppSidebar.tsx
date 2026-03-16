@@ -44,7 +44,7 @@ const DarkModeToggle = ({ isOpen }: { isOpen: boolean }) => {
   );
 };
 
-
+const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
   const [isOpen, setIsOpen] = useState(true);
 
   return (
