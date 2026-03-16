@@ -59,7 +59,7 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
     >
       <div className="p-5 flex items-center gap-3 h-16">
         <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-          <div className="w-3.5 h-3.5 bg-accent rounded-full" />
+          <Droplets size={18} className="text-primary-foreground" />
         </div>
         {isOpen && (
           <motion.span
@@ -67,7 +67,7 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
             animate={{ opacity: 1 }}
             className="font-bold tracking-tight text-lg text-sidebar-foreground whitespace-nowrap"
           >
-            Agencia Aua
+            aguApp
           </motion.span>
         )}
       </div>
