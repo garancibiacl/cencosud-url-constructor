@@ -75,12 +75,15 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
         })}
       </nav>
 
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="p-4 border-t border-sidebar-border flex justify-center text-muted-foreground hover:text-foreground transition-colors"
-      >
-        {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
-      </button>
+      <div className="mt-auto border-t border-sidebar-border">
+        <DarkModeToggle isOpen={isOpen} />
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full p-4 border-t border-sidebar-border flex justify-center text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+        </button>
+      </div>
     </motion.aside>
   );
 };
