@@ -21,7 +21,30 @@ interface AppSidebarProps {
   onTabChange: (tab: string) => void;
 }
 
-const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
+const DarkModeToggle = ({ isOpen }: { isOpen: boolean }) => {
+  const [isDark, setIsDark] = useState(() =>
+    document.documentElement.classList.contains("dark")
+  );
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+  }, [isDark]);
+
+  return (
+    <button
+      onClick={() => setIsDark(!isDark)}
+      className="w-full flex items-center gap-3 px-6 py-3 text-muted-foreground hover:text-foreground transition-colors"
+      title={isOpen ? undefined : (isDark ? "Light Mode" : "Dark Mode")}
+    >
+      {isDark ? <Sun size={20} className="shrink-0" /> : <Moon size={20} className="shrink-0" />}
+      {isOpen && (
+        <span className="text-sm whitespace-nowrap">{isDark ? "Light Mode" : "Dark Mode"}</span>
+      )}
+    </button>
+  );
+};
+
+
   const [isOpen, setIsOpen] = useState(true);
 
   return (
