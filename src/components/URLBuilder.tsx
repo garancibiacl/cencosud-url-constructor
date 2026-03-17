@@ -37,7 +37,6 @@ import {
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -993,6 +992,8 @@ const URLBuilder = () => {
   const [bulkDescriptions, setBulkDescriptions] = useState("");
   const [bulkBaseUrls, setBulkBaseUrls] = useState("");
   const [bulkResolvedLinks, setBulkResolvedLinks] = useState<Record<string, string>>({});
+  const [showResultsBottomShadow, setShowResultsBottomShadow] = useState(false);
+  const resultsScrollRef = useRef<HTMLDivElement>(null);
 
   const singleSlug = cleanTextToSlug(singleDescription);
   const singleFinalUrl = hydrateUrl(singleBaseUrl, {
@@ -1007,6 +1008,16 @@ const URLBuilder = () => {
   useEffect(() => {
     setBulkResolvedLinks({});
   }, [batchRows]);
+
+  useEffect(() => {
+    const container = resultsScrollRef.current;
+    if (!container) {
+      return;
+    }
+
+    const nextShowShadow = container.scrollHeight - container.scrollTop - container.clientHeight > 8;
+    setShowResultsBottomShadow(nextShowShadow);
+  }, [batchRows, activeTab]);
 
   const validBatchLinks = batchRows
     .map((row) => bulkResolvedLinks[`row-${row.index}`] || "")
@@ -1062,6 +1073,16 @@ const URLBuilder = () => {
     initial: { opacity: 0, y: 10 },
     animate: { opacity: 1, y: 0 },
     exit: { opacity: 0, y: -10 },
+  };
+
+  const handleResultsScroll = () => {
+    const container = resultsScrollRef.current;
+    if (!container) {
+      return;
+    }
+
+    const nextShowShadow = container.scrollHeight - container.scrollTop - container.clientHeight > 8;
+    setShowResultsBottomShadow(nextShowShadow);
   };
 
   const globalContextSection = (
@@ -1322,37 +1343,54 @@ const URLBuilder = () => {
                         </span>
                       </div>
 
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>URL Base</TableHead>
-                            <TableHead>Slug generado</TableHead>
-                            <TableHead>Link Final</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {batchRows.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={3} className="text-muted-foreground">
-                                Agrega descripciones y URLs para generar el lote.
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            batchRows.map((row) => (
-                              <BulkEditableRow
-                                key={`${row.index}-${globalParams.ubicacion}-${globalParams.componente}-${globalParams.campana}-${globalParams.semana}-${globalParams.fecha}`}
-                                row={row}
-                                defaultContext={globalParams}
-                                onCopy={copyValue}
-                                onResolvedChange={handleRowResolvedChange}
-                                weekOptions={weekOptions}
-                                currentWeekValue={currentWeekValue}
-                                isoWeekYear={isoWeekYear}
-                              />
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
+                      <div className="relative">
+                        <div
+                          ref={resultsScrollRef}
+                          onScroll={handleResultsScroll}
+                          className="max-h-[60vh] overflow-y-auto overflow-x-hidden rounded-2xl border border-border [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent"
+                        >
+                          <table className="w-full caption-bottom text-sm">
+                            <TableHeader>
+                              <TableRow className="border-b border-border bg-card hover:bg-card">
+                                <TableHead className="sticky top-0 z-10 bg-card shadow-[0_1px_0_hsl(var(--border))]">
+                                  URL Base
+                                </TableHead>
+                                <TableHead className="sticky top-0 z-10 bg-card shadow-[0_1px_0_hsl(var(--border))]">
+                                  Slug generado
+                                </TableHead>
+                                <TableHead className="sticky top-0 z-10 bg-card shadow-[0_1px_0_hsl(var(--border))]">
+                                  Link Final
+                                </TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {batchRows.length === 0 ? (
+                                <TableRow>
+                                  <TableCell colSpan={3} className="text-muted-foreground">
+                                    Agrega descripciones y URLs para generar el lote.
+                                  </TableCell>
+                                </TableRow>
+                              ) : (
+                                batchRows.map((row) => (
+                                  <BulkEditableRow
+                                    key={`${row.index}-${globalParams.ubicacion}-${globalParams.componente}-${globalParams.campana}-${globalParams.semana}-${globalParams.fecha}`}
+                                    row={row}
+                                    defaultContext={globalParams}
+                                    onCopy={copyValue}
+                                    onResolvedChange={handleRowResolvedChange}
+                                    weekOptions={weekOptions}
+                                    currentWeekValue={currentWeekValue}
+                                    isoWeekYear={isoWeekYear}
+                                  />
+                                ))
+                              )}
+                            </TableBody>
+                          </table>
+                        </div>
+                        {showResultsBottomShadow && batchRows.length > 0 && (
+                          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 rounded-b-2xl bg-gradient-to-t from-card via-card/80 to-transparent" />
+                        )}
+                      </div>
                     </section>
                   </div>
                 </TabsContent>
