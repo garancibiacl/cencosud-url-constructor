@@ -151,7 +151,7 @@ const ComboField = ({
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+      <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
         {label}
       </label>
       <Popover open={open} onOpenChange={setOpen}>
@@ -262,7 +262,7 @@ const WeekSelectorField = ({
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+      <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
         {label}
       </label>
 
@@ -538,7 +538,7 @@ const BulkEditableRow = ({
                       )
                     ))}
                     <div className="flex flex-col gap-2">
-                      <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                      <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
                         Descripcion (Slug)
                       </label>
                       <input
@@ -694,48 +694,6 @@ const URLBuilder = () => {
           </div>
         </header>
 
-        <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
-          <div className="mb-5 flex items-center gap-3">
-            <Layers3 className="h-5 w-5 text-primary" />
-            <div>
-              <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-foreground">
-                Contexto Global
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Estos selectores alimentan la nomenclatura individual y tambien el lote masivo.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-            {globalFieldOrder.map((field) => (
-              field.key === "semana" ? (
-                <WeekSelectorField
-                  key={field.key}
-                  label={field.label}
-                  placeholder={field.placeholder}
-                  value={globalParams.semana}
-                  onChange={(value) => updateGlobalParam("semana", value)}
-                  options={weekOptions}
-                  currentWeekValue={currentWeekValue}
-                />
-              ) : (
-                <ComboField
-                  key={field.key}
-                  label={field.label}
-                  placeholder={field.placeholder}
-                  value={globalParams[field.key]}
-                  onChange={(value) => updateGlobalParam(field.key, value)}
-                  options={dropdownOptions[field.key]}
-                  customValueFormatter={
-                    field.key === "fecha" ? (rawValue) => rawValue.trim().replace(/\D/g, "") : undefined
-                  }
-                />
-              )
-            ))}
-          </div>
-        </section>
-
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="flex items-center justify-between gap-4">
             <TabsList className="h-auto rounded-2xl bg-card p-1 shadow-card">
@@ -771,6 +729,48 @@ const URLBuilder = () => {
             )}
           </div>
 
+          <section className="mt-4 rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
+            <div className="mb-5 flex items-center gap-3">
+              <Layers3 className="h-5 w-5 text-primary" />
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-foreground">
+                  Contexto Global
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Estos selectores alimentan la nomenclatura individual y tambien el lote masivo.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+              {globalFieldOrder.map((field) => (
+                field.key === "semana" ? (
+                  <WeekSelectorField
+                    key={field.key}
+                    label={field.label}
+                    placeholder={field.placeholder}
+                    value={globalParams.semana}
+                    onChange={(value) => updateGlobalParam("semana", value)}
+                    options={weekOptions}
+                    currentWeekValue={currentWeekValue}
+                  />
+                ) : (
+                  <ComboField
+                    key={field.key}
+                    label={field.label}
+                    placeholder={field.placeholder}
+                    value={globalParams[field.key]}
+                    onChange={(value) => updateGlobalParam(field.key, value)}
+                    options={dropdownOptions[field.key]}
+                    customValueFormatter={
+                      field.key === "fecha" ? (rawValue) => rawValue.trim().replace(/\D/g, "") : undefined
+                    }
+                  />
+                )
+              ))}
+            </div>
+          </section>
+
           <AnimatePresence mode="wait">
             {activeTab === "individual" ? (
               <motion.div key="individual" variants={contentVariants} initial="initial" animate="animate" exit="exit">
@@ -779,7 +779,7 @@ const URLBuilder = () => {
                     <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
                       <div className="space-y-6">
                         <div className="flex flex-col gap-2">
-                          <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                          <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
                             URL Base
                           </label>
                           <input
@@ -794,7 +794,7 @@ const URLBuilder = () => {
                         <div className="rounded-[24px] border border-border bg-secondary/70 p-4 md:p-5">
                           <div className="flex flex-col gap-3">
                             <div className="flex items-center justify-between gap-3">
-                              <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                              <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
                                 Descripcion del Banner / Grilla
                               </label>
                               <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">
@@ -874,7 +874,7 @@ const URLBuilder = () => {
 
                       <div className="grid gap-4 lg:grid-cols-2">
                         <div className="flex flex-col gap-2">
-                          <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                          <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
                             Lista de Descripciones
                           </label>
                           <textarea
@@ -887,7 +887,7 @@ const URLBuilder = () => {
                         </div>
 
                         <div className="flex flex-col gap-2">
-                          <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                          <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
                             Lista de URLs Base
                           </label>
                           <textarea
