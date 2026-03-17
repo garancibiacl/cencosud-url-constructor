@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import { format, isValid, parse } from "date-fns";
+import { es } from "date-fns/locale";
 import {
   AlertCircle,
+  CalendarDays,
   Check,
   ChevronsUpDown,
   Copy,
@@ -22,6 +25,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Table,
   TableBody,
@@ -48,6 +52,28 @@ type GlobalParamKey = Exclude<keyof URLParams, "descripcion">;
 const CUSTOM_WEEK_LABELS: Record<string, string> = {
   s12: "KV SANTA YAPA",
 };
+
+const DATE_INPUT_FORMATS = ["dd/MM/yyyy", "dd-MM-yyyy", "yyyy-MM-dd", "ddMMyyyy"];
+
+const parseDateValue = (value: string) => {
+  const normalized = value.trim();
+  if (!normalized) {
+    return undefined;
+  }
+
+  for (const formatPattern of DATE_INPUT_FORMATS) {
+    const parsedDate = parse(normalized, formatPattern, new Date());
+    if (isValid(parsedDate)) {
+      return parsedDate;
+    }
+  }
+
+  return undefined;
+};
+
+const formatDateValue = (date: Date) => format(date, "ddMMyyyy");
+
+const formatDateDisplay = (date: Date) => format(date, "dd/MM/yyyy");
 
 const dropdownOptions: Record<GlobalParamKey, { value: string; label: string }[]> = {
   ubicacion: [
@@ -89,22 +115,7 @@ const dropdownOptions: Record<GlobalParamKey, { value: string; label: string }[]
     { value: "oferta-semanal", label: "Oferta Semanal" },
   ],
   semana: [],
-  fecha: (() => {
-    const dates: { value: string; label: string }[] = [];
-    const now = new Date();
-    for (let i = 0; i < 90; i++) {
-      const date = new Date(now);
-      date.setDate(date.getDate() + i);
-      const dd = String(date.getDate()).padStart(2, "0");
-      const mm = String(date.getMonth() + 1).padStart(2, "0");
-      const yyyy = date.getFullYear();
-      dates.push({
-        value: `${dd}${mm}${yyyy}`,
-        label: `${dd}/${mm}/${yyyy}`,
-      });
-    }
-    return dates;
-  })(),
+  fecha: [],
 };
 
 const globalFieldOrder: { key: GlobalParamKey; label: string; placeholder: string }[] = [
@@ -366,6 +377,142 @@ const WeekSelectorField = ({
   );
 };
 
+interface DateSelectorFieldProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}
+
+const DateSelectorField = ({ label, value, onChange, placeholder }: DateSelectorFieldProps) => {
+  const [open, setOpen] = useState(false);
+  const selectedDate = value ? parseDateValue(value) : undefined;
+  const [viewMonth, setViewMonth] = useState<Date>(selectedDate ?? new Date());
+  const [inputValue, setInputValue] = useState(
+    selectedDate ? formatDateDisplay(selectedDate) : "",
+  );
+
+  useEffect(() => {
+    setInputValue(selectedDate ? formatDateDisplay(selectedDate) : "");
+    if (selectedDate) {
+      setViewMonth(selectedDate);
+    }
+  }, [selectedDate, value]);
+
+  const commitDate = (rawValue: string) => {
+    const parsedDate = parseDateValue(rawValue);
+    if (!parsedDate) {
+      return false;
+    }
+
+    onChange(formatDateValue(parsedDate));
+    setInputValue(formatDateDisplay(parsedDate));
+    setViewMonth(parsedDate);
+    return true;
+  };
+
+  const handleSelect = (date?: Date) => {
+    if (!date) {
+      return;
+    }
+
+    onChange(formatDateValue(date));
+    setInputValue(formatDateDisplay(date));
+    setViewMonth(date);
+    setOpen(false);
+  };
+
+  const handleToday = () => {
+    const today = new Date();
+    onChange(formatDateValue(today));
+    setInputValue(formatDateDisplay(today));
+    setViewMonth(today);
+    setOpen(false);
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+        {label}
+      </label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <div className="flex h-12 items-center rounded-2xl border border-border bg-secondary px-3 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/15">
+          <input
+            type="text"
+            value={inputValue}
+            onFocus={() => setOpen(true)}
+            onChange={(event) => setInputValue(event.target.value)}
+            onBlur={() => {
+              if (!inputValue.trim()) {
+                onChange("");
+                return;
+              }
+
+              const isCommitted = commitDate(inputValue);
+              if (!isCommitted && selectedDate) {
+                setInputValue(formatDateDisplay(selectedDate));
+              }
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                if (commitDate(inputValue)) {
+                  setOpen(false);
+                }
+              }
+            }}
+            placeholder={placeholder.replace("Seleccionar", "Escribe")}
+            className="flex-1 bg-transparent px-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          />
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-primary transition-colors hover:bg-primary/10"
+              aria-label="Abrir calendario"
+            >
+              <CalendarDays className="h-4 w-4" />
+            </button>
+          </PopoverTrigger>
+        </div>
+        <PopoverContent className="w-auto rounded-2xl border border-border p-0 shadow-card" align="start">
+          <div className="border-b border-border px-3 py-3">
+            <button
+              type="button"
+              onClick={handleToday}
+              className="inline-flex h-9 items-center rounded-xl bg-[#0052A3] px-3 text-xs font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:bg-[#004080]"
+            >
+              Hoy
+            </button>
+          </div>
+          <Calendar
+            mode="single"
+            locale={es}
+            selected={selectedDate}
+            onSelect={handleSelect}
+            month={viewMonth}
+            onMonthChange={setViewMonth}
+            className="p-3"
+            classNames={{
+              head_cell: "w-10 rounded-md text-[0.75rem] font-semibold uppercase text-muted-foreground",
+              cell: "h-10 w-10 p-0 text-center text-sm",
+              day: "h-10 w-10 rounded-xl p-0 text-sm font-medium text-foreground transition-colors hover:bg-slate-100 focus:bg-slate-100",
+              day_today:
+                "bg-[#0052A3] font-semibold text-white hover:bg-[#0052A3] hover:text-white focus:bg-[#0052A3] focus:text-white",
+              day_selected:
+                "bg-[#EA7120] font-semibold text-white hover:bg-[#EA7120] hover:text-white focus:bg-[#EA7120] focus:text-white",
+              day_outside:
+                "text-muted-foreground/40 opacity-50 aria-selected:bg-[#EA7120]/20 aria-selected:text-foreground",
+              nav_button:
+                "flex h-8 w-8 items-center justify-center rounded-xl border border-border bg-white p-0 text-foreground transition-colors hover:bg-slate-100 hover:text-foreground",
+              caption_label: "text-sm font-semibold text-foreground",
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+};
+
 interface BulkEditableRowProps {
   row: BatchRow;
   defaultContext: Omit<URLParams, "descripcion">;
@@ -521,6 +668,14 @@ const BulkEditableRow = ({
                           options={weekOptions}
                           currentWeekValue={currentWeekValue}
                         />
+                      ) : field.key === "fecha" ? (
+                        <DateSelectorField
+                          key={`${rowId}-${field.key}`}
+                          label={field.label}
+                          placeholder={field.placeholder}
+                          value={localParams.fecha}
+                          onChange={(value) => updateLocalParam("fecha", value)}
+                        />
                       ) : (
                         <ComboField
                           key={`${rowId}-${field.key}`}
@@ -529,11 +684,6 @@ const BulkEditableRow = ({
                           value={localParams[field.key]}
                           onChange={(value) => updateLocalParam(field.key, value)}
                           options={dropdownOptions[field.key]}
-                          customValueFormatter={
-                            field.key === "fecha"
-                              ? (rawValue) => rawValue.trim().replace(/\D/g, "")
-                              : undefined
-                          }
                         />
                       )
                     ))}
@@ -682,31 +832,36 @@ const URLBuilder = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-        {globalFieldOrder.map((field) => (
-          field.key === "semana" ? (
-            <WeekSelectorField
+            {globalFieldOrder.map((field) => (
+              field.key === "semana" ? (
+                <WeekSelectorField
               key={field.key}
               label={field.label}
               placeholder={field.placeholder}
               value={globalParams.semana}
               onChange={(value) => updateGlobalParam("semana", value)}
-              options={weekOptions}
-              currentWeekValue={currentWeekValue}
-            />
-          ) : (
-            <ComboField
-              key={field.key}
+                  options={weekOptions}
+                  currentWeekValue={currentWeekValue}
+                />
+              ) : field.key === "fecha" ? (
+                <DateSelectorField
+                  key={field.key}
+                  label={field.label}
+                  placeholder={field.placeholder}
+                  value={globalParams.fecha}
+                  onChange={(value) => updateGlobalParam("fecha", value)}
+                />
+              ) : (
+                <ComboField
+                  key={field.key}
               label={field.label}
-              placeholder={field.placeholder}
-              value={globalParams[field.key]}
-              onChange={(value) => updateGlobalParam(field.key, value)}
-              options={dropdownOptions[field.key]}
-              customValueFormatter={
-                field.key === "fecha" ? (rawValue) => rawValue.trim().replace(/\D/g, "") : undefined
-              }
-            />
-          )
-        ))}
+                  placeholder={field.placeholder}
+                  value={globalParams[field.key]}
+                  onChange={(value) => updateGlobalParam(field.key, value)}
+                  options={dropdownOptions[field.key]}
+                />
+              )
+            ))}
       </div>
     </section>
   );
