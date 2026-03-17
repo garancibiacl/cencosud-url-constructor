@@ -10,7 +10,6 @@ import {
   RotateCcw,
   Rows3,
   Settings2,
-  TimerReset,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -64,6 +63,10 @@ const dropdownOptions: Record<GlobalParamKey, { value: string; label: string }[]
   componente: [
     { value: "grilla", label: "Grilla" },
     { value: "banner", label: "Banner" },
+    { value: "huincha", label: "Huincha" },
+    { value: "vitrina", label: "Vitrina" },
+    { value: "carrusel", label: "Carrusel" },
+    { value: "contador", label: "Contador" },
     { value: "banner-hero", label: "Banner Hero" },
     { value: "banner-secondary", label: "Banner Secundario" },
     { value: "banner-strip", label: "Banner Strip" },
@@ -77,6 +80,7 @@ const dropdownOptions: Record<GlobalParamKey, { value: string; label: string }[]
   ],
   campana: [
     { value: "especial", label: "Especial" },
+    { value: "proveedor", label: "Proveedor" },
     { value: "semanasanta", label: "Semana Santa" },
     { value: "cyber-day", label: "Cyber Day" },
     { value: "black-friday", label: "Black Friday" },
@@ -107,7 +111,7 @@ const globalFieldOrder: { key: GlobalParamKey; label: string; placeholder: strin
   { key: "ubicacion", label: "Ubicacion", placeholder: "Seleccionar ubicacion" },
   { key: "componente", label: "Componente", placeholder: "Seleccionar componente" },
   { key: "campana", label: "Campana", placeholder: "Seleccionar campana" },
-  { key: "semana", label: "Semana", placeholder: "Seleccionar semana" },
+  { key: "semana", label: "Semana Actual", placeholder: "Seleccionar semana" },
   { key: "fecha", label: "Fecha", placeholder: "Seleccionar fecha" },
 ];
 
@@ -258,19 +262,9 @@ const WeekSelectorField = ({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-3">
-        <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          {label}
-        </label>
-        <button
-          type="button"
-          onClick={() => selectWeek(currentWeekValue)}
-          className="inline-flex h-8 items-center gap-2 rounded-xl border border-border px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:border-primary/20 hover:text-foreground"
-        >
-          <TimerReset className="h-3.5 w-3.5" />
-          Semana actual
-        </button>
-      </div>
+      <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+        {label}
+      </label>
 
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
@@ -279,9 +273,6 @@ const WeekSelectorField = ({
               <span className={value ? "text-foreground" : "text-muted-foreground"}>
                 {selectedWeek?.label || value || placeholder}
               </span>
-              {selectedWeek?.customLabel && (
-                <p className="truncate text-[11px] font-medium text-primary">{selectedWeek.customLabel}</p>
-              )}
             </div>
             <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
           </button>
@@ -361,11 +352,6 @@ const WeekSelectorField = ({
                         />
                         <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                           <span className="truncate">{option.label}</span>
-                          {option.customLabel && (
-                            <span className="shrink-0 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold text-accent">
-                              {option.customLabel}
-                            </span>
-                          )}
                         </div>
                       </CommandItem>
                     ))}
