@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format, isValid, parse } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -7,6 +7,7 @@ import {
   Check,
   ChevronsUpDown,
   Copy,
+  Pencil,
   ExternalLink,
   Layers3,
   Plus,
@@ -26,6 +27,15 @@ import {
 } from "@/components/ui/command";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -74,6 +84,33 @@ const parseDateValue = (value: string) => {
 const formatDateValue = (date: Date) => format(date, "ddMMyyyy");
 
 const formatDateDisplay = (date: Date) => format(date, "dd/MM/yyyy");
+
+const validateEditableBaseUrl = (value: string) => {
+  const normalized = value.trim();
+
+  if (!normalized) {
+    return "Falta URL base";
+  }
+
+  if (normalized.startsWith("/")) {
+    return undefined;
+  }
+
+  if (/^https?:\/\//i.test(normalized)) {
+    try {
+      new URL(normalized);
+      return undefined;
+    } catch {
+      return "La URL no es valida";
+    }
+  }
+
+  if (/^(www\.|[a-z0-9-]+(?:\.[a-z0-9-]+)+)/i.test(normalized)) {
+    return "Agrega https:// al inicio";
+  }
+
+  return "Usa una ruta relativa o una URL completa";
+};
 
 const dropdownOptions: Record<GlobalParamKey, { value: string; label: string }[]> = {
   ubicacion: [
@@ -513,6 +550,60 @@ const DateSelectorField = ({ label, value, onChange, placeholder }: DateSelector
   );
 };
 
+interface NumberedTextareaProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  rows?: number;
+  placeholder?: string;
+}
+
+const NumberedTextarea = ({
+  label,
+  value,
+  onChange,
+  rows = 10,
+  placeholder,
+}: NumberedTextareaProps) => {
+  const [scrollTop, setScrollTop] = useState(0);
+  const visibleLineCount = Math.max(value.split("\n").length, rows, 1);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+        {label}
+      </label>
+      <div className="flex min-h-[240px] overflow-hidden rounded-2xl border border-border bg-secondary">
+        <div className="flex w-12 shrink-0 justify-center border-r border-slate-300 bg-slate-50/80 px-2 py-3.5">
+          <div
+            className="space-y-0.5 text-center font-mono text-xs font-semibold text-primary/80"
+            style={{ transform: `translateY(-${scrollTop}px)` }}
+          >
+            {Array.from({ length: visibleLineCount }, (_, index) => (
+              <div key={`${label}-${index + 1}`} className="flex h-8 items-center justify-center">
+                {index + 1}
+              </div>
+            ))}
+          </div>
+        </div>
+        <textarea
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
+          rows={rows}
+          placeholder={placeholder}
+          className="min-h-[240px] flex-1 resize-none bg-secondary px-4 py-3.5 font-mono text-sm leading-8 text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-0"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(to bottom, transparent 0, transparent 31px, rgba(148,163,184,0.28) 31px, rgba(148,163,184,0.28) 32px)",
+            backgroundPosition: "0 54px",
+          }}
+        />
+      </div>
+    </div>
+  );
+};
+
 interface BulkEditableRowProps {
   row: BatchRow;
   defaultContext: Omit<URLParams, "descripcion">;
@@ -533,15 +624,26 @@ const BulkEditableRow = ({
   isoWeekYear,
 }: BulkEditableRowProps) => {
   const { hydrateUrl } = useUrlHydrator();
-  const rowId = `${row.index}-${row.baseUrl}-${row.rawDescription}`;
+  const rowId = `row-${row.index}`;
   const [isOpen, setIsOpen] = useState(false);
+  const [isBaseUrlModalOpen, setIsBaseUrlModalOpen] = useState(false);
+  const [baseUrl, setBaseUrl] = useState(row.baseUrl);
+  const [baseUrlDraft, setBaseUrlDraft] = useState(row.baseUrl);
+  const [baseUrlError, setBaseUrlError] = useState<string>();
+  const [isRowFlashing, setIsRowFlashing] = useState(false);
   const [localParams, setLocalParams] = useState<URLParams>({
     ...defaultContext,
     descripcion: row.slug,
   });
   const [hasManualSlug, setHasManualSlug] = useState(false);
+  const baseUrlInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    setBaseUrl(row.baseUrl);
+    setBaseUrlDraft(row.baseUrl);
+    setBaseUrlError(undefined);
+    setIsBaseUrlModalOpen(false);
+    setIsRowFlashing(false);
     setLocalParams({
       ...defaultContext,
       descripcion: row.slug,
@@ -549,12 +651,29 @@ const BulkEditableRow = ({
     setHasManualSlug(false);
   }, [defaultContext, row.slug, row.baseUrl, row.rawDescription]);
 
-  const hasMissingUrl = !row.baseUrl && !!row.rawDescription;
-  const hasMissingDescription = !!row.baseUrl && !row.rawDescription;
+  useEffect(() => {
+    if (!isBaseUrlModalOpen) {
+      return;
+    }
+
+    const input = baseUrlInputRef.current;
+    if (!input) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      input.focus();
+      const length = input.value.length;
+      input.setSelectionRange(length, length);
+    });
+  }, [isBaseUrlModalOpen]);
+
+  const hasMissingUrl = !baseUrl.trim() && !!row.rawDescription;
+  const hasMissingDescription = !!baseUrl.trim() && !row.rawDescription;
   const hasError = hasMissingUrl || hasMissingDescription;
   const resolvedUrl =
-    !hasError && row.baseUrl && localParams.descripcion
-      ? hydrateUrl(row.baseUrl, localParams)
+    !hasError && baseUrl && localParams.descripcion
+      ? hydrateUrl(baseUrl, localParams)
       : "";
 
   useEffect(() => {
@@ -579,7 +698,34 @@ const BulkEditableRow = ({
     }
   };
 
+  const commitBaseUrl = () => {
+    const nextValue = baseUrlDraft.trim();
+    const nextError = validateEditableBaseUrl(nextValue);
+    setBaseUrlError(nextError);
+
+    if (nextError) {
+      return false;
+    }
+
+    setBaseUrl(nextValue);
+    setBaseUrlDraft(nextValue);
+    setIsBaseUrlModalOpen(false);
+    setIsRowFlashing(true);
+    return true;
+  };
+
+  const cancelBaseUrlEdit = () => {
+    setBaseUrlDraft(baseUrl);
+    setBaseUrlError(undefined);
+    setIsBaseUrlModalOpen(false);
+  };
+
   const resetRow = () => {
+    setBaseUrl(row.baseUrl);
+    setBaseUrlDraft(row.baseUrl);
+    setBaseUrlError(undefined);
+    setIsBaseUrlModalOpen(false);
+    setIsRowFlashing(false);
     setLocalParams({
       ...defaultContext,
       descripcion: row.slug,
@@ -587,16 +733,54 @@ const BulkEditableRow = ({
     setHasManualSlug(false);
   };
 
+  useEffect(() => {
+    if (!isRowFlashing) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setIsRowFlashing(false), 1200);
+    return () => window.clearTimeout(timeoutId);
+  }, [isRowFlashing]);
+
   return (
     <>
-      <TableRow className={hasError ? "bg-destructive/5 hover:bg-destructive/10" : "hover:bg-muted/30"}>
+      <TableRow
+        className={`transition-colors duration-500 ${
+          isRowFlashing
+            ? "bg-primary/10"
+            : hasError
+              ? "bg-destructive/5 hover:bg-destructive/10"
+              : "hover:bg-muted/30"
+        }`}
+      >
         <TableCell className="align-top">
           <div className="flex items-start gap-3">
             <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
               {row.index + 1}
             </span>
             <div className="min-w-0 flex-1 space-y-2">
-              <p className="break-all font-mono text-xs text-foreground">{row.baseUrl || "Sin URL"}</p>
+              <div className="group flex min-h-10 items-center gap-2 rounded-xl border border-transparent px-3 py-2 transition-all hover:border-border hover:bg-muted/30">
+                <p className="min-w-0 flex-1 break-all font-mono text-xs text-foreground">
+                  {baseUrl || "Sin URL"}
+                </p>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBaseUrlDraft(baseUrl);
+                        setBaseUrlError(undefined);
+                        setIsBaseUrlModalOpen(true);
+                      }}
+                      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-primary/10 hover:text-[#0052A3]"
+                      aria-label={`Editar URL Base fila ${row.index + 1}`}
+                    >
+                      <Pencil size={13} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">Editar URL base</TooltipContent>
+                </Tooltip>
+              </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setIsOpen((current) => !current)}
@@ -643,6 +827,69 @@ const BulkEditableRow = ({
           </div>
         </TableCell>
       </TableRow>
+
+      <Dialog open={isBaseUrlModalOpen} onOpenChange={(open) => !open && cancelBaseUrlEdit()}>
+        <DialogContent className="max-w-2xl rounded-3xl border border-border bg-background p-0 shadow-elevated">
+          <div className="p-6 md:p-7">
+            <DialogHeader>
+              <DialogTitle>Editar URL Base - Fila {row.index + 1}</DialogTitle>
+              <DialogDescription>
+                Ajusta la URL base y guarda para recalcular el link final de inmediato.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-5 space-y-3">
+              <input
+                ref={baseUrlInputRef}
+                type="text"
+                value={baseUrlDraft}
+                onChange={(event) => {
+                  const nextValue = event.target.value;
+                  setBaseUrlDraft(nextValue);
+                  setBaseUrlError(validateEditableBaseUrl(nextValue));
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    commitBaseUrl();
+                  }
+
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    cancelBaseUrlEdit();
+                  }
+                }}
+                placeholder="https://www.santaisabel.cl/santas-ofertas"
+                className={`h-14 w-full rounded-2xl border bg-secondary px-4 font-mono text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground ${
+                  baseUrlError
+                    ? "border-destructive ring-4 ring-destructive/10"
+                    : "border-border focus:border-primary focus:ring-4 focus:ring-primary/10"
+                }`}
+              />
+              {baseUrlError && (
+                <p className="text-sm font-medium text-destructive">{baseUrlError}</p>
+              )}
+            </div>
+
+            <DialogFooter className="mt-6">
+              <button
+                type="button"
+                onClick={cancelBaseUrlEdit}
+                className="inline-flex h-11 items-center justify-center rounded-2xl border border-border bg-secondary px-5 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={commitBaseUrl}
+                className="inline-flex h-11 items-center justify-center rounded-2xl bg-[#0052A3] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#004080]"
+              >
+                Guardar
+              </button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <TableRow className="hover:bg-transparent">
         <TableCell colSpan={3} className="pt-0">
@@ -762,7 +1009,7 @@ const URLBuilder = () => {
   }, [batchRows]);
 
   const validBatchLinks = batchRows
-    .map((row) => bulkResolvedLinks[`${row.index}-${row.baseUrl}-${row.rawDescription}`] || "")
+    .map((row) => bulkResolvedLinks[`row-${row.index}`] || "")
     .filter(Boolean);
 
   const updateGlobalParam = (key: GlobalParamKey, value: string) => {
@@ -1047,18 +1294,13 @@ const URLBuilder = () => {
                           />
                         </div>
 
-                        <div className="flex flex-col gap-2">
-                          <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                            Lista de URLs Base
-                          </label>
-                          <textarea
-                            value={bulkBaseUrls}
-                            onChange={(event) => setBulkBaseUrls(event.target.value)}
-                            rows={10}
-                            placeholder={"/busca?fq=H%3A27791\n/santas-ofertas"}
-                            className="min-h-[240px] rounded-2xl border border-border bg-secondary px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
-                          />
-                        </div>
+                        <NumberedTextarea
+                          label="Lista de URLs Base"
+                          value={bulkBaseUrls}
+                          onChange={setBulkBaseUrls}
+                          rows={10}
+                          placeholder={"/busca?fq=H%3A27791\n/santas-ofertas"}
+                        />
                       </div>
                     </section>
 
@@ -1098,7 +1340,7 @@ const URLBuilder = () => {
                           ) : (
                             batchRows.map((row) => (
                               <BulkEditableRow
-                                key={`${row.index}-${row.baseUrl}-${row.rawDescription}-${globalParams.ubicacion}-${globalParams.componente}-${globalParams.campana}-${globalParams.semana}-${globalParams.fecha}`}
+                                key={`${row.index}-${globalParams.ubicacion}-${globalParams.componente}-${globalParams.campana}-${globalParams.semana}-${globalParams.fecha}`}
                                 row={row}
                                 defaultContext={globalParams}
                                 onCopy={copyValue}
