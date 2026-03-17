@@ -667,6 +667,50 @@ const URLBuilder = () => {
     exit: { opacity: 0, y: -10 },
   };
 
+  const globalContextSection = (
+    <section className="mt-4 rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
+      <div className="mb-5 flex items-center gap-3">
+        <Layers3 className="h-5 w-5 text-primary" />
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-foreground">
+            Contexto Global
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Estos selectores alimentan la nomenclatura individual y tambien el lote masivo.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+        {globalFieldOrder.map((field) => (
+          field.key === "semana" ? (
+            <WeekSelectorField
+              key={field.key}
+              label={field.label}
+              placeholder={field.placeholder}
+              value={globalParams.semana}
+              onChange={(value) => updateGlobalParam("semana", value)}
+              options={weekOptions}
+              currentWeekValue={currentWeekValue}
+            />
+          ) : (
+            <ComboField
+              key={field.key}
+              label={field.label}
+              placeholder={field.placeholder}
+              value={globalParams[field.key]}
+              onChange={(value) => updateGlobalParam(field.key, value)}
+              options={dropdownOptions[field.key]}
+              customValueFormatter={
+                field.key === "fecha" ? (rawValue) => rawValue.trim().replace(/\D/g, "") : undefined
+              }
+            />
+          )
+        ))}
+      </div>
+    </section>
+  );
+
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 py-6 md:px-8 lg:px-12 lg:py-8">
@@ -729,129 +773,91 @@ const URLBuilder = () => {
             )}
           </div>
 
-          <section className="mt-4 rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
-            <div className="mb-5 flex items-center gap-3">
-              <Layers3 className="h-5 w-5 text-primary" />
-              <div>
-                <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-foreground">
-                  Contexto Global
-                </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Estos selectores alimentan la nomenclatura individual y tambien el lote masivo.
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-              {globalFieldOrder.map((field) => (
-                field.key === "semana" ? (
-                  <WeekSelectorField
-                    key={field.key}
-                    label={field.label}
-                    placeholder={field.placeholder}
-                    value={globalParams.semana}
-                    onChange={(value) => updateGlobalParam("semana", value)}
-                    options={weekOptions}
-                    currentWeekValue={currentWeekValue}
-                  />
-                ) : (
-                  <ComboField
-                    key={field.key}
-                    label={field.label}
-                    placeholder={field.placeholder}
-                    value={globalParams[field.key]}
-                    onChange={(value) => updateGlobalParam(field.key, value)}
-                    options={dropdownOptions[field.key]}
-                    customValueFormatter={
-                      field.key === "fecha" ? (rawValue) => rawValue.trim().replace(/\D/g, "") : undefined
-                    }
-                  />
-                )
-              ))}
-            </div>
-          </section>
-
           <AnimatePresence mode="wait">
             {activeTab === "individual" ? (
               <motion.div key="individual" variants={contentVariants} initial="initial" animate="animate" exit="exit">
                 <TabsContent value="individual" forceMount className="mt-4">
-                  <div className="grid gap-8 xl:grid-cols-[minmax(0,1.25fr)_minmax(340px,0.9fr)]">
-                    <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
-                      <div className="space-y-6">
-                        <div className="flex flex-col gap-2">
-                          <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                            URL Base
-                          </label>
-                          <input
-                            type="text"
-                            value={singleBaseUrl}
-                            onChange={(event) => setSingleBaseUrl(event.target.value)}
-                            placeholder="https://www.santaisabel.cl/santas-ofertas"
-                            className="h-12 rounded-2xl border border-border bg-secondary px-4 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
-                          />
-                        </div>
+                  <div className="space-y-4">
+                    <div className="grid gap-8 xl:grid-cols-[minmax(0,1.25fr)_minmax(340px,0.9fr)]">
+                      <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
+                        <div className="space-y-6">
+                          <div className="flex flex-col gap-2">
+                            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                              URL Base
+                            </label>
+                            <input
+                              type="text"
+                              value={singleBaseUrl}
+                              onChange={(event) => setSingleBaseUrl(event.target.value)}
+                              placeholder="https://www.santaisabel.cl/santas-ofertas"
+                              className="h-12 rounded-2xl border border-border bg-secondary px-4 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
+                            />
+                          </div>
 
-                        <div className="rounded-[24px] border border-border bg-secondary/70 p-4 md:p-5">
-                          <div className="flex flex-col gap-3">
-                            <div className="flex items-center justify-between gap-3">
-                              <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                                Descripcion del Banner / Grilla
-                              </label>
-                              <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">
-                                {singleSlug || "slug pendiente"}
+                          <div className="rounded-[24px] border border-border bg-secondary/70 p-4 md:p-5">
+                            <div className="flex flex-col gap-3">
+                              <div className="flex items-center justify-between gap-3">
+                                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                                  Descripcion del Banner / Grilla
+                                </label>
+                                <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">
+                                  {singleSlug || "slug pendiente"}
+                                </span>
+                              </div>
+
+                              <textarea
+                                value={singleDescription}
+                                onChange={(event) => setSingleDescription(event.target.value)}
+                                placeholder='Pega un texto como: "Prensa/TV - TRUTRO ENTERO $2.790"'
+                                rows={4}
+                                className="min-h-[112px] rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
+                              />
+
+                              <span className="w-fit rounded-full bg-primary/10 px-3 py-1 font-mono text-xs text-primary">
+                                {singleSlug || "trutro-entero"}
                               </span>
                             </div>
-
-                            <textarea
-                              value={singleDescription}
-                              onChange={(event) => setSingleDescription(event.target.value)}
-                              placeholder='Pega un texto como: "Prensa/TV - TRUTRO ENTERO $2.790"'
-                              rows={4}
-                              className="min-h-[112px] rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
-                            />
-
-                            <span className="w-fit rounded-full bg-primary/10 px-3 py-1 font-mono text-xs text-primary">
-                              {singleSlug || "trutro-entero"}
-                            </span>
                           </div>
                         </div>
-                      </div>
-                    </section>
+                      </section>
 
-                    <section className="rounded-[28px] border border-primary/10 bg-primary p-6 text-primary-foreground shadow-elevated md:p-8">
-                      <div className="mb-6 flex items-start justify-between gap-4">
-                        <div className="space-y-3">
-                          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-foreground/12">
-                            <ExternalLink size={20} className="text-primary-foreground" />
+                      <section className="rounded-[28px] border border-primary/10 bg-primary p-6 text-primary-foreground shadow-elevated md:p-8">
+                        <div className="mb-6 flex items-start justify-between gap-4">
+                          <div className="space-y-3">
+                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-foreground/12">
+                              <ExternalLink size={20} className="text-primary-foreground" />
+                            </div>
+                            <div>
+                              <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-primary-foreground/72">
+                                Link Final
+                              </h3>
+                              <p className="mt-2 max-w-sm text-sm leading-6 text-primary-foreground/80">
+                                Preview inmediato con slug inteligente y concatenacion automatica.
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-primary-foreground/72">
-                              Link Final
-                            </h3>
-                            <p className="mt-2 max-w-sm text-sm leading-6 text-primary-foreground/80">
-                              Preview inmediato con slug inteligente y concatenacion automatica.
-                            </p>
-                          </div>
+
+                          <button
+                            onClick={() =>
+                              copyValue(singleFinalUrl, "Link copiado", "El link individual fue copiado al portapapeles.")
+                            }
+                            disabled={!singleFinalUrl}
+                            className="inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-2xl bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <Copy size={16} />
+                            Copiar Link
+                          </button>
                         </div>
 
-                        <button
-                          onClick={() =>
-                            copyValue(singleFinalUrl, "Link copiado", "El link individual fue copiado al portapapeles.")
-                          }
-                          disabled={!singleFinalUrl}
-                          className="inline-flex h-11 items-center gap-2 rounded-2xl bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <Copy size={16} />
-                          Copiar Link
-                        </button>
-                      </div>
+                        <div className="rounded-2xl bg-black/10 p-4">
+                          <code className="block min-h-[96px] break-all font-mono text-sm leading-7 text-primary-foreground/95">
+                            {singleFinalUrl || "/santas-ofertas?nombre_promo=home-grilla-trutro-entero-s12-20032026"}
+                          </code>
+                        </div>
+                      </section>
+                    </div>
 
-                      <div className="rounded-2xl bg-black/10 p-4">
-                        <code className="block min-h-[96px] break-all font-mono text-sm leading-7 text-primary-foreground/95">
-                          {singleFinalUrl || "/santas-ofertas?nombre_promo=home-grilla-trutro-entero-s12-20032026"}
-                        </code>
-                      </div>
-                    </section>
+                    {globalContextSection}
                   </div>
                 </TabsContent>
               </motion.div>
@@ -900,6 +906,8 @@ const URLBuilder = () => {
                         </div>
                       </div>
                     </section>
+
+                    {globalContextSection}
 
                     <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
                       <div className="mb-4 flex items-center justify-between gap-4">
