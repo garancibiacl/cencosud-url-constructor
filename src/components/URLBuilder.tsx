@@ -7,8 +7,10 @@ import {
   ExternalLink,
   Layers3,
   Plus,
+  RotateCcw,
   Rows3,
   Settings2,
+  TimerReset,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -33,8 +35,20 @@ import { toast } from "@/hooks/use-toast";
 import type { URLParams } from "@/lib/url-builder";
 import type { BatchRow } from "@/hooks/useUrlHydrator";
 import { useUrlHydrator } from "@/hooks/useUrlHydrator";
+import {
+  buildWeekOptions,
+  findWeekOption,
+  getCurrentISOWeekValue,
+  getCurrentISOWeekYear,
+  parseWeekSelectionInput,
+  type WeekOption,
+} from "@/lib/week-options";
 
 type GlobalParamKey = Exclude<keyof URLParams, "descripcion">;
+
+const CUSTOM_WEEK_LABELS: Record<string, string> = {
+  s12: "KV SANTA YAPA",
+};
 
 const dropdownOptions: Record<GlobalParamKey, { value: string; label: string }[]> = {
   ubicacion: [
@@ -70,10 +84,7 @@ const dropdownOptions: Record<GlobalParamKey, { value: string; label: string }[]
     { value: "aniversario", label: "Aniversario" },
     { value: "oferta-semanal", label: "Oferta Semanal" },
   ],
-  semana: Array.from({ length: 52 }, (_, i) => ({
-    value: `s${String(i + 1).padStart(2, "0")}`,
-    label: `Semana ${i + 1}`,
-  })),
+  semana: [],
   fecha: (() => {
     const dates: { value: string; label: string }[] = [];
     const now = new Date();
@@ -106,16 +117,26 @@ interface ComboFieldProps {
   onChange: (value: string) => void;
   placeholder: string;
   options: { value: string; label: string }[];
+  customValueFormatter?: (value: string) => string;
 }
 
-const ComboField = ({ label, value, onChange, placeholder, options }: ComboFieldProps) => {
+const ComboField = ({
+  label,
+  value,
+  onChange,
+  placeholder,
+  options,
+  customValueFormatter,
+}: ComboFieldProps) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
   const selectedLabel = options.find((option) => option.value === value)?.label;
 
   const handleCustomValue = () => {
-    const nextValue = search.trim().replace(/\s+/g, "-").toLowerCase();
+    const nextValue = customValueFormatter
+      ? customValueFormatter(search)
+      : search.trim().replace(/\s+/g, "-").toLowerCase();
     if (!nextValue) {
       return;
     }
@@ -187,11 +208,186 @@ const ComboField = ({ label, value, onChange, placeholder, options }: ComboField
   );
 };
 
+interface WeekSelectorFieldProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  options: WeekOption[];
+  currentWeekValue: string;
+}
+
+const WeekSelectorField = ({
+  label,
+  value,
+  onChange,
+  placeholder,
+  options,
+  currentWeekValue,
+}: WeekSelectorFieldProps) => {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const selectedWeek = findWeekOption(options, value);
+  const currentWeek = findWeekOption(options, currentWeekValue);
+  const suggestedWeek = parseWeekSelectionInput(search, options, getCurrentISOWeekYear());
+  const monthGroups = useMemo(() => {
+    const groups = new Map<string, { heading: string; options: WeekOption[] }>();
+
+    for (const option of options) {
+      const group = groups.get(option.monthKey);
+      if (group) {
+        group.options.push(option);
+      } else {
+        groups.set(option.monthKey, { heading: option.monthLabel, options: [option] });
+      }
+    }
+
+    return Array.from(groups.values());
+  }, [options]);
+
+  const selectWeek = (weekValue: string) => {
+    onChange(weekValue);
+    setSearch("");
+    setOpen(false);
+  };
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const showSuggestedWeek =
+    suggestedWeek && suggestedWeek.value !== value && suggestedWeek.value !== currentWeekValue;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          {label}
+        </label>
+        <button
+          type="button"
+          onClick={() => selectWeek(currentWeekValue)}
+          className="inline-flex h-8 items-center gap-2 rounded-xl border border-border px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:border-primary/20 hover:text-foreground"
+        >
+          <TimerReset className="h-3.5 w-3.5" />
+          Semana actual
+        </button>
+      </div>
+
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button className="flex h-12 w-full items-center justify-between rounded-2xl border border-border bg-secondary px-4 text-left text-sm text-foreground transition-all outline-none focus:border-primary focus:ring-4 focus:ring-primary/15">
+            <div className="min-w-0">
+              <span className={value ? "text-foreground" : "text-muted-foreground"}>
+                {selectedWeek?.label || value || placeholder}
+              </span>
+              {selectedWeek?.customLabel && (
+                <p className="truncate text-[11px] font-medium text-primary">{selectedWeek.customLabel}</p>
+              )}
+            </div>
+            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-[var(--radix-popover-trigger-width)] rounded-2xl border border-border p-0 shadow-card"
+          align="start"
+        >
+          <Command shouldFilter={false}>
+            <CommandInput
+              placeholder="Escribe semana o fecha..."
+              value={search}
+              onValueChange={setSearch}
+            />
+            <CommandList>
+              <CommandEmpty>No se encontraron semanas.</CommandEmpty>
+
+              {currentWeek && (
+                <CommandGroup heading="Accesos rapidos">
+                  <CommandItem
+                    value={`actual ${currentWeek.searchValue}`}
+                    onSelect={() => selectWeek(currentWeek.value)}
+                  >
+                    <Check
+                      className={`mr-2 h-4 w-4 ${value === currentWeek.value ? "opacity-100" : "opacity-0"}`}
+                    />
+                    <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                      <span className="truncate">{currentWeek.label}</span>
+                      <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                        Hoy
+                      </span>
+                    </div>
+                  </CommandItem>
+                </CommandGroup>
+              )}
+
+              {showSuggestedWeek && suggestedWeek && (
+                <CommandGroup heading="Detectado desde tu input">
+                  <CommandItem
+                    value={`detectado ${suggestedWeek.searchValue}`}
+                    onSelect={() => selectWeek(suggestedWeek.value)}
+                  >
+                    <Check className="mr-2 h-4 w-4 opacity-0" />
+                    <div className="min-w-0">
+                      <p className="truncate">{suggestedWeek.label}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Seleccionar automaticamente esta semana
+                      </p>
+                    </div>
+                  </CommandItem>
+                </CommandGroup>
+              )}
+
+              {monthGroups.map((group) => {
+                const visibleOptions = group.options.filter((option) => {
+                  if (!normalizedSearch) {
+                    return true;
+                  }
+
+                  return option.searchValue.includes(normalizedSearch);
+                });
+
+                if (visibleOptions.length === 0) {
+                  return null;
+                }
+
+                return (
+                  <CommandGroup key={group.heading} heading={group.heading}>
+                    {visibleOptions.map((option) => (
+                      <CommandItem
+                        key={option.value}
+                        value={option.searchValue}
+                        onSelect={() => selectWeek(option.value)}
+                      >
+                        <Check
+                          className={`mr-2 h-4 w-4 ${value === option.value ? "opacity-100" : "opacity-0"}`}
+                        />
+                        <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                          <span className="truncate">{option.label}</span>
+                          {option.customLabel && (
+                            <span className="shrink-0 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-semibold text-accent">
+                              {option.customLabel}
+                            </span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                );
+              })}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+};
+
 interface BulkEditableRowProps {
   row: BatchRow;
   defaultContext: Omit<URLParams, "descripcion">;
   onCopy: (value: string, title: string, description: string) => Promise<void>;
   onResolvedChange: (rowId: string, finalUrl: string) => void;
+  weekOptions: WeekOption[];
+  currentWeekValue: string;
+  isoWeekYear: number;
 }
 
 const BulkEditableRow = ({
@@ -199,6 +395,9 @@ const BulkEditableRow = ({
   defaultContext,
   onCopy,
   onResolvedChange,
+  weekOptions,
+  currentWeekValue,
+  isoWeekYear,
 }: BulkEditableRowProps) => {
   const { hydrateUrl } = useUrlHydrator();
   const rowId = `${row.index}-${row.baseUrl}-${row.rawDescription}`;
@@ -230,7 +429,18 @@ const BulkEditableRow = ({
   }, [onResolvedChange, resolvedUrl, rowId]);
 
   const updateLocalParam = (key: keyof URLParams, value: string) => {
-    setLocalParams((current) => ({ ...current, [key]: value }));
+    setLocalParams((current) => {
+      if (key === "fecha") {
+        const matchedWeek = parseWeekSelectionInput(value, weekOptions, isoWeekYear);
+        return {
+          ...current,
+          fecha: value,
+          semana: matchedWeek?.value ?? current.semana,
+        };
+      }
+
+      return { ...current, [key]: value };
+    });
     if (key === "descripcion") {
       setHasManualSlug(true);
     }
@@ -315,14 +525,31 @@ const BulkEditableRow = ({
                 <div className="rounded-2xl border border-border bg-secondary/40 p-4">
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {globalFieldOrder.map((field) => (
-                      <ComboField
-                        key={`${rowId}-${field.key}`}
-                        label={field.label}
-                        placeholder={field.placeholder}
-                        value={localParams[field.key]}
-                        onChange={(value) => updateLocalParam(field.key, value)}
-                        options={dropdownOptions[field.key]}
-                      />
+                      field.key === "semana" ? (
+                        <WeekSelectorField
+                          key={`${rowId}-${field.key}`}
+                          label={field.label}
+                          placeholder={field.placeholder}
+                          value={localParams.semana}
+                          onChange={(value) => updateLocalParam("semana", value)}
+                          options={weekOptions}
+                          currentWeekValue={currentWeekValue}
+                        />
+                      ) : (
+                        <ComboField
+                          key={`${rowId}-${field.key}`}
+                          label={field.label}
+                          placeholder={field.placeholder}
+                          value={localParams[field.key]}
+                          onChange={(value) => updateLocalParam(field.key, value)}
+                          options={dropdownOptions[field.key]}
+                          customValueFormatter={
+                            field.key === "fecha"
+                              ? (rawValue) => rawValue.trim().replace(/\D/g, "")
+                              : undefined
+                          }
+                        />
+                      )
                     ))}
                     <div className="flex flex-col gap-2">
                       <label className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
@@ -363,13 +590,19 @@ const BulkEditableRow = ({
 
 const URLBuilder = () => {
   const { cleanTextToSlug, hydrateBatchRows, hydrateUrl } = useUrlHydrator();
+  const isoWeekYear = useMemo(() => getCurrentISOWeekYear(), []);
+  const weekOptions = useMemo(
+    () => buildWeekOptions(isoWeekYear, CUSTOM_WEEK_LABELS),
+    [isoWeekYear],
+  );
+  const currentWeekValue = useMemo(() => getCurrentISOWeekValue(), []);
 
   const [activeTab, setActiveTab] = useState("individual");
   const [globalParams, setGlobalParams] = useState<Omit<URLParams, "descripcion">>({
     ubicacion: "",
     componente: "",
     campana: "",
-    semana: "",
+    semana: currentWeekValue,
     fecha: "",
   });
   const [singleBaseUrl, setSingleBaseUrl] = useState("");
@@ -397,7 +630,18 @@ const URLBuilder = () => {
     .filter(Boolean);
 
   const updateGlobalParam = (key: GlobalParamKey, value: string) => {
-    setGlobalParams((current) => ({ ...current, [key]: value }));
+    setGlobalParams((current) => {
+      if (key === "fecha") {
+        const matchedWeek = parseWeekSelectionInput(value, weekOptions, isoWeekYear);
+        return {
+          ...current,
+          fecha: value,
+          semana: matchedWeek?.value ?? current.semana,
+        };
+      }
+
+      return { ...current, [key]: value };
+    });
   };
 
   const clearAll = () => {
@@ -405,7 +649,7 @@ const URLBuilder = () => {
       ubicacion: "",
       componente: "",
       campana: "",
-      semana: "",
+      semana: currentWeekValue,
       fecha: "",
     });
     setSingleBaseUrl("");
@@ -455,8 +699,10 @@ const URLBuilder = () => {
 
             <button
               onClick={clearAll}
-              className="inline-flex h-11 items-center justify-center rounded-2xl border border-border px-4 text-sm font-semibold text-muted-foreground transition-colors hover:border-primary/20 hover:text-foreground"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-elevated transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-card focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+              aria-label="Limpiar todos los campos"
             >
+              <RotateCcw className="h-4 w-4" />
               Limpiar todo
             </button>
           </div>
@@ -477,14 +723,29 @@ const URLBuilder = () => {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
             {globalFieldOrder.map((field) => (
-              <ComboField
-                key={field.key}
-                label={field.label}
-                placeholder={field.placeholder}
-                value={globalParams[field.key]}
-                onChange={(value) => updateGlobalParam(field.key, value)}
-                options={dropdownOptions[field.key]}
-              />
+              field.key === "semana" ? (
+                <WeekSelectorField
+                  key={field.key}
+                  label={field.label}
+                  placeholder={field.placeholder}
+                  value={globalParams.semana}
+                  onChange={(value) => updateGlobalParam("semana", value)}
+                  options={weekOptions}
+                  currentWeekValue={currentWeekValue}
+                />
+              ) : (
+                <ComboField
+                  key={field.key}
+                  label={field.label}
+                  placeholder={field.placeholder}
+                  value={globalParams[field.key]}
+                  onChange={(value) => updateGlobalParam(field.key, value)}
+                  options={dropdownOptions[field.key]}
+                  customValueFormatter={
+                    field.key === "fecha" ? (rawValue) => rawValue.trim().replace(/\D/g, "") : undefined
+                  }
+                />
+              )
             ))}
           </div>
         </section>
@@ -693,6 +954,9 @@ const URLBuilder = () => {
                                 defaultContext={globalParams}
                                 onCopy={copyValue}
                                 onResolvedChange={handleRowResolvedChange}
+                                weekOptions={weekOptions}
+                                currentWeekValue={currentWeekValue}
+                                isoWeekYear={isoWeekYear}
                               />
                             ))
                           )}
