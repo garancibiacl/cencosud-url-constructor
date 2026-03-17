@@ -292,7 +292,7 @@ const BulkEditableRow = ({
                 onCopy(resolvedUrl, "Link copiado", `Se copio el link de la fila ${row.index + 1}.`)
               }
               disabled={!resolvedUrl}
-              className="inline-flex h-9 shrink-0 items-center gap-2 rounded-xl border border-border px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/20 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex h-9 shrink-0 items-center gap-2 rounded-xl bg-accent px-3 text-xs font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Copy size={14} />
               Copiar
@@ -443,9 +443,6 @@ const URLBuilder = () => {
         <header className="rounded-[24px] border border-border bg-card px-6 py-6 shadow-card md:px-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-2">
-              <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-                Agencia Aua
-              </span>
               <div className="space-y-2">
                 <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
                   Constructor de URLs Inteligente
@@ -519,7 +516,7 @@ const URLBuilder = () => {
                   )
                 }
                 disabled={validBatchLinks.length === 0}
-                className="inline-flex h-11 items-center gap-2 rounded-2xl bg-accent px-4 text-sm font-semibold text-accent-foreground transition-all hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-11 items-center gap-2 rounded-2xl bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Copy size={16} />
                 Copiar todos los links
@@ -595,7 +592,7 @@ const URLBuilder = () => {
                             copyValue(singleFinalUrl, "Link copiado", "El link individual fue copiado al portapapeles.")
                           }
                           disabled={!singleFinalUrl}
-                          className="inline-flex h-11 items-center gap-2 rounded-2xl bg-accent px-4 text-sm font-semibold text-accent-foreground transition-all hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex h-11 items-center gap-2 rounded-2xl bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <Copy size={16} />
                           Copiar Link

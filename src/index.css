@@ -22,7 +22,7 @@
     --muted: 210 33% 96%;
     --muted-foreground: 214 12% 42%;
 
-    --accent: 87 56% 44%;
+    --accent: 24 83% 52%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
@@ -71,7 +71,7 @@
     --muted: 214 28% 14%;
     --muted-foreground: 214 12% 68%;
 
-    --accent: 87 56% 44%;
+    --accent: 24 83% 52%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 63% 31%;
@@ -79,16 +79,16 @@
 
     --border: 214 24% 18%;
     --input: 214 24% 18%;
-    --ring: 87 56% 44%;
+    --ring: 24 83% 52%;
 
     --sidebar-background: 215 42% 8%;
     --sidebar-foreground: 0 0% 92%;
-    --sidebar-primary: 87 56% 44%;
+    --sidebar-primary: 24 83% 52%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 214 28% 14%;
     --sidebar-accent-foreground: 0 0% 96%;
     --sidebar-border: 214 24% 18%;
-    --sidebar-ring: 87 56% 44%;
+    --sidebar-ring: 24 83% 52%;
 
     --warning: 45 93% 47%;
     --warning-foreground: 45 93% 80%;
@@ -108,7 +108,7 @@
   body {
     @apply bg-background text-foreground antialiased;
     background-image: radial-gradient(circle at top left, rgba(0, 85, 165, 0.08), transparent 28%),
-      radial-gradient(circle at top right, rgba(120, 190, 32, 0.08), transparent 24%);
+      radial-gradient(circle at top right, rgba(234, 113, 33, 0.08), transparent 24%);
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
