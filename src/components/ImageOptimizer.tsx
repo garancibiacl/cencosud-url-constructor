@@ -273,9 +273,6 @@ const ImageOptimizer = () => {
     ? Math.round((batchProgress.current / batchProgress.total) * 100)
     : 0;
 
-  const focalPointForPreview = editingItem?.focalPoint || { x: 50, y: 50 };
-  const objectPosition = `${focalPointForPreview.x}% ${focalPointForPreview.y}%`;
-  const previewImage = editingItem?.dataUrl || null;
 
   return (
     <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
