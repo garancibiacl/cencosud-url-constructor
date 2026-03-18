@@ -12,10 +12,10 @@ import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { CENCOSUD_PRESETS, type ImagePreset } from "@/lib/image-presets";
+import { CENCOSUD_PRESETS, getPresetVariants, type ImagePreset, type PresetVariant } from "@/lib/image-presets";
 import { processImage, downloadBlob, type ProcessedImage } from "@/lib/image-processor";
 import {
   getHistory, addHistoryEntry, clearHistory,
@@ -41,6 +41,12 @@ const BRAND_COLORS: Record<string, { bg: string; text: string; border: string }>
   "Santa Isabel": { bg: "bg-[hsl(0,70%,95%)]", text: "text-[hsl(0,70%,35%)]", border: "border-[hsl(0,70%,80%)]" },
 };
 
+const HIDDEN_PRESET_KEYS = new Set([
+  "PARIS_HOME",
+  "JUMBO_OFERTA",
+  "SANTA_ISABEL_GRILLA",
+]);
+
 function BrandBadge({ brand }: { brand: string }) {
   const colors = BRAND_COLORS[brand] || { bg: "bg-muted", text: "text-muted-foreground", border: "border-border" };
   return (
@@ -59,6 +65,71 @@ function formatDate(ts: number) {
 let nextId = 0;
 function makeId() {
   return `q-${Date.now()}-${nextId++}`;
+}
+
+function clampFocal(value: number) {
+  return Math.max(0, Math.min(100, value));
+}
+
+function GuideOverlay({
+  marginPx,
+  reservePx = 0,
+  widthPx,
+  mode = "frame",
+  label,
+}: {
+  marginPx: number;
+  reservePx?: number;
+  widthPx: number;
+  mode?: "frame" | "lateral";
+  label: string;
+}) {
+  const marginPct = (marginPx / widthPx) * 100;
+  const reservePct = reservePx > 0 ? ((marginPx + reservePx) / widthPx) * 100 : null;
+
+  if (mode === "lateral") {
+    return (
+      <div className="absolute inset-0 pointer-events-none z-10">
+        <div className="absolute inset-y-0 border-l-2 border-dashed border-[hsla(24,83%,52%,0.7)]" style={{ left: `${marginPct}%` }} />
+        <div className="absolute inset-y-0 border-r-2 border-dashed border-[hsla(24,83%,52%,0.7)]" style={{ right: `${marginPct}%` }} />
+        {reservePct !== null && (
+          <>
+            <div className="absolute inset-y-0 border-l border-dashed border-[hsla(10,78%,55%,0.7)]" style={{ left: `${reservePct}%` }} />
+            <div className="absolute inset-y-0 border-r border-dashed border-[hsla(10,78%,55%,0.7)]" style={{ right: `${reservePct}%` }} />
+          </>
+        )}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 rounded-b bg-accent/80 px-1.5 py-0.5 text-[8px] font-bold text-accent-foreground">
+          {label}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="absolute inset-0 pointer-events-none z-10"
+      style={{
+        border: `${marginPct}% dashed`,
+        borderColor: "hsla(24, 83%, 52%, 0.6)",
+      }}
+    >
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 rounded-b bg-accent/80 px-1.5 py-0.5 text-[8px] font-bold text-accent-foreground">
+        {label}
+      </div>
+    </div>
+  );
+}
+
+function getVariantIcon(variantId: ProcessedImage["device"] | PresetVariant["id"]) {
+  return variantId === "desktop" ? Monitor : Smartphone;
+}
+
+function getDimensionBadgeClass(category?: string) {
+  if (category === "SISA App") {
+    return "border-[hsl(0,70%,80%)] bg-[hsl(0,70%,95%)] text-[hsl(0,70%,35%)]";
+  }
+
+  return "";
 }
 
 /* ══════════════════════════════════════════════════════════════ */
@@ -87,6 +158,10 @@ const ImageOptimizer = () => {
 
   useEffect(() => { setHistory(getHistory()); }, []);
   const refreshHistory = () => setHistory(getHistory());
+  useEffect(() => {
+    if (!selectedPreset) return;
+    setShowSafeZones(Boolean(selectedPreset.safeZoneDefaultVisible));
+  }, [selectedPreset]);
 
   /* ── File handling (multi) ── */
   const addFiles = useCallback((files: FileList | File[]) => {
@@ -245,7 +320,8 @@ const ImageOptimizer = () => {
     const dateSuffix = new Date().toISOString().slice(0, 10);
     downloadBlob(zipBlob, `${presetSlug}-batch-${dateSuffix}.zip`);
 
-    toast({ title: "Descarga iniciada", description: `${doneItems.length * 2} archivos en el ZIP. Historial actualizado.` });
+    const zipCount = doneItems.reduce((total, item) => total + item.results.length, 0);
+    toast({ title: "Descarga iniciada", description: `${zipCount} archivos en el ZIP. Historial actualizado.` });
   };
 
   /* ── History ── */
@@ -272,6 +348,32 @@ const ImageOptimizer = () => {
   const globalProgress = batchProgress.total > 0
     ? Math.round((batchProgress.current / batchProgress.total) * 100)
     : 0;
+  const focalTuning = selectedPreset?.focalPointTuning;
+  const focalXStep = focalTuning?.xStep ?? 1;
+  const focalYStep = focalTuning?.yStep ?? 1;
+  const presetVariants = selectedPreset ? getPresetVariants(selectedPreset) : [];
+  const groupedPresets = Object.entries(CENCOSUD_PRESETS)
+    .filter(([key]) => !HIDDEN_PRESET_KEYS.has(key))
+    .reduce<Record<string, Array<[string, ImagePreset]>>>((acc, entry) => {
+    const category = entry[1].category ?? "Web y Retail";
+    acc[category] ??= [];
+    acc[category].push(entry);
+    return acc;
+  }, {});
+
+  const nudgeFocalPoint = useCallback((axis: "x" | "y", delta: number) => {
+    if (!editingId) return;
+    setQueue((prev) => prev.map((q) => {
+      if (q.id !== editingId) return q;
+      return {
+        ...q,
+        focalPoint: {
+          ...q.focalPoint,
+          [axis]: clampFocal(q.focalPoint[axis] + delta),
+        },
+      };
+    }));
+  }, [editingId]);
 
 
   return (
@@ -306,8 +408,19 @@ const ImageOptimizer = () => {
                   <SelectValue placeholder="Selecciona un formato de Cencosud..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(CENCOSUD_PRESETS).map(([key, preset]) => (
-                    <SelectItem key={key} value={key}>{preset.label}</SelectItem>
+                  {Object.entries(groupedPresets).map(([category, presets], index) => (
+                    <div key={category}>
+                      {index > 0 && <SelectSeparator />}
+                      <SelectGroup>
+                        <SelectLabel>{category}</SelectLabel>
+                        {presets.map(([key, preset]) => (
+                          <SelectItem key={key} value={key}>
+                            {preset.label}
+                            {preset.densityLabel ? ` (${preset.densityLabel})` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </div>
                   ))}
                 </SelectContent>
               </Select>
@@ -329,21 +442,32 @@ const ImageOptimizer = () => {
 
             {selectedPreset && (
               <div className="mt-4 flex flex-wrap gap-2">
-                <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 text-xs font-medium">
-                  <Monitor size={13} />
-                  Desktop: {selectedPreset.desktop.width}×{selectedPreset.desktop.height}px
-                </Badge>
-                <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 text-xs font-medium">
-                  <Smartphone size={13} />
-                  Mobile: {selectedPreset.mobile.width}×{selectedPreset.mobile.height}px
-                </Badge>
+                {presetVariants.map((variant) => {
+                  const Icon = getVariantIcon(variant.id);
+                  return (
+                    <Badge
+                      key={variant.id}
+                      variant="secondary"
+                      className={`gap-1.5 px-3 py-1.5 text-xs font-medium ${getDimensionBadgeClass(selectedPreset.category)}`}
+                    >
+                      <Icon size={13} />
+                      {variant.label}: {variant.dimension.width}×{variant.dimension.height}px
+                    </Badge>
+                  );
+                })}
                 <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-xs font-medium">
                   <Info size={13} />
                   Peso máx: {selectedPreset.maxWeightKb} KB
                 </Badge>
+                {selectedPreset.densityLabel && (
+                  <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-xs font-medium">
+                    {selectedPreset.densityLabel}
+                  </Badge>
+                )}
                 {selectedPreset.outputFormat && (
                   <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-xs font-medium">
                     Formato: .{selectedPreset.outputFormat}
+                    {selectedPreset.outputDpi ? ` · ${selectedPreset.outputDpi} dpi` : ""}
                   </Badge>
                 )}
               </div>
@@ -366,6 +490,17 @@ const ImageOptimizer = () => {
                 <span className="text-[10px] text-muted-foreground">
                   Desktop: {selectedPreset.safeZone.desktop}px · Mobile: {selectedPreset.safeZone.mobile}px
                 </span>
+                {selectedPreset.reserveMargin && (
+                  <span className="text-[10px] text-muted-foreground">
+                    Reserva interna: {selectedPreset.reserveMargin.desktop}px desktop · {selectedPreset.reserveMargin.mobile}px mobile
+                  </span>
+                )}
+              </div>
+            )}
+
+            {selectedPreset?.technicalNote && (
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-900">
+                {selectedPreset.technicalNote}
               </div>
             )}
 
@@ -517,7 +652,8 @@ const ImageOptimizer = () => {
 
                         <div
                           ref={imageContainerRef}
-                          className="relative select-none touch-none cursor-crosshair rounded-xl border-2 border-border overflow-hidden bg-muted/20"
+                          className="relative select-none touch-none cursor-crosshair rounded-xl border-2 border-border overflow-hidden bg-muted/20 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          tabIndex={0}
                           onPointerDown={(e) => {
                             // Auto-select first item if none editing
                             if (!editingId && queue.length > 0) {
@@ -527,6 +663,25 @@ const ImageOptimizer = () => {
                           }}
                           onPointerMove={handlePointerMove}
                           onPointerUp={handlePointerUp}
+                          onKeyDown={(e) => {
+                            if (!activeItem) return;
+                            if (e.key === "ArrowLeft") {
+                              e.preventDefault();
+                              nudgeFocalPoint("x", -focalXStep);
+                            }
+                            if (e.key === "ArrowRight") {
+                              e.preventDefault();
+                              nudgeFocalPoint("x", focalXStep);
+                            }
+                            if (e.key === "ArrowUp") {
+                              e.preventDefault();
+                              nudgeFocalPoint("y", -focalYStep);
+                            }
+                            if (e.key === "ArrowDown") {
+                              e.preventDefault();
+                              nudgeFocalPoint("y", focalYStep);
+                            }
+                          }}
                         >
                           <img
                             src={activeDataUrl}
@@ -555,119 +710,110 @@ const ImageOptimizer = () => {
                           </div>
                         </div>
 
-                        <p className="text-[10px] text-muted-foreground mt-2 text-center">
-                          Haz clic o arrastra el punto rojo para centrar el contenido importante
-                        </p>
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                          <p className="text-[10px] text-muted-foreground">
+                            Haz clic o arrastra el punto rojo para centrar el contenido importante
+                          </p>
+                          {activeItem && (
+                            <div className="flex items-center gap-1.5">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2 text-[10px]"
+                                onClick={() => nudgeFocalPoint("y", -focalYStep)}
+                              >
+                                Y -{focalYStep}%
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2 text-[10px]"
+                                onClick={() => nudgeFocalPoint("y", focalYStep)}
+                              >
+                                Y +{focalYStep}%
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+
+                        {focalTuning?.helperText && (
+                          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
+                            {focalTuning.helperText}
+                            <span className="ml-1 font-medium">
+                              Usa flechas del teclado o los ajustes finos de Y para mayor precisión.
+                            </span>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   )}
 
-                  {/* Previews side by side */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Desktop Preview */}
-                    <Card>
-                      <CardContent className="p-5">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Monitor size={16} className="text-primary" />
-                          <span className="text-sm font-semibold text-foreground">Vista Previa Desktop</span>
-                        </div>
-                        <div
-                          className="relative rounded-xl border border-border bg-muted/30 overflow-hidden"
-                          style={{
-                            aspectRatio: selectedPreset
-                              ? selectedPreset.desktop.ratio.replace("/", " / ")
-                              : "16 / 9",
-                          }}
-                        >
-                          {activeDataUrl ? (
-                            <img
-                              src={activeDataUrl}
-                              alt="Preview desktop"
-                              className="absolute inset-0 w-full h-full object-cover transition-[object-position] duration-150 ease-out"
-                              style={{ objectPosition: activeObjPos }}
-                            />
-                          ) : (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
-                              <Monitor size={28} className="mb-2 opacity-40" />
-                              <span className="text-xs">Sin imagen</span>
-                            </div>
-                          )}
-                          {/* Safe zone overlay - Desktop */}
-                          {showSafeZones && selectedPreset?.safeZone && (
-                            <div
-                              className="absolute pointer-events-none z-10"
-                              style={{
-                                inset: 0,
-                                border: `${(selectedPreset.safeZone.desktop / selectedPreset.desktop.width) * 100}% dashed`,
-                                borderColor: "hsla(24, 83%, 52%, 0.6)",
-                              }}
-                            >
-                              <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-accent/80 text-accent-foreground text-[8px] font-bold px-1.5 py-0.5 rounded-b">
-                                {selectedPreset.safeZone.desktop}px margen
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        {selectedPreset && (
-                          <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                            {selectedPreset.desktop.width}×{selectedPreset.desktop.height}px · Ratio {selectedPreset.desktop.ratio}
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
+                  <div className={`grid grid-cols-1 ${presetVariants.length > 1 ? "md:grid-cols-2" : ""} gap-6`}>
+                    {presetVariants.map((variant) => {
+                      const Icon = getVariantIcon(variant.id);
+                      const safeZoneValue = variant.id === "mobile"
+                        ? selectedPreset?.safeZone?.mobile
+                        : selectedPreset?.safeZone?.desktop;
+                      const reserveMarginValue = variant.id === "mobile"
+                        ? selectedPreset?.reserveMargin?.mobile
+                        : selectedPreset?.reserveMargin?.desktop;
 
-                    {/* Mobile Preview */}
-                    <Card>
-                      <CardContent className="p-5">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Smartphone size={16} className="text-primary" />
-                          <span className="text-sm font-semibold text-foreground">Vista Previa Mobile</span>
-                        </div>
-                        <div
-                          className="relative rounded-xl border border-border bg-muted/30 overflow-hidden mx-auto"
-                          style={{
-                            aspectRatio: selectedPreset
-                              ? selectedPreset.mobile.ratio.replace("/", " / ")
-                              : "9 / 16",
-                            maxHeight: "320px",
-                          }}
-                        >
-                          {activeDataUrl ? (
-                            <img
-                              src={activeDataUrl}
-                              alt="Preview mobile"
-                              className="absolute inset-0 w-full h-full object-cover transition-[object-position] duration-150 ease-out"
-                              style={{ objectPosition: activeObjPos }}
-                            />
-                          ) : (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
-                              <Smartphone size={28} className="mb-2 opacity-40" />
-                              <span className="text-xs">Sin imagen</span>
+                      return (
+                        <Card key={variant.id}>
+                          <CardContent className="p-5">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Icon size={16} className="text-primary" />
+                              <span className="text-sm font-semibold text-foreground">Vista Previa {variant.label}</span>
                             </div>
-                          )}
-                          {/* Safe zone overlay - Mobile */}
-                          {showSafeZones && selectedPreset?.safeZone && (
                             <div
-                              className="absolute pointer-events-none z-10"
+                              className="relative rounded-xl border border-border bg-muted/30 overflow-hidden mx-auto"
                               style={{
-                                inset: 0,
-                                border: `${(selectedPreset.safeZone.mobile / selectedPreset.mobile.width) * 100}% dashed`,
-                                borderColor: "hsla(24, 83%, 52%, 0.6)",
+                                aspectRatio: variant.dimension.ratio.replace("/", " / "),
+                                maxHeight: "320px",
                               }}
                             >
-                              <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-accent/80 text-accent-foreground text-[8px] font-bold px-1.5 py-0.5 rounded-b">
-                                {selectedPreset.safeZone.mobile}px margen
-                              </div>
+                              {activeDataUrl ? (
+                                <img
+                                  src={activeDataUrl}
+                                  alt={`Preview ${variant.label}`}
+                                  className="absolute inset-0 w-full h-full object-cover transition-[object-position] duration-150 ease-out"
+                                  style={{ objectPosition: activeObjPos }}
+                                />
+                              ) : (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
+                                  <Icon size={28} className="mb-2 opacity-40" />
+                                  <span className="text-xs">Sin imagen</span>
+                                </div>
+                              )}
+                              {showSafeZones && safeZoneValue && selectedPreset && (
+                                <GuideOverlay
+                                  marginPx={safeZoneValue}
+                                  reservePx={reserveMarginValue}
+                                  widthPx={variant.dimension.width}
+                                  mode={selectedPreset.safeZoneMode}
+                                  label={`${safeZoneValue}px safe zone${reserveMarginValue ? ` · +${reserveMarginValue}px reserva` : ""}`}
+                                />
+                              )}
                             </div>
-                          )}
-                        </div>
-                        {selectedPreset && (
-                          <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                            {selectedPreset.mobile.width}×{selectedPreset.mobile.height}px · Ratio {selectedPreset.mobile.ratio}
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
+                            <p className="text-[11px] text-muted-foreground mt-2 text-center">
+                              {variant.dimension.width}×{variant.dimension.height}px · Ratio {variant.dimension.ratio}
+                            </p>
+                            {selectedPreset?.focalPointTuning && variant.id === "desktop" && (
+                              <p className="text-[10px] text-amber-700 mt-1 text-center">
+                                Vista crítica: el recorte vertical cambia rápido en este formato.
+                              </p>
+                            )}
+                            {selectedPreset?.focalPointTuning && variant.id === "app" && (
+                              <p className="text-[10px] text-amber-700 mt-1 text-center">
+                                Ajuste fino recomendado para preservar nitidez y composición en App.
+                              </p>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 </>
               );
@@ -679,7 +825,7 @@ const ImageOptimizer = () => {
                 <CardContent className="p-12 flex flex-col items-center justify-center text-center">
                   <Crosshair size={32} className="text-muted-foreground/30 mb-3" />
                   <p className="text-sm font-medium text-muted-foreground">Sube una imagen para ver el editor de Punto Focal</p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">Las previsualizaciones Desktop y Mobile se sincronizarán en tiempo real</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">Las previsualizaciones de cada variante se sincronizarán en tiempo real</p>
                 </CardContent>
               </Card>
             )}
@@ -734,7 +880,10 @@ const ImageOptimizer = () => {
                     </div>
                     <div className="px-3 py-2 border-t border-border">
                       <div className="flex items-center gap-1.5 mb-0.5">
-                        {img.device === "desktop" ? <Monitor size={11} className="text-primary" /> : <Smartphone size={11} className="text-primary" />}
+                        {(() => {
+                          const Icon = getVariantIcon(img.device);
+                          return <Icon size={11} className="text-primary" />;
+                        })()}
                         <span className="text-[10px] font-semibold text-foreground capitalize">{img.device}</span>
                         <Badge
                           variant={selectedPreset && img.sizeKb <= selectedPreset.maxWeightKb ? "secondary" : "destructive"}
@@ -814,10 +963,17 @@ const ImageOptimizer = () => {
                           <span className="text-[10px] text-muted-foreground">{formatDate(entry.timestamp)}</span>
                         </div>
                         <p className="text-[11px] text-muted-foreground truncate" title={entry.fileName}>{entry.fileName}</p>
-                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                          <Monitor size={10} /> {entry.desktopSizeKb}KB
-                          <span className="mx-0.5">·</span>
-                          <Smartphone size={10} /> {entry.mobileSizeKb}KB
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                          {entry.desktopSizeKb > 0 && (
+                            <span className="inline-flex items-center gap-1">
+                              <Monitor size={10} /> {entry.desktopSizeKb}KB
+                            </span>
+                          )}
+                          {entry.mobileSizeKb > 0 && (
+                            <span className="inline-flex items-center gap-1">
+                              <Smartphone size={10} /> {entry.mobileSizeKb}KB
+                            </span>
+                          )}
                         </div>
                         <div className="flex gap-1.5 pt-1">
                           <Button size="sm" variant="outline" className="flex-1 h-7 text-[11px] gap-1" onClick={() => handleReEdit(entry)}>

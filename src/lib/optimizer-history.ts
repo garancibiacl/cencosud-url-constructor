@@ -62,7 +62,7 @@ export async function addHistoryEntry(
   focalPoint: { x: number; y: number },
   originalFileName: string,
 ): Promise<HistoryEntry> {
-  const desktop = results.find((r) => r.device === "desktop");
+  const desktop = results.find((r) => r.device === "desktop") ?? results[0];
   const mobile = results.find((r) => r.device === "mobile");
 
   const [masterThumb, desktopThumb, mobileThumb] = await Promise.all([

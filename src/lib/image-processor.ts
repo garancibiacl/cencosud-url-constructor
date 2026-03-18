@@ -1,4 +1,4 @@
-import type { PresetDimension } from "./image-presets";
+import { getPresetVariants, type ImagePreset, type PresetDimension, type PresetVariantId } from "./image-presets";
 
 export interface ProcessedImage {
   blob: Blob;
@@ -7,7 +7,7 @@ export interface ProcessedImage {
   sizeKb: number;
   width: number;
   height: number;
-  device: "desktop" | "mobile";
+  device: PresetVariantId;
 }
 
 /**
@@ -16,7 +16,7 @@ export interface ProcessedImage {
  */
 export function generateFileName(
   presetLabel: string,
-  device: "desktop" | "mobile",
+  device: PresetVariantId,
   format: "webp" | "jpg" = "webp",
 ): string {
   const now = new Date();
@@ -115,57 +115,44 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 /**
- * Process an uploaded image into Desktop and Mobile variants.
+ * Process an uploaded image into the output variants defined by the preset.
  */
 export async function processImage(
   imageSrc: string,
-  preset: {
-    label: string;
-    desktop: PresetDimension;
-    mobile: PresetDimension;
-    maxWeightKb: number;
-    outputFormat?: "webp" | "jpg";
-  },
+  preset: ImagePreset,
   focalX: number,
   focalY: number,
   onProgress?: (pct: number) => void,
 ): Promise<ProcessedImage[]> {
   const format = preset.outputFormat || "webp";
+  const variants = getPresetVariants(preset);
 
   onProgress?.(5);
   const img = await loadImage(imageSrc);
   onProgress?.(15);
 
-  const desktopCanvas = cropWithFocalPoint(img, preset.desktop, focalX, focalY);
-  onProgress?.(35);
-  const desktopBlob = await exportOptimized(desktopCanvas, preset.maxWeightKb, format);
-  onProgress?.(55);
+  const results: ProcessedImage[] = [];
 
-  const mobileCanvas = cropWithFocalPoint(img, preset.mobile, focalX, focalY);
-  onProgress?.(70);
-  const mobileBlob = await exportOptimized(mobileCanvas, preset.maxWeightKb, format);
-  onProgress?.(90);
+  for (let i = 0; i < variants.length; i++) {
+    const variant = variants[i];
+    const canvas = cropWithFocalPoint(img, variant.dimension, focalX, focalY);
+    const progressBase = 15 + Math.round(((i * 70) / variants.length));
+    onProgress?.(progressBase);
 
-  const results: ProcessedImage[] = [
-    {
-      blob: desktopBlob,
-      dataUrl: URL.createObjectURL(desktopBlob),
-      fileName: generateFileName(preset.label, "desktop", format),
-      sizeKb: Math.round(desktopBlob.size / 1024),
-      width: preset.desktop.width,
-      height: preset.desktop.height,
-      device: "desktop",
-    },
-    {
-      blob: mobileBlob,
-      dataUrl: URL.createObjectURL(mobileBlob),
-      fileName: generateFileName(preset.label, "mobile", format),
-      sizeKb: Math.round(mobileBlob.size / 1024),
-      width: preset.mobile.width,
-      height: preset.mobile.height,
-      device: "mobile",
-    },
-  ];
+    const blob = await exportOptimized(canvas, preset.maxWeightKb, format);
+    const progressDone = 15 + Math.round((((i + 1) * 70) / variants.length));
+    onProgress?.(progressDone);
+
+    results.push({
+      blob,
+      dataUrl: URL.createObjectURL(blob),
+      fileName: generateFileName(preset.label, variant.id, format),
+      sizeKb: Math.round(blob.size / 1024),
+      width: variant.dimension.width,
+      height: variant.dimension.height,
+      device: variant.id,
+    });
+  }
 
   onProgress?.(100);
   return results;
