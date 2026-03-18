@@ -1,19 +1,41 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Upload, Monitor, Smartphone, Zap, Download, ImageIcon, X, Info,
   AlertTriangle, Loader2, CheckCircle2, Crosshair, FileDown, Package,
+  History, RotateCcw, Trash2,
 } from "lucide-react";
 import JSZip from "jszip";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { CENCOSUD_PRESETS, type ImagePreset } from "@/lib/image-presets";
 import { processImage, downloadBlob, type ProcessedImage } from "@/lib/image-processor";
+import {
+  getHistory, addHistoryEntry, clearHistory,
+  type HistoryEntry,
+} from "@/lib/optimizer-history";
+
+// Brand badge colors
+const BRAND_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  Paris: { bg: "bg-[hsl(210,100%,95%)]", text: "text-[hsl(210,100%,32%)]", border: "border-[hsl(210,100%,80%)]" },
+  Jumbo: { bg: "bg-[hsl(145,60%,93%)]", text: "text-[hsl(145,60%,25%)]", border: "border-[hsl(145,60%,75%)]" },
+  "Santa Isabel": { bg: "bg-[hsl(0,70%,95%)]", text: "text-[hsl(0,70%,35%)]", border: "border-[hsl(0,70%,80%)]" },
+};
+
+function BrandBadge({ brand }: { brand: string }) {
+  const colors = BRAND_COLORS[brand] || { bg: "bg-muted", text: "text-muted-foreground", border: "border-border" };
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${colors.bg} ${colors.text} ${colors.border}`}>
+      {brand}
+    </span>
+  );
+}
 
 const ImageOptimizer = () => {
   const [selectedPresetKey, setSelectedPresetKey] = useState<string>("");
@@ -26,6 +48,7 @@ const ImageOptimizer = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processProgress, setProcessProgress] = useState(0);
   const [results, setResults] = useState<ProcessedImage[]>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -39,6 +62,13 @@ const ImageOptimizer = () => {
   const hasImage = !!uploadedImage;
   const isProcessed = results.length > 0;
   const canProcess = hasImage && !!selectedPresetKey && !isProcessing;
+
+  // Load history on mount
+  useEffect(() => {
+    setHistory(getHistory());
+  }, []);
+
+  const refreshHistory = () => setHistory(getHistory());
 
   const resetResults = () => {
     results.forEach((r) => URL.revokeObjectURL(r.dataUrl));
@@ -136,8 +166,8 @@ const ImageOptimizer = () => {
 
       const brandName = selectedPreset.label.split(" - ")[0] || selectedPreset.label;
       toast({
-        title: "¡Imágenes optimizadas con éxito!",
-        description: `Banners listos para ${brandName}`,
+        title: `¡Imágenes optimizadas con éxito para ${brandName}!`,
+        description: "Desktop y Mobile listos para descarga.",
         className: "border-[hsl(88,72%,43%)] bg-[hsl(88,72%,95%)] text-[hsl(88,72%,20%)]",
       });
     } catch {
@@ -157,14 +187,68 @@ const ImageOptimizer = () => {
   };
 
   const handleDownloadAll = async () => {
-    if (results.length === 0) return;
+    if (results.length === 0 || !uploadedImage || !selectedPresetKey || !selectedPreset) return;
+
+    // Save to history
+    await addHistoryEntry(
+      uploadedImage,
+      results,
+      selectedPresetKey,
+      selectedPreset.label,
+      focalPoint,
+      fileName,
+    );
+    refreshHistory();
+
+    // Generate ZIP
     const zip = new JSZip();
     results.forEach((r) => zip.file(r.fileName, r.blob));
     const zipBlob = await zip.generateAsync({ type: "blob" });
-    const presetSlug = (selectedPreset?.label || "export")
+    const presetSlug = (selectedPreset.label)
       .toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
     downloadBlob(zipBlob, `${presetSlug}-banners.zip`);
+
+    toast({
+      title: "Descarga iniciada",
+      description: "Registro guardado en el historial.",
+    });
   };
+
+  // --- History actions ---
+  const handleReEdit = (entry: HistoryEntry) => {
+    // Load the master thumbnail back (low-res but functional for re-editing)
+    setUploadedImage(entry.masterThumb);
+    setFileName(entry.fileName);
+    setFileSizeKb(0); // unknown from thumb
+    setFocalPoint(entry.focalPoint);
+    setSelectedPresetKey(entry.presetKey);
+    resetResults();
+
+    toast({
+      title: "Imagen cargada para re-edición",
+      description: `${entry.presetLabel} — Punto focal restaurado.`,
+    });
+
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleClearHistory = () => {
+    clearHistory();
+    refreshHistory();
+    toast({ title: "Historial limpiado", description: "Se eliminaron todos los registros." });
+  };
+
+  function formatDate(ts: number) {
+    const d = new Date(ts);
+    return d.toLocaleDateString("es-CL", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
 
   return (
     <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
@@ -235,7 +319,7 @@ const ImageOptimizer = () => {
           </div>
         )}
 
-        {hasImage && selectedPreset && !isOverweight && (
+        {hasImage && selectedPreset && !isOverweight && fileSizeKb > 0 && (
           <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 animate-fade-in">
             <CheckCircle2 size={18} className="text-primary shrink-0" />
             <p className="text-sm text-primary">
@@ -320,9 +404,11 @@ const ImageOptimizer = () => {
 
                   <div className="px-3 py-2 bg-muted/50 border-t border-border flex items-center justify-between">
                     <p className="text-xs text-muted-foreground truncate flex-1">{fileName}</p>
-                    <span className={`text-xs font-medium ml-2 ${isOverweight ? "text-destructive" : "text-muted-foreground"}`}>
-                      {fileSizeKb} KB
-                    </span>
+                    {fileSizeKb > 0 && (
+                      <span className={`text-xs font-medium ml-2 ${isOverweight ? "text-destructive" : "text-muted-foreground"}`}>
+                        {fileSizeKb} KB
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
@@ -454,10 +540,7 @@ const ImageOptimizer = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {results.map((img) => (
-                  <div
-                    key={img.device}
-                    className="rounded-xl border border-border overflow-hidden bg-muted/20"
-                  >
+                  <div key={img.device} className="rounded-xl border border-border overflow-hidden bg-muted/20">
                     <div
                       className="relative bg-muted/30"
                       style={{
@@ -473,7 +556,6 @@ const ImageOptimizer = () => {
                         className="absolute inset-0 w-full h-full object-contain"
                       />
                     </div>
-
                     <div className="px-4 py-3 border-t border-border flex items-center justify-between">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
@@ -482,15 +564,9 @@ const ImageOptimizer = () => {
                           ) : (
                             <Smartphone size={13} className="text-primary shrink-0" />
                           )}
-                          <span className="text-xs font-semibold text-foreground capitalize">
-                            {img.device}
-                          </span>
+                          <span className="text-xs font-semibold text-foreground capitalize">{img.device}</span>
                           <Badge
-                            variant={
-                              selectedPreset && img.sizeKb <= selectedPreset.maxWeightKb
-                                ? "secondary"
-                                : "destructive"
-                            }
+                            variant={selectedPreset && img.sizeKb <= selectedPreset.maxWeightKb ? "secondary" : "destructive"}
                             className="text-[10px] px-1.5 py-0"
                           >
                             {img.sizeKb} KB
@@ -498,13 +574,7 @@ const ImageOptimizer = () => {
                         </div>
                         <p className="text-[11px] text-muted-foreground truncate">{img.fileName}</p>
                       </div>
-
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1.5 shrink-0 ml-2"
-                        onClick={() => handleDownloadSingle(img)}
-                      >
+                      <Button size="sm" variant="outline" className="gap-1.5 shrink-0 ml-2" onClick={() => handleDownloadSingle(img)}>
                         <FileDown size={14} />
                         Descargar
                       </Button>
@@ -532,6 +602,89 @@ const ImageOptimizer = () => {
             Descargar Todo (.zip)
           </Button>
         </div>
+
+        {/* History Section */}
+        {history.length > 0 && (
+          <>
+            <Separator />
+            <Card>
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <History size={16} className="text-primary" />
+                    Banners Recientes
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">
+                      {history.length}
+                    </Badge>
+                  </h3>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="gap-1.5 text-xs text-muted-foreground hover:text-destructive"
+                    onClick={handleClearHistory}
+                  >
+                    <Trash2 size={13} />
+                    Limpiar historial
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {history.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="rounded-xl border border-border overflow-hidden bg-card hover:shadow-md transition-shadow"
+                    >
+                      {/* Thumbnails row */}
+                      <div className="flex gap-px bg-muted/30">
+                        {entry.desktopThumb && (
+                          <div className="flex-1 h-16 overflow-hidden">
+                            <img src={entry.desktopThumb} alt="Desktop" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                        {entry.mobileThumb && (
+                          <div className="w-16 h-16 overflow-hidden shrink-0">
+                            <img src={entry.mobileThumb} alt="Mobile" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="px-3 py-2.5 space-y-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <BrandBadge brand={entry.brandName} />
+                          <span className="text-[10px] text-muted-foreground">
+                            {formatDate(entry.timestamp)}
+                          </span>
+                        </div>
+
+                        <p className="text-[11px] text-muted-foreground truncate" title={entry.fileName}>
+                          {entry.fileName}
+                        </p>
+
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <Monitor size={10} /> {entry.desktopSizeKb}KB
+                          <span className="mx-0.5">·</span>
+                          <Smartphone size={10} /> {entry.mobileSizeKb}KB
+                        </div>
+
+                        <div className="flex gap-1.5 pt-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 h-7 text-[11px] gap-1"
+                            onClick={() => handleReEdit(entry)}
+                          >
+                            <RotateCcw size={11} />
+                            Re-editar
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
     </div>
   );
