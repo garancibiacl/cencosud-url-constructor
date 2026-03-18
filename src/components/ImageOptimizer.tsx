@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Upload, Monitor, Smartphone, Zap, Download, ImageIcon, X, Info,
   AlertTriangle, Loader2, CheckCircle2, Crosshair, FileDown, Package,
-  History, RotateCcw, Trash2,
+  History, RotateCcw, Trash2, Layers, Eye, ChevronLeft,
 } from "lucide-react";
 import JSZip from "jszip";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,7 +21,19 @@ import {
   type HistoryEntry,
 } from "@/lib/optimizer-history";
 
-// Brand badge colors
+/* ── Types ── */
+interface QueueItem {
+  id: string;
+  file: File;
+  dataUrl: string;
+  fileName: string;
+  sizeKb: number;
+  focalPoint: { x: number; y: number };
+  status: "pending" | "processing" | "done" | "error";
+  results: ProcessedImage[];
+}
+
+/* ── Brand badges ── */
 const BRAND_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   Paris: { bg: "bg-[hsl(210,100%,95%)]", text: "text-[hsl(210,100%,32%)]", border: "border-[hsl(210,100%,80%)]" },
   Jumbo: { bg: "bg-[hsl(145,60%,93%)]", text: "text-[hsl(145,60%,25%)]", border: "border-[hsl(145,60%,75%)]" },
@@ -37,17 +49,26 @@ function BrandBadge({ brand }: { brand: string }) {
   );
 }
 
+function formatDate(ts: number) {
+  return new Date(ts).toLocaleDateString("es-CL", {
+    day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+}
+
+let nextId = 0;
+function makeId() {
+  return `q-${Date.now()}-${nextId++}`;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
 const ImageOptimizer = () => {
   const [selectedPresetKey, setSelectedPresetKey] = useState<string>("");
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string>("");
-  const [fileSizeKb, setFileSizeKb] = useState<number>(0);
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [focalPoint, setFocalPoint] = useState({ x: 50, y: 50 });
   const [isDraggingFocal, setIsDraggingFocal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [processProgress, setProcessProgress] = useState(0);
-  const [results, setResults] = useState<ProcessedImage[]>([]);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageContainerRef = useRef<HTMLDivElement>(null);
@@ -57,45 +78,47 @@ const ImageOptimizer = () => {
     ? CENCOSUD_PRESETS[selectedPresetKey]
     : null;
 
-  const isOverweight = selectedPreset ? fileSizeKb > selectedPreset.maxWeightKb : false;
-  const objectPosition = `${focalPoint.x}% ${focalPoint.y}%`;
-  const hasImage = !!uploadedImage;
-  const isProcessed = results.length > 0;
-  const canProcess = hasImage && !!selectedPresetKey && !isProcessing;
+  const editingItem = editingId ? queue.find((q) => q.id === editingId) : null;
+  const allDone = queue.length > 0 && queue.every((q) => q.status === "done");
+  const allResults = queue.flatMap((q) => q.results);
+  const canProcess = queue.length > 0 && !!selectedPresetKey && !isProcessing;
 
-  // Load history on mount
-  useEffect(() => {
-    setHistory(getHistory());
-  }, []);
-
+  useEffect(() => { setHistory(getHistory()); }, []);
   const refreshHistory = () => setHistory(getHistory());
 
-  const resetResults = () => {
-    results.forEach((r) => URL.revokeObjectURL(r.dataUrl));
-    setResults([]);
-    setProcessProgress(0);
-  };
+  /* ── File handling (multi) ── */
+  const addFiles = useCallback((files: FileList | File[]) => {
+    const newItems: QueueItem[] = [];
+    Array.from(files).forEach((file) => {
+      if (!file.type.startsWith("image/")) return;
+      const id = makeId();
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        setQueue((prev) => prev.map((q) =>
+          q.id === id ? { ...q, dataUrl } : q
+        ));
+      };
+      reader.readAsDataURL(file);
+      newItems.push({
+        id,
+        file,
+        dataUrl: "",
+        fileName: file.name,
+        sizeKb: Math.round(file.size / 1024),
+        focalPoint: { x: 50, y: 50 },
+        status: "pending",
+        results: [],
+      });
+    });
+    setQueue((prev) => [...prev, ...newItems]);
+  }, []);
 
-  const handleFile = useCallback((file: File) => {
-    if (!file.type.startsWith("image/")) return;
-    setFileName(file.name);
-    setFileSizeKb(Math.round(file.size / 1024));
-    setFocalPoint({ x: 50, y: 50 });
-    resetResults();
-    const reader = new FileReader();
-    reader.onload = (e) => setUploadedImage(e.target?.result as string);
-    reader.readAsDataURL(file);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragging(false);
-      const file = e.dataTransfer.files[0];
-      if (file) handleFile(file);
-    },
-    [handleFile],
-  );
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+  }, [addFiles]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -104,132 +127,136 @@ const ImageOptimizer = () => {
 
   const handleDragLeave = useCallback(() => setIsDragging(false), []);
 
-  const clearImage = () => {
-    setUploadedImage(null);
-    setFileName("");
-    setFileSizeKb(0);
-    resetResults();
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  const removeFromQueue = (id: string) => {
+    setQueue((prev) => {
+      const item = prev.find((q) => q.id === id);
+      item?.results.forEach((r) => URL.revokeObjectURL(r.dataUrl));
+      return prev.filter((q) => q.id !== id);
+    });
+    if (editingId === id) setEditingId(null);
   };
 
-  // --- Focal point ---
+  const clearQueue = () => {
+    queue.forEach((q) => q.results.forEach((r) => URL.revokeObjectURL(r.dataUrl)));
+    setQueue([]);
+    setEditingId(null);
+  };
+
+  /* ── Focal point editing ── */
   const updateFocalFromEvent = useCallback(
     (clientX: number, clientY: number) => {
       const el = imageContainerRef.current;
-      if (!el) return;
+      if (!el || !editingId) return;
       const rect = el.getBoundingClientRect();
       const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
       const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
-      setFocalPoint({ x, y });
+      setQueue((prev) => prev.map((q) =>
+        q.id === editingId ? { ...q, focalPoint: { x, y } } : q
+      ));
     },
-    [],
+    [editingId],
   );
 
-  const handlePointerDown = useCallback(
-    (e: React.PointerEvent) => {
-      e.preventDefault();
-      setIsDraggingFocal(true);
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
-      updateFocalFromEvent(e.clientX, e.clientY);
-    },
-    [updateFocalFromEvent],
-  );
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    setIsDraggingFocal(true);
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    updateFocalFromEvent(e.clientX, e.clientY);
+  }, [updateFocalFromEvent]);
 
-  const handlePointerMove = useCallback(
-    (e: React.PointerEvent) => {
-      if (!isDraggingFocal) return;
-      updateFocalFromEvent(e.clientX, e.clientY);
-    },
-    [isDraggingFocal, updateFocalFromEvent],
-  );
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!isDraggingFocal) return;
+    updateFocalFromEvent(e.clientX, e.clientY);
+  }, [isDraggingFocal, updateFocalFromEvent]);
 
-  const handlePointerUp = useCallback(() => {
-    setIsDraggingFocal(false);
-  }, []);
+  const handlePointerUp = useCallback(() => setIsDraggingFocal(false), []);
 
-  // --- Real processing ---
-  const handleProcess = useCallback(async () => {
-    if (!uploadedImage || !selectedPreset || !selectedPresetKey) return;
+  /* ── Batch processing ── */
+  const handleProcessAll = useCallback(async () => {
+    if (!selectedPreset || !selectedPresetKey) return;
+    const pending = queue.filter((q) => q.dataUrl && q.status !== "done");
+    if (pending.length === 0) return;
+
     setIsProcessing(true);
-    setProcessProgress(0);
-    resetResults();
+    setBatchProgress({ current: 0, total: pending.length });
 
-    try {
-      const processed = await processImage(
-        uploadedImage,
-        selectedPreset,
-        focalPoint.x,
-        focalPoint.y,
-        (pct) => setProcessProgress(pct),
-      );
-      setResults(processed);
+    for (let i = 0; i < pending.length; i++) {
+      const item = pending[i];
+      setBatchProgress({ current: i + 1, total: pending.length });
 
-      const brandName = selectedPreset.label.split(" - ")[0] || selectedPreset.label;
-      toast({
-        title: `¡Imágenes optimizadas con éxito para ${brandName}!`,
-        description: "Desktop y Mobile listos para descarga.",
-        className: "border-[hsl(88,72%,43%)] bg-[hsl(88,72%,95%)] text-[hsl(88,72%,20%)]",
-      });
-    } catch {
-      toast({
-        title: "Error al procesar",
-        description: "No se pudo procesar la imagen. Intenta con otra.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
+      setQueue((prev) => prev.map((q) =>
+        q.id === item.id ? { ...q, status: "processing" } : q
+      ));
+
+      try {
+        const results = await processImage(
+          item.dataUrl,
+          selectedPreset,
+          item.focalPoint.x,
+          item.focalPoint.y,
+        );
+        setQueue((prev) => prev.map((q) =>
+          q.id === item.id ? { ...q, status: "done", results } : q
+        ));
+      } catch {
+        setQueue((prev) => prev.map((q) =>
+          q.id === item.id ? { ...q, status: "error" } : q
+        ));
+      }
     }
-  }, [uploadedImage, selectedPreset, selectedPresetKey, focalPoint, toast]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // --- Downloads ---
-  const handleDownloadSingle = (img: ProcessedImage) => {
-    downloadBlob(img.blob, img.fileName);
-  };
+    setIsProcessing(false);
+    const brandName = selectedPreset.label.split(" - ")[0] || selectedPreset.label;
+    toast({
+      title: `¡${pending.length} imagen${pending.length > 1 ? "es" : ""} optimizada${pending.length > 1 ? "s" : ""} para ${brandName}!`,
+      description: "Todas listas para descarga.",
+      className: "border-[hsl(88,72%,43%)] bg-[hsl(88,72%,95%)] text-[hsl(88,72%,20%)]",
+    });
+  }, [queue, selectedPreset, selectedPresetKey, toast]);
+
+  /* ── Downloads ── */
+  const handleDownloadSingle = (img: ProcessedImage) => downloadBlob(img.blob, img.fileName);
 
   const handleDownloadAll = async () => {
-    if (results.length === 0 || !uploadedImage || !selectedPresetKey || !selectedPreset) return;
+    const doneItems = queue.filter((q) => q.status === "done" && q.results.length > 0);
+    if (doneItems.length === 0 || !selectedPreset) return;
 
-    // Save to history
-    await addHistoryEntry(
-      uploadedImage,
-      results,
-      selectedPresetKey,
-      selectedPreset.label,
-      focalPoint,
-      fileName,
-    );
+    const zip = new JSZip();
+    for (const item of doneItems) {
+      for (const r of item.results) {
+        zip.file(r.fileName, r.blob);
+      }
+      // Save each to history
+      await addHistoryEntry(
+        item.dataUrl,
+        item.results,
+        selectedPresetKey,
+        selectedPreset.label,
+        item.focalPoint,
+        item.fileName,
+      );
+    }
     refreshHistory();
 
-    // Generate ZIP
-    const zip = new JSZip();
-    results.forEach((r) => zip.file(r.fileName, r.blob));
     const zipBlob = await zip.generateAsync({ type: "blob" });
-    const presetSlug = (selectedPreset.label)
-      .toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-    downloadBlob(zipBlob, `${presetSlug}-banners.zip`);
+    const presetSlug = selectedPreset.label.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+    const dateSuffix = new Date().toISOString().slice(0, 10);
+    downloadBlob(zipBlob, `${presetSlug}-batch-${dateSuffix}.zip`);
 
-    toast({
-      title: "Descarga iniciada",
-      description: "Registro guardado en el historial.",
-    });
+    toast({ title: "Descarga iniciada", description: `${doneItems.length * 2} archivos en el ZIP. Historial actualizado.` });
   };
 
-  // --- History actions ---
+  /* ── History ── */
   const handleReEdit = (entry: HistoryEntry) => {
-    // Load the master thumbnail back (low-res but functional for re-editing)
-    setUploadedImage(entry.masterThumb);
-    setFileName(entry.fileName);
-    setFileSizeKb(0); // unknown from thumb
-    setFocalPoint(entry.focalPoint);
+    const id = makeId();
+    setQueue((prev) => [...prev, {
+      id, file: null as unknown as File, dataUrl: entry.masterThumb,
+      fileName: entry.fileName, sizeKb: 0,
+      focalPoint: entry.focalPoint, status: "pending", results: [],
+    }]);
     setSelectedPresetKey(entry.presetKey);
-    resetResults();
-
-    toast({
-      title: "Imagen cargada para re-edición",
-      description: `${entry.presetLabel} — Punto focal restaurado.`,
-    });
-
-    // Scroll to top
+    setEditingId(id);
+    toast({ title: "Imagen cargada para re-edición", description: `${entry.presetLabel} — Punto focal restaurado.` });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -239,16 +266,14 @@ const ImageOptimizer = () => {
     toast({ title: "Historial limpiado", description: "Se eliminaron todos los registros." });
   };
 
-  function formatDate(ts: number) {
-    const d = new Date(ts);
-    return d.toLocaleDateString("es-CL", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
+  /* ── Computed ── */
+  const globalProgress = batchProgress.total > 0
+    ? Math.round((batchProgress.current / batchProgress.total) * 100)
+    : 0;
+
+  const focalPointForPreview = editingItem?.focalPoint || { x: 50, y: 50 };
+  const objectPosition = `${focalPointForPreview.x}% ${focalPointForPreview.y}%`;
+  const previewImage = editingItem?.dataUrl || null;
 
   return (
     <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
@@ -276,18 +301,32 @@ const ImageOptimizer = () => {
             <label className="text-sm font-semibold text-foreground mb-2 block">
               Formato de destino
             </label>
-            <Select value={selectedPresetKey} onValueChange={(v) => { setSelectedPresetKey(v); resetResults(); }}>
-              <SelectTrigger className="w-full max-w-md h-11 text-sm">
-                <SelectValue placeholder="Selecciona un formato de Cencosud..." />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(CENCOSUD_PRESETS).map(([key, preset]) => (
-                  <SelectItem key={key} value={key}>
-                    {preset.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex flex-wrap gap-3 items-end">
+              <Select value={selectedPresetKey} onValueChange={setSelectedPresetKey}>
+                <SelectTrigger className="w-full max-w-md h-11 text-sm">
+                  <SelectValue placeholder="Selecciona un formato de Cencosud..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(CENCOSUD_PRESETS).map(([key, preset]) => (
+                    <SelectItem key={key} value={key}>{preset.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {queue.length > 0 && selectedPresetKey && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="gap-1.5 text-xs"
+                  onClick={() => toast({
+                    title: "Preset aplicado a todas",
+                    description: `${queue.length} imagen${queue.length > 1 ? "es" : ""} usarán ${selectedPreset?.label}`,
+                  })}
+                >
+                  <Layers size={14} />
+                  Aplicar a Todas ({queue.length})
+                </Button>
+              )}
+            </div>
 
             {selectedPreset && (
               <div className="mt-4 flex flex-wrap gap-2">
@@ -308,81 +347,139 @@ const ImageOptimizer = () => {
           </CardContent>
         </Card>
 
-        {/* Weight alert */}
-        {hasImage && selectedPreset && isOverweight && (
-          <div className="flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 animate-fade-in">
-            <AlertTriangle size={18} className="text-destructive shrink-0" />
-            <p className="text-sm text-destructive">
-              La imagen pesa <strong>{fileSizeKb} KB</strong> y supera el límite de{" "}
-              <strong>{selectedPreset.maxWeightKb} KB</strong>. Será optimizada al procesar.
-            </p>
-          </div>
-        )}
-
-        {hasImage && selectedPreset && !isOverweight && fileSizeKb > 0 && (
-          <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 animate-fade-in">
-            <CheckCircle2 size={18} className="text-primary shrink-0" />
-            <p className="text-sm text-primary">
-              Peso actual: <strong>{fileSizeKb} KB</strong> — dentro del límite de{" "}
-              <strong>{selectedPreset.maxWeightKb} KB</strong>.
-            </p>
-          </div>
-        )}
-
-        {/* Dropzone + Previews */}
+        {/* ── Dropzone + Queue + Preview ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Dropzone / Focal Point */}
+          {/* Col 1: Dropzone + Queue list */}
           <Card className="lg:col-span-1">
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-3">
-                <label className="text-sm font-semibold text-foreground">Imagen Maestra</label>
-                {hasImage && (
-                  <Badge variant="secondary" className="gap-1 text-[10px] px-2 py-0.5">
-                    <Crosshair size={10} />
-                    Arrastra el punto focal
-                  </Badge>
+                <label className="text-sm font-semibold text-foreground">
+                  Imágenes {queue.length > 0 && `(${queue.length})`}
+                </label>
+                {queue.length > 1 && (
+                  <Button size="sm" variant="ghost" className="h-6 text-[10px] text-muted-foreground hover:text-destructive gap-1 px-2" onClick={clearQueue}>
+                    <Trash2 size={10} /> Limpiar cola
+                  </Button>
                 )}
               </div>
 
-              {!hasImage ? (
-                <div
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-all cursor-pointer min-h-[220px] ${
-                    isDragging
-                      ? "border-primary bg-primary/5 scale-[1.01]"
-                      : "border-border hover:border-primary/50 hover:bg-muted/50"
-                  }`}
-                >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 mb-4">
-                    <Upload size={24} className="text-primary" />
-                  </div>
-                  <p className="text-sm font-medium text-foreground mb-1">Arrastra tu imagen aquí</p>
-                  <p className="text-xs text-muted-foreground">o haz clic para seleccionar</p>
-                  <p className="text-[11px] text-muted-foreground mt-2">JPG, PNG, WebP</p>
+              {/* Dropzone — always visible */}
+              <div
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onClick={() => fileInputRef.current?.click()}
+                className={`relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 transition-all cursor-pointer ${
+                  queue.length > 0 ? "min-h-[100px]" : "min-h-[180px]"
+                } ${
+                  isDragging
+                    ? "border-primary bg-primary/5 scale-[1.01]"
+                    : "border-border hover:border-primary/50 hover:bg-muted/50"
+                }`}
+              >
+                <Upload size={queue.length > 0 ? 18 : 24} className="text-primary mb-2" />
+                <p className="text-xs font-medium text-foreground">
+                  {queue.length > 0 ? "Agregar más imágenes" : "Arrastra tus imágenes aquí"}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {queue.length > 0 ? "o clic para seleccionar" : "Múltiples archivos · JPG, PNG, WebP"}
+                </p>
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files?.length) addFiles(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+
+              {/* Queue list */}
+              {queue.length > 0 && (
+                <div className="mt-3 space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
+                  {queue.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`flex items-center gap-2 rounded-lg border p-1.5 transition-all cursor-pointer ${
+                        editingId === item.id
+                          ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                          : "border-border hover:border-primary/30 bg-card"
+                      }`}
+                      onClick={() => setEditingId(item.id)}
+                    >
+                      {/* Thumbnail */}
+                      <div className="w-10 h-10 rounded-md overflow-hidden bg-muted/30 shrink-0">
+                        {item.dataUrl && (
+                          <img src={item.dataUrl} alt="" className="w-full h-full object-cover" />
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-medium text-foreground truncate">{item.fileName}</p>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-muted-foreground">{item.sizeKb} KB</span>
+                          {item.status === "done" && (
+                            <CheckCircle2 size={10} className="text-primary" />
+                          )}
+                          {item.status === "processing" && (
+                            <Loader2 size={10} className="text-primary animate-spin" />
+                          )}
+                          {item.status === "error" && (
+                            <AlertTriangle size={10} className="text-destructive" />
+                          )}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={(e) => { e.stopPropagation(); removeFromQueue(item.id); }}
+                        className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ) : (
-                <div className="relative rounded-xl border border-border overflow-hidden">
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Col 2: Focal point editor OR Desktop preview */}
+          <Card className="lg:col-span-1">
+            <CardContent className="p-5">
+              {editingItem && editingItem.dataUrl ? (
+                <>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Crosshair size={14} className="text-primary" />
+                      <span className="text-sm font-semibold text-foreground">Punto Focal</span>
+                    </div>
+                    <Button size="sm" variant="ghost" className="h-6 text-[10px] gap-1 px-2" onClick={() => setEditingId(null)}>
+                      <ChevronLeft size={10} /> Volver a preview
+                    </Button>
+                  </div>
+
                   <div
                     ref={imageContainerRef}
-                    className="relative select-none touch-none cursor-crosshair"
+                    className="relative select-none touch-none cursor-crosshair rounded-xl border border-border overflow-hidden"
                     onPointerDown={handlePointerDown}
                     onPointerMove={handlePointerMove}
                     onPointerUp={handlePointerUp}
                   >
                     <img
-                      src={uploadedImage}
-                      alt="Imagen subida"
+                      src={editingItem.dataUrl}
+                      alt="Focal editor"
                       className="w-full h-auto max-h-[300px] object-contain bg-muted/30 pointer-events-none"
                       draggable={false}
                     />
                     <div
                       className="absolute pointer-events-none"
                       style={{
-                        left: `${focalPoint.x}%`,
-                        top: `${focalPoint.y}%`,
+                        left: `${editingItem.focalPoint.x}%`,
+                        top: `${editingItem.focalPoint.y}%`,
                         transform: "translate(-50%, -50%)",
                       }}
                     >
@@ -395,75 +492,56 @@ const ImageOptimizer = () => {
                     </div>
                   </div>
 
-                  <button
-                    onClick={clearImage}
-                    className="absolute top-2 right-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-foreground/80 text-background hover:bg-foreground transition-colors"
+                  <p className="text-[11px] text-muted-foreground mt-2 text-center truncate">
+                    {editingItem.fileName} — Focal: {Math.round(editingItem.focalPoint.x)}%, {Math.round(editingItem.focalPoint.y)}%
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Monitor size={16} className="text-primary" />
+                    <span className="text-sm font-semibold text-foreground">Vista Previa Desktop</span>
+                  </div>
+                  <div
+                    className="relative rounded-xl border border-border bg-muted/30 overflow-hidden"
+                    style={{
+                      aspectRatio: selectedPreset
+                        ? selectedPreset.desktop.ratio.replace("/", " / ")
+                        : "16 / 9",
+                    }}
                   >
-                    <X size={14} />
-                  </button>
-
-                  <div className="px-3 py-2 bg-muted/50 border-t border-border flex items-center justify-between">
-                    <p className="text-xs text-muted-foreground truncate flex-1">{fileName}</p>
-                    {fileSizeKb > 0 && (
-                      <span className={`text-xs font-medium ml-2 ${isOverweight ? "text-destructive" : "text-muted-foreground"}`}>
-                        {fileSizeKb} KB
-                      </span>
+                    {previewImage ? (
+                      <img
+                        src={previewImage}
+                        alt="Preview desktop"
+                        className="absolute inset-0 w-full h-full object-cover transition-[object-position] duration-150 ease-out"
+                        style={{ objectPosition }}
+                      />
+                    ) : queue.length > 0 && queue[0]?.dataUrl ? (
+                      <img
+                        src={queue[0].dataUrl}
+                        alt="Preview desktop"
+                        className="absolute inset-0 w-full h-full object-cover"
+                        style={{ objectPosition: `${queue[0].focalPoint.x}% ${queue[0].focalPoint.y}%` }}
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
+                        <Monitor size={28} className="mb-2 opacity-40" />
+                        <span className="text-xs">Sin imagen</span>
+                      </div>
                     )}
                   </div>
-                </div>
-              )}
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleFile(file);
-                }}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Desktop Preview */}
-          <Card className="lg:col-span-1">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <Monitor size={16} className="text-primary" />
-                <span className="text-sm font-semibold text-foreground">Vista Previa Desktop</span>
-              </div>
-              <div
-                className="relative rounded-xl border border-border bg-muted/30 overflow-hidden"
-                style={{
-                  aspectRatio: selectedPreset
-                    ? selectedPreset.desktop.ratio.replace("/", " / ")
-                    : "16 / 9",
-                }}
-              >
-                {hasImage ? (
-                  <img
-                    src={uploadedImage}
-                    alt="Preview desktop"
-                    className="absolute inset-0 w-full h-full object-cover transition-[object-position] duration-150 ease-out"
-                    style={{ objectPosition }}
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
-                    <Monitor size={28} className="mb-2 opacity-40" />
-                    <span className="text-xs">Sin imagen</span>
-                  </div>
-                )}
-              </div>
-              {selectedPreset && (
-                <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                  {selectedPreset.desktop.width}×{selectedPreset.desktop.height}px · Ratio {selectedPreset.desktop.ratio}
-                </p>
+                  {selectedPreset && (
+                    <p className="text-[11px] text-muted-foreground mt-2 text-center">
+                      {selectedPreset.desktop.width}×{selectedPreset.desktop.height}px · Ratio {selectedPreset.desktop.ratio}
+                    </p>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
 
-          {/* Mobile Preview */}
+          {/* Col 3: Mobile preview */}
           <Card className="lg:col-span-1">
             <CardContent className="p-5">
               <div className="flex items-center gap-2 mb-3">
@@ -479,103 +557,121 @@ const ImageOptimizer = () => {
                   maxHeight: "320px",
                 }}
               >
-                {hasImage ? (
-                  <img
-                    src={uploadedImage}
-                    alt="Preview mobile"
-                    className="absolute inset-0 w-full h-full object-cover transition-[object-position] duration-150 ease-out"
-                    style={{ objectPosition }}
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
-                    <Smartphone size={28} className="mb-2 opacity-40" />
-                    <span className="text-xs">Sin imagen</span>
-                  </div>
-                )}
+                {(() => {
+                  const src = previewImage || (queue.length > 0 ? queue[0]?.dataUrl : null);
+                  const fp = editingItem?.focalPoint || (queue.length > 0 ? queue[0]?.focalPoint : null);
+                  if (src) {
+                    return (
+                      <img
+                        src={src}
+                        alt="Preview mobile"
+                        className="absolute inset-0 w-full h-full object-cover transition-[object-position] duration-150 ease-out"
+                        style={{ objectPosition: fp ? `${fp.x}% ${fp.y}%` : "50% 50%" }}
+                      />
+                    );
+                  }
+                  return (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
+                      <Smartphone size={28} className="mb-2 opacity-40" />
+                      <span className="text-xs">Sin imagen</span>
+                    </div>
+                  );
+                })()}
               </div>
               {selectedPreset && (
                 <p className="text-[11px] text-muted-foreground mt-2 text-center">
                   {selectedPreset.mobile.width}×{selectedPreset.mobile.height}px · Ratio {selectedPreset.mobile.ratio}
                 </p>
               )}
+              {/* Quick focal point editing buttons for queue */}
+              {queue.length > 0 && !editingId && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {queue.slice(0, 6).map((item, i) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setEditingId(item.id)}
+                      className="group relative w-9 h-9 rounded-md border border-border overflow-hidden hover:ring-2 hover:ring-primary/40 transition-all"
+                      title={`Editar focal: ${item.fileName}`}
+                    >
+                      {item.dataUrl ? (
+                        <img src={item.dataUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-muted flex items-center justify-center text-[9px] text-muted-foreground">{i + 1}</div>
+                      )}
+                      <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/20 flex items-center justify-center transition-all">
+                        <Eye size={10} className="text-background opacity-0 group-hover:opacity-100" />
+                      </div>
+                    </button>
+                  ))}
+                  {queue.length > 6 && (
+                    <span className="text-[10px] text-muted-foreground self-center ml-1">+{queue.length - 6} más</span>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Processing progress */}
-        {(isProcessing || isProcessed) && (
+        {/* Batch processing progress */}
+        {(isProcessing || allDone) && (
           <Card className="animate-fade-in">
             <CardContent className="p-5">
               <div className="flex items-center gap-3 mb-3">
                 {isProcessing ? (
                   <>
                     <Loader2 size={18} className="text-primary animate-spin" />
-                    <span className="text-sm font-medium text-foreground">Optimizando imágenes…</span>
+                    <span className="text-sm font-medium text-foreground">
+                      Procesando {batchProgress.current} de {batchProgress.total}…
+                    </span>
                   </>
                 ) : (
                   <>
                     <CheckCircle2 size={18} className="text-primary" />
-                    <span className="text-sm font-medium text-foreground">¡Imágenes procesadas con éxito!</span>
+                    <span className="text-sm font-medium text-foreground">
+                      ¡{queue.length} imagen{queue.length > 1 ? "es" : ""} procesada{queue.length > 1 ? "s" : ""} con éxito!
+                    </span>
                   </>
                 )}
               </div>
-              <Progress value={Math.min(processProgress, 100)} className="h-2" />
+              <Progress value={isProcessing ? globalProgress : 100} className="h-2" />
               <p className="text-[11px] text-muted-foreground mt-2">
                 {isProcessing
-                  ? `Progreso: ${Math.min(Math.round(processProgress), 100)}%`
-                  : "Desktop y Mobile listos para descarga"}
+                  ? `Progreso global: ${globalProgress}%`
+                  : `${allResults.length} archivos listos para descarga`}
               </p>
             </CardContent>
           </Card>
         )}
 
         {/* Results Gallery */}
-        {isProcessed && (
+        {allDone && allResults.length > 0 && (
           <Card className="animate-fade-in">
             <CardContent className="p-5">
               <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
                 <Package size={16} className="text-primary" />
-                Resultados — Listos para descarga
+                Resultados — {allResults.length} archivos listos
               </h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {results.map((img) => (
-                  <div key={img.device} className="rounded-xl border border-border overflow-hidden bg-muted/20">
-                    <div
-                      className="relative bg-muted/30"
-                      style={{
-                        aspectRatio: img.device === "desktop"
-                          ? selectedPreset?.desktop.ratio.replace("/", " / ")
-                          : selectedPreset?.mobile.ratio.replace("/", " / "),
-                        maxHeight: "200px",
-                      }}
-                    >
-                      <img
-                        src={img.dataUrl}
-                        alt={`${img.device} result`}
-                        className="absolute inset-0 w-full h-full object-contain"
-                      />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                {allResults.map((img, idx) => (
+                  <div key={`${img.fileName}-${idx}`} className="rounded-xl border border-border overflow-hidden bg-muted/20">
+                    <div className="relative bg-muted/30 h-24">
+                      <img src={img.dataUrl} alt={img.fileName} className="absolute inset-0 w-full h-full object-contain" />
                     </div>
-                    <div className="px-4 py-3 border-t border-border flex items-center justify-between">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          {img.device === "desktop" ? (
-                            <Monitor size={13} className="text-primary shrink-0" />
-                          ) : (
-                            <Smartphone size={13} className="text-primary shrink-0" />
-                          )}
-                          <span className="text-xs font-semibold text-foreground capitalize">{img.device}</span>
-                          <Badge
-                            variant={selectedPreset && img.sizeKb <= selectedPreset.maxWeightKb ? "secondary" : "destructive"}
-                            className="text-[10px] px-1.5 py-0"
-                          >
-                            {img.sizeKb} KB
-                          </Badge>
-                        </div>
-                        <p className="text-[11px] text-muted-foreground truncate">{img.fileName}</p>
+                    <div className="px-3 py-2 border-t border-border">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        {img.device === "desktop" ? <Monitor size={11} className="text-primary" /> : <Smartphone size={11} className="text-primary" />}
+                        <span className="text-[10px] font-semibold text-foreground capitalize">{img.device}</span>
+                        <Badge
+                          variant={selectedPreset && img.sizeKb <= selectedPreset.maxWeightKb ? "secondary" : "destructive"}
+                          className="text-[9px] px-1 py-0"
+                        >
+                          {img.sizeKb} KB
+                        </Badge>
                       </div>
-                      <Button size="sm" variant="outline" className="gap-1.5 shrink-0 ml-2" onClick={() => handleDownloadSingle(img)}>
-                        <FileDown size={14} />
+                      <p className="text-[10px] text-muted-foreground truncate mb-1.5">{img.fileName}</p>
+                      <Button size="sm" variant="outline" className="w-full h-7 gap-1 text-[10px]" onClick={() => handleDownloadSingle(img)}>
+                        <FileDown size={11} />
                         Descargar
                       </Button>
                     </div>
@@ -588,12 +684,14 @@ const ImageOptimizer = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-3">
-          <Button disabled={!canProcess} onClick={handleProcess} className="gap-2">
+          <Button disabled={!canProcess} onClick={handleProcessAll} className="gap-2">
             {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
-            {isProcessing ? "Procesando…" : "Procesar Imágenes"}
+            {isProcessing
+              ? `Procesando ${batchProgress.current}/${batchProgress.total}…`
+              : `Procesar ${queue.length > 1 ? `Todo (${queue.length})` : "Imagen"}`}
           </Button>
           <Button
-            disabled={!isProcessed}
+            disabled={!allDone || allResults.length === 0}
             variant="outline"
             className="gap-2 border-accent text-accent hover:bg-accent hover:text-accent-foreground"
             onClick={handleDownloadAll}
@@ -613,16 +711,9 @@ const ImageOptimizer = () => {
                   <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                     <History size={16} className="text-primary" />
                     Banners Recientes
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">
-                      {history.length}
-                    </Badge>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">{history.length}</Badge>
                   </h3>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="gap-1.5 text-xs text-muted-foreground hover:text-destructive"
-                    onClick={handleClearHistory}
-                  >
+                  <Button size="sm" variant="ghost" className="gap-1.5 text-xs text-muted-foreground hover:text-destructive" onClick={handleClearHistory}>
                     <Trash2 size={13} />
                     Limpiar historial
                   </Button>
@@ -630,11 +721,7 @@ const ImageOptimizer = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                   {history.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="rounded-xl border border-border overflow-hidden bg-card hover:shadow-md transition-shadow"
-                    >
-                      {/* Thumbnails row */}
+                    <div key={entry.id} className="rounded-xl border border-border overflow-hidden bg-card hover:shadow-md transition-shadow">
                       <div className="flex gap-px bg-muted/30">
                         {entry.desktopThumb && (
                           <div className="flex-1 h-16 overflow-hidden">
@@ -647,32 +734,19 @@ const ImageOptimizer = () => {
                           </div>
                         )}
                       </div>
-
                       <div className="px-3 py-2.5 space-y-1.5">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <BrandBadge brand={entry.brandName} />
-                          <span className="text-[10px] text-muted-foreground">
-                            {formatDate(entry.timestamp)}
-                          </span>
+                          <span className="text-[10px] text-muted-foreground">{formatDate(entry.timestamp)}</span>
                         </div>
-
-                        <p className="text-[11px] text-muted-foreground truncate" title={entry.fileName}>
-                          {entry.fileName}
-                        </p>
-
+                        <p className="text-[11px] text-muted-foreground truncate" title={entry.fileName}>{entry.fileName}</p>
                         <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                           <Monitor size={10} /> {entry.desktopSizeKb}KB
                           <span className="mx-0.5">·</span>
                           <Smartphone size={10} /> {entry.mobileSizeKb}KB
                         </div>
-
                         <div className="flex gap-1.5 pt-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1 h-7 text-[11px] gap-1"
-                            onClick={() => handleReEdit(entry)}
-                          >
+                          <Button size="sm" variant="outline" className="flex-1 h-7 text-[11px] gap-1" onClick={() => handleReEdit(entry)}>
                             <RotateCcw size={11} />
                             Re-editar
                           </Button>
