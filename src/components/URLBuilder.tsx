@@ -1722,7 +1722,7 @@ const URLBuilder = () => {
                                       setIsSingleAppTitleEditing(false);
                                     }
                                   }}
-                                  className="h-11 w-full rounded-xl bg-transparent px-3 text-lg font-semibold text-foreground outline-none"
+                                  className="h-11 w-full rounded-xl bg-transparent px-3 text-lg font-semibold text-slate-700 outline-none"
                                   aria-label="Titulo limpio editable"
                                 />
                               </button>
@@ -1781,7 +1781,7 @@ const URLBuilder = () => {
                                       setIsSingleAppCodeEditing(false);
                                     }
                                   }}
-                                  className="h-11 w-full rounded-xl bg-transparent px-3 font-mono text-lg font-semibold text-foreground outline-none"
+                                  className="h-11 w-full rounded-xl bg-transparent px-3 font-mono text-lg font-semibold text-slate-700 outline-none"
                                   aria-label="Codigo coleccion editable"
                                 />
                               </button>
