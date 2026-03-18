@@ -71,6 +71,7 @@ const ImageOptimizer = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [showSafeZones, setShowSafeZones] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
