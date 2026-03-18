@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Upload, Monitor, Smartphone, Zap, Download, ImageIcon, X, Info,
   AlertTriangle, Loader2, CheckCircle2, Crosshair, FileDown, Package,
-  History, RotateCcw, Trash2, Layers, Eye, ChevronLeft,
+  History, RotateCcw, Trash2, Layers, Eye, ChevronLeft, ShieldCheck, Type,
 } from "lucide-react";
 import JSZip from "jszip";
 import { Card, CardContent } from "@/components/ui/card";
