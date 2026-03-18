@@ -464,12 +464,10 @@ const ImageOptimizer = () => {
                     {selectedPreset.densityLabel}
                   </Badge>
                 )}
-                {selectedPreset.outputFormat && (
-                  <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-xs font-medium">
-                    Formato: .{selectedPreset.outputFormat}
-                    {selectedPreset.outputDpi ? ` · ${selectedPreset.outputDpi} dpi` : ""}
-                  </Badge>
-                )}
+                <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-xs font-medium">
+                  Formato: .jpg
+                  {selectedPreset.outputDpi ? ` · ${selectedPreset.outputDpi} dpi` : ""}
+                </Badge>
               </div>
             )}
 
@@ -551,7 +549,7 @@ const ImageOptimizer = () => {
                   {queue.length > 0 ? "Agregar más imágenes" : "Arrastra tus imágenes aquí"}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  {queue.length > 0 ? "o clic para seleccionar" : "Múltiples archivos · JPG, PNG, WebP"}
+                  {queue.length > 0 ? "o clic para seleccionar" : "Múltiples archivos · JPG y PNG"}
                 </p>
               </div>
 

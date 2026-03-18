@@ -34,7 +34,7 @@ function createThumbnail(src: string, maxDim: number = THUMB_SIZE): Promise<stri
       c.height = h;
       const ctx = c.getContext("2d")!;
       ctx.drawImage(img, 0, 0, w, h);
-      resolve(c.toDataURL("image/webp", 0.5));
+      resolve(c.toDataURL("image/jpeg", 0.6));
     };
     img.onerror = () => resolve("");
     img.src = src;

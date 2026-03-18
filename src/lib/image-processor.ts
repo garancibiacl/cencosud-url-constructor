@@ -1,5 +1,8 @@
 import { getPresetVariants, type ImagePreset, type PresetDimension, type PresetVariantId } from "./image-presets";
 
+export const FORCED_OUTPUT_FORMAT = "jpg" as const;
+const FORCED_MIME_TYPE = "image/jpeg";
+
 export interface ProcessedImage {
   blob: Blob;
   dataUrl: string;
@@ -17,7 +20,7 @@ export interface ProcessedImage {
 export function generateFileName(
   presetLabel: string,
   device: PresetVariantId,
-  format: "webp" | "jpg" = "webp",
+  format: "jpg" = FORCED_OUTPUT_FORMAT,
 ): string {
   const now = new Date();
   const dd = String(now.getDate()).padStart(2, "0");
@@ -78,30 +81,27 @@ function cropWithFocalPoint(
 }
 
 /**
- * Export a canvas to a blob, reducing quality if needed to meet maxKb.
- * Supports both WebP and JPEG formats.
+ * Export a canvas to a JPEG blob, reducing quality if needed to meet maxKb.
  */
 async function exportOptimized(
   canvas: HTMLCanvasElement,
   maxKb: number,
-  format: "webp" | "jpg" = "webp",
 ): Promise<Blob> {
-  const mimeType = format === "jpg" ? "image/jpeg" : "image/webp";
-  let quality = 0.82;
-  const minQuality = 0.3;
+  let quality = 0.9;
+  const minQuality = 0.45;
 
   while (quality >= minQuality) {
     const blob = await new Promise<Blob>((resolve) =>
-      canvas.toBlob((b) => resolve(b!), mimeType, quality),
+      canvas.toBlob((b) => resolve(b!), FORCED_MIME_TYPE, quality),
     );
     if (blob.size / 1024 <= maxKb || quality <= minQuality) {
       return blob;
     }
-    quality -= 0.08;
+    quality -= 0.05;
   }
 
   return new Promise<Blob>((resolve) =>
-    canvas.toBlob((b) => resolve(b!), mimeType, minQuality),
+    canvas.toBlob((b) => resolve(b!), FORCED_MIME_TYPE, minQuality),
   );
 }
 
@@ -124,7 +124,6 @@ export async function processImage(
   focalY: number,
   onProgress?: (pct: number) => void,
 ): Promise<ProcessedImage[]> {
-  const format = preset.outputFormat || "webp";
   const variants = getPresetVariants(preset);
 
   onProgress?.(5);
@@ -139,14 +138,14 @@ export async function processImage(
     const progressBase = 15 + Math.round(((i * 70) / variants.length));
     onProgress?.(progressBase);
 
-    const blob = await exportOptimized(canvas, preset.maxWeightKb, format);
+    const blob = await exportOptimized(canvas, preset.maxWeightKb);
     const progressDone = 15 + Math.round((((i + 1) * 70) / variants.length));
     onProgress?.(progressDone);
 
     results.push({
       blob,
       dataUrl: URL.createObjectURL(blob),
-      fileName: generateFileName(preset.label, variant.id, format),
+      fileName: generateFileName(preset.label, variant.id, FORCED_OUTPUT_FORMAT),
       sizeKb: Math.round(blob.size / 1024),
       width: variant.dimension.width,
       height: variant.dimension.height,
@@ -159,10 +158,11 @@ export async function processImage(
 }
 
 export function downloadBlob(blob: Blob, fileName: string) {
+  const normalizedFileName = fileName.replace(/\.[a-z0-9]+$/i, `.${FORCED_OUTPUT_FORMAT}`);
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = fileName;
+  a.download = normalizedFileName;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

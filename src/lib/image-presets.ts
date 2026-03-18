@@ -42,8 +42,8 @@ export interface ImagePreset {
   category?: string;
   /** Informative density tag for selector and panel */
   densityLabel?: string;
-  /** Output format override. Defaults to "webp" if not set. */
-  outputFormat?: "webp" | "jpg";
+  /** Output format override. Defaults to "jpg" if not set. */
+  outputFormat?: "jpg";
   /** Explicit output variants. Falls back to desktop/mobile when omitted */
   variants?: PresetVariant[];
   /** Safe zone margins in px for preview overlays */
@@ -111,7 +111,7 @@ export const CENCOSUD_PRESETS: Record<string, ImagePreset> = {
     desktop: { width: 1920, height: 364, ratio: "480/91" },
     mobile: { width: 700, height: 330, ratio: "70/33" },
     maxWeightKb: 200,
-    outputFormat: "webp",
+    outputFormat: "jpg",
     safeZone: { desktop: 64, mobile: 32 },
     reserveMargin: { desktop: 16, mobile: 16 },
     safeZoneMode: "lateral",
@@ -137,7 +137,7 @@ export const CENCOSUD_PRESETS: Record<string, ImagePreset> = {
       },
     ],
     maxWeightKb: 200,
-    outputFormat: "webp",
+    outputFormat: "jpg",
     technicalNote: "Exportación App en medida 3X para pantallas de alta densidad, priorizando nitidez de textos y límite estricto de 200 KB.",
   },
   JUMBO_APP_BANNER_DOBLE: {
@@ -154,7 +154,7 @@ export const CENCOSUD_PRESETS: Record<string, ImagePreset> = {
       },
     ],
     maxWeightKb: 200,
-    outputFormat: "webp",
+    outputFormat: "jpg",
     technicalNote: "Exportación App en medida 2X para mantener nitidez superior en superficies cuadradas de alta densidad.",
   },
   JUMBO_APP_BANNER_HUINCHA: {
@@ -171,7 +171,7 @@ export const CENCOSUD_PRESETS: Record<string, ImagePreset> = {
       },
     ],
     maxWeightKb: 200,
-    outputFormat: "webp",
+    outputFormat: "jpg",
     focalPointTuning: {
       xStep: 0.5,
       yStep: 0.5,
@@ -193,8 +193,8 @@ export const CENCOSUD_PRESETS: Record<string, ImagePreset> = {
       },
     ],
     maxWeightKb: 200,
-    outputFormat: "webp",
-    technicalNote: "Exportación SISA App en medida 3X con remuestreo optimizado para textos nítidos, salida WebP y tope estricto de 200 KB.",
+    outputFormat: "jpg",
+    technicalNote: "Exportación SISA App en medida 3X con remuestreo optimizado para textos nítidos, salida JPG y tope estricto de 200 KB.",
   },
   SISA_APP_SHORTCUTS: {
     label: "Shortcuts App",
@@ -210,7 +210,7 @@ export const CENCOSUD_PRESETS: Record<string, ImagePreset> = {
       },
     ],
     maxWeightKb: 200,
-    outputFormat: "webp",
+    outputFormat: "jpg",
     focalPointTuning: {
       xStep: 0.5,
       yStep: 0.5,
@@ -232,7 +232,7 @@ export const CENCOSUD_PRESETS: Record<string, ImagePreset> = {
       },
     ],
     maxWeightKb: 200,
-    outputFormat: "webp",
+    outputFormat: "jpg",
     technicalNote: "Exportación SISA App en medida 3X para banners secundarios con remuestreo cuidado y peso máximo de 200 KB.",
   },
   SISA_APP_BANNER_HUINCHA: {
@@ -249,13 +249,13 @@ export const CENCOSUD_PRESETS: Record<string, ImagePreset> = {
       },
     ],
     maxWeightKb: 200,
-    outputFormat: "webp",
+    outputFormat: "jpg",
     focalPointTuning: {
       xStep: 0.5,
       yStep: 0.5,
       helperText: "La huincha SISA App es muy delgada. Usa microajustes de foco para preservar hero y textos en pantallas de alta densidad.",
     },
-    technicalNote: "Huincha SISA App en medida 2X con sincronización fina del punto focal y salida WebP de hasta 200 KB.",
+    technicalNote: "Huincha SISA App en medida 2X con sincronización fina del punto focal y salida JPG de hasta 200 KB.",
   },
   SISA_APP_BANNER_DOBLE: {
     label: "Banner Doble App",
@@ -271,7 +271,7 @@ export const CENCOSUD_PRESETS: Record<string, ImagePreset> = {
       },
     ],
     maxWeightKb: 200,
-    outputFormat: "webp",
+    outputFormat: "jpg",
     technicalNote: "Banner doble SISA App en medida 2X para superficies cuadradas con máxima nitidez y compresión controlada.",
   },
 };
