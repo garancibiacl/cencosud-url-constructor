@@ -7,13 +7,11 @@ import {
   Check,
   ChevronsUpDown,
   Copy,
-  Pencil,
   ExternalLink,
   Layers3,
   Plus,
   RotateCcw,
   Rows3,
-  Settings2,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -27,14 +25,6 @@ import {
 } from "@/components/ui/command";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   TableBody,
@@ -46,8 +36,9 @@ import {
 import { toast } from "@/hooks/use-toast";
 import type { URLParams } from "@/lib/url-builder";
 import type { BatchRow } from "@/hooks/useUrlHydrator";
-import { useUrlHydrator } from "@/hooks/useUrlHydrator";
+import { compactDescriptionReference, useUrlHydrator } from "@/hooks/useUrlHydrator";
 import {
+  type AppBatchRow,
   buildAppBatchRows,
   extractCleanTitle,
   extractCollectionCode,
@@ -146,6 +137,20 @@ const dropdownOptions: Record<GlobalParamKey, { value: string; label: string }[]
     { value: "header", label: "Header" },
   ],
   campana: [
+    { value: "bombazo", label: "Bombazo" },
+    { value: "lo-mejor-de-la-semana", label: "Lo mejor de la semana" },
+    { value: "fondo-surtido", label: "Fondo surtido" },
+    { value: "super-ofertas-online", label: "Super Ofertas Online" },
+    { value: "torta-del-mes", label: "Torta del mes" },
+    { value: "ofertas-tc", label: "Ofertas TC" },
+    { value: "avance", label: "Avance" },
+    { value: "puntos", label: "Puntos" },
+    { value: "cencopay", label: "Cencopay" },
+    { value: "lpm", label: "LPM" },
+    { value: "tarjeta", label: "Tarjeta" },
+    { value: "hogar-de-cristo", label: "Hogar de cristo" },
+    { value: "retiro", label: "Retiro" },
+    { value: "dsp-gratis-prime-dsps-gratis-30k", label: "Dsp gratis Prime + dsps gratis 30k" },
     { value: "especial", label: "Especial" },
     { value: "proveedor", label: "Proveedor" },
     { value: "semanasanta", label: "Semana Santa" },
@@ -630,9 +635,7 @@ const BulkEditableRow = ({
   const { hydrateUrl } = useUrlHydrator();
   const rowId = `row-${row.index}`;
   const [isOpen, setIsOpen] = useState(false);
-  const [isBaseUrlModalOpen, setIsBaseUrlModalOpen] = useState(false);
   const [baseUrl, setBaseUrl] = useState(row.baseUrl);
-  const [baseUrlDraft, setBaseUrlDraft] = useState(row.baseUrl);
   const [baseUrlError, setBaseUrlError] = useState<string>();
   const [isRowFlashing, setIsRowFlashing] = useState(false);
   const [localParams, setLocalParams] = useState<URLParams>({
@@ -640,13 +643,11 @@ const BulkEditableRow = ({
     descripcion: row.slug,
   });
   const [hasManualSlug, setHasManualSlug] = useState(false);
-  const baseUrlInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setBaseUrl(row.baseUrl);
-    setBaseUrlDraft(row.baseUrl);
     setBaseUrlError(undefined);
-    setIsBaseUrlModalOpen(false);
+    setIsOpen(false);
     setIsRowFlashing(false);
     setLocalParams({
       ...defaultContext,
@@ -654,23 +655,6 @@ const BulkEditableRow = ({
     });
     setHasManualSlug(false);
   }, [defaultContext, row.slug, row.baseUrl, row.rawDescription]);
-
-  useEffect(() => {
-    if (!isBaseUrlModalOpen) {
-      return;
-    }
-
-    const input = baseUrlInputRef.current;
-    if (!input) {
-      return;
-    }
-
-    requestAnimationFrame(() => {
-      input.focus();
-      const length = input.value.length;
-      input.setSelectionRange(length, length);
-    });
-  }, [isBaseUrlModalOpen]);
 
   const hasMissingUrl = !baseUrl.trim() && !!row.rawDescription;
   const hasMissingDescription = !!baseUrl.trim() && !row.rawDescription;
@@ -702,33 +686,51 @@ const BulkEditableRow = ({
     }
   };
 
-  const commitBaseUrl = () => {
-    const nextValue = baseUrlDraft.trim();
-    const nextError = validateEditableBaseUrl(nextValue);
+  const commitBaseUrl = (nextValue: string) => {
+    const normalizedValue = nextValue.trim();
+    const nextError = validateEditableBaseUrl(normalizedValue);
     setBaseUrlError(nextError);
 
     if (nextError) {
       return false;
     }
 
-    setBaseUrl(nextValue);
-    setBaseUrlDraft(nextValue);
-    setIsBaseUrlModalOpen(false);
+    setBaseUrl(normalizedValue);
     setIsRowFlashing(true);
     return true;
   };
 
-  const cancelBaseUrlEdit = () => {
-    setBaseUrlDraft(baseUrl);
-    setBaseUrlError(undefined);
-    setIsBaseUrlModalOpen(false);
+  const handleBaseUrlChange = (nextValue: string) => {
+    const nextError = validateEditableBaseUrl(nextValue);
+    setBaseUrlError(nextError);
+    setBaseUrl(nextValue);
+  };
+
+  const handleBaseUrlBlur = () => {
+    const nextValue = baseUrl.trim();
+    if (!nextValue) {
+      setBaseUrl("");
+      setBaseUrlError(validateEditableBaseUrl(""));
+      return;
+    }
+
+    commitBaseUrl(nextValue);
+  };
+
+  const commitSlug = (nextValue: string) => {
+    const normalizedValue = nextValue.trim();
+    updateLocalParam("descripcion", normalizedValue);
+    setIsRowFlashing(true);
+  };
+
+  const handleSlugChange = (nextValue: string) => {
+    updateLocalParam("descripcion", nextValue);
   };
 
   const resetRow = () => {
     setBaseUrl(row.baseUrl);
-    setBaseUrlDraft(row.baseUrl);
     setBaseUrlError(undefined);
-    setIsBaseUrlModalOpen(false);
+    setIsOpen(false);
     setIsRowFlashing(false);
     setLocalParams({
       ...defaultContext,
@@ -762,53 +764,81 @@ const BulkEditableRow = ({
             <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
               {row.index + 1}
             </span>
-            <div className="min-w-0 flex-1 space-y-2">
-              <div className="group flex min-h-10 items-center gap-2 rounded-xl border border-transparent px-3 py-2 transition-all hover:border-border hover:bg-muted/30">
-                <p className="min-w-0 flex-1 break-all font-mono text-xs text-foreground">
-                  {baseUrl || "Sin URL"}
-                </p>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBaseUrlDraft(baseUrl);
-                        setBaseUrlError(undefined);
-                        setIsBaseUrlModalOpen(true);
-                      }}
-                      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-primary/10 hover:text-[#0052A3]"
-                      aria-label={`Editar URL Base fila ${row.index + 1}`}
-                    >
-                      <Pencil size={13} />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">Editar URL base</TooltipContent>
-                </Tooltip>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsOpen((current) => !current)}
-                  className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/20 hover:text-foreground"
-                >
-                  <Settings2 size={14} className="text-primary" />
-                  Ajustes por fila
-                  <motion.span animate={{ rotate: isOpen ? 90 : 0 }} transition={{ duration: 0.18 }}>
-                    <ChevronsUpDown size={14} />
-                  </motion.span>
-                </button>
-                {hasError && (
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <p
+                className="break-all text-[11px] italic text-[#64748b]"
+                title={row.baseUrl || "Sin URL original"}
+              >
+                {row.baseUrl || "Sin URL original"}
+              </p>
+              <input
+                type="text"
+                value={baseUrl}
+                onChange={(event) => handleBaseUrlChange(event.target.value)}
+                onBlur={handleBaseUrlBlur}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    commitBaseUrl(baseUrl);
+                    event.currentTarget.blur();
+                  }
+                }}
+                placeholder="Sin URL"
+                size={Math.max(baseUrl.length, 32)}
+                style={{ width: `${Math.max(baseUrl.length, 32)}ch` }}
+                className={`min-h-10 w-full rounded-xl border bg-transparent px-2 py-2 font-mono text-[11px] text-foreground outline-none transition-colors placeholder:text-muted-foreground ${
+                  baseUrlError
+                    ? "border-destructive/40 focus:border-destructive"
+                    : "border-transparent focus:border-[#0055a5]"
+                }`}
+              />
+              {hasError && (
+                <div className="flex items-center gap-2">
                   <span className="inline-flex rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive">
                     {hasMissingUrl ? "Falta URL base" : "Falta descripcion"}
                   </span>
-                )}
-              </div>
+                </div>
+              )}
+
+              <button
+                onClick={() => setIsOpen((current) => !current)}
+                className="inline-flex w-fit items-center gap-2 rounded-xl border border-[#0055a5] bg-white px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-slate-50"
+              >
+                <span className="text-[#0055a5]">
+                  <ChevronsUpDown size={14} />
+                </span>
+                Ajustes por fila
+                <motion.span animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.18 }}>
+                  <ChevronsUpDown size={14} />
+                </motion.span>
+              </button>
             </div>
           </div>
         </TableCell>
         <TableCell className="align-top">
-          <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 font-mono text-xs text-primary">
-            {localParams.descripcion || "sin-slug"}
-          </span>
+          <p
+            className="mb-1.5 break-words text-[11px] italic text-[#64748b]"
+            title={row.rawDescription || "Sin descripcion original"}
+          >
+            {compactDescriptionReference(row.rawDescription) || "Sin descripcion original"}
+          </p>
+          <input
+            type="text"
+            value={localParams.descripcion}
+            onChange={(event) => handleSlugChange(event.target.value)}
+            onBlur={(event) => commitSlug(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                commitSlug(event.currentTarget.value);
+                event.currentTarget.blur();
+              }
+            }}
+            placeholder="sin-slug"
+            size={Math.max(localParams.descripcion.length, 24)}
+            style={{ width: `${Math.max(localParams.descripcion.length, 24)}ch` }}
+            className="min-h-10 w-full rounded-xl border border-transparent bg-transparent px-2 py-2 font-mono text-[11px] text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-[#0055a5]"
+          />
           {hasManualSlug && (
             <p className="mt-2 text-[11px] font-medium text-muted-foreground">Slug manual activo</p>
           )}
@@ -831,69 +861,6 @@ const BulkEditableRow = ({
           </div>
         </TableCell>
       </TableRow>
-
-      <Dialog open={isBaseUrlModalOpen} onOpenChange={(open) => !open && cancelBaseUrlEdit()}>
-        <DialogContent className="max-w-2xl rounded-3xl border border-border bg-background p-0 shadow-elevated">
-          <div className="p-6 md:p-7">
-            <DialogHeader>
-              <DialogTitle>Editar URL Base - Fila {row.index + 1}</DialogTitle>
-              <DialogDescription>
-                Ajusta la URL base y guarda para recalcular el link final de inmediato.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="mt-5 space-y-3">
-              <input
-                ref={baseUrlInputRef}
-                type="text"
-                value={baseUrlDraft}
-                onChange={(event) => {
-                  const nextValue = event.target.value;
-                  setBaseUrlDraft(nextValue);
-                  setBaseUrlError(validateEditableBaseUrl(nextValue));
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    commitBaseUrl();
-                  }
-
-                  if (event.key === "Escape") {
-                    event.preventDefault();
-                    cancelBaseUrlEdit();
-                  }
-                }}
-                placeholder="https://www.santaisabel.cl/santas-ofertas"
-                className={`h-14 w-full rounded-2xl border bg-secondary px-4 font-mono text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground ${
-                  baseUrlError
-                    ? "border-destructive ring-4 ring-destructive/10"
-                    : "border-border focus:border-primary focus:ring-4 focus:ring-primary/10"
-                }`}
-              />
-              {baseUrlError && (
-                <p className="text-sm font-medium text-destructive">{baseUrlError}</p>
-              )}
-            </div>
-
-            <DialogFooter className="mt-6">
-              <button
-                type="button"
-                onClick={cancelBaseUrlEdit}
-                className="inline-flex h-11 items-center justify-center rounded-2xl border border-border bg-secondary px-5 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={commitBaseUrl}
-                className="inline-flex h-11 items-center justify-center rounded-2xl bg-[#0052A3] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#004080]"
-              >
-                Guardar
-              </button>
-            </DialogFooter>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <TableRow className="hover:bg-transparent">
         <TableCell colSpan={3} className="pt-0">
@@ -984,7 +951,8 @@ const URLBuilder = () => {
   );
   const currentWeekValue = useMemo(() => getCurrentISOWeekValue(), []);
 
-  const [activeTab, setActiveTab] = useState("individual");
+  const [activeTab, setActiveTab] = useState("cms-web");
+  const [webMode, setWebMode] = useState("individual");
   const [appMode, setAppMode] = useState("individual");
   const [globalParams, setGlobalParams] = useState<Omit<URLParams, "descripcion">>({
     ubicacion: "",
@@ -1001,6 +969,7 @@ const URLBuilder = () => {
   const [bulkBaseUrls, setBulkBaseUrls] = useState("");
   const [bulkAppTitles, setBulkAppTitles] = useState("");
   const [bulkAppUrls, setBulkAppUrls] = useState("");
+  const [editableAppRows, setEditableAppRows] = useState<AppBatchRow[]>([]);
   const [bulkResolvedLinks, setBulkResolvedLinks] = useState<Record<string, string>>({});
   const [showResultsBottomShadow, setShowResultsBottomShadow] = useState(false);
   const resultsScrollRef = useRef<HTMLDivElement>(null);
@@ -1026,6 +995,10 @@ const URLBuilder = () => {
   }, [batchRows]);
 
   useEffect(() => {
+    setEditableAppRows(appBatchRows);
+  }, [appBatchRows]);
+
+  useEffect(() => {
     const container = resultsScrollRef.current;
     if (!container) {
       return;
@@ -1038,7 +1011,7 @@ const URLBuilder = () => {
   const validBatchLinks = batchRows
     .map((row) => bulkResolvedLinks[`row-${row.index}`] || "")
     .filter(Boolean);
-  const validAppRows = appBatchRows.filter((row) => row.cleanTitle && row.collectionCode);
+  const validAppRows = editableAppRows.filter((row) => row.cleanTitle && row.collectionCode);
   const bulkAppCopyValue = validAppRows
     .map((row) => `${row.cleanTitle}\t${row.collectionCode}`)
     .join("\n");
@@ -1091,6 +1064,23 @@ const URLBuilder = () => {
       }
       return { ...current, [rowId]: finalUrl };
     });
+  };
+
+  const updateEditableAppRow = (
+    rowIndex: number,
+    key: "cleanTitle" | "collectionCode",
+    value: string,
+  ) => {
+    setEditableAppRows((current) =>
+      current.map((row) =>
+        row.index === rowIndex
+          ? {
+              ...row,
+              [key]: value,
+            }
+          : row,
+      ),
+    );
   };
 
   const contentVariants = {
@@ -1176,7 +1166,7 @@ const URLBuilder = () => {
 
             <button
               onClick={clearAll}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-elevated transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-card focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-primary bg-white px-5 text-sm font-semibold text-primary shadow-sm transition-all hover:-translate-y-0.5 hover:bg-primary hover:text-primary-foreground hover:shadow-card focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
               aria-label="Limpiar todos los campos"
             >
               <RotateCcw className="h-4 w-4" />
@@ -1189,43 +1179,20 @@ const URLBuilder = () => {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <TabsList className="flex h-auto w-full flex-wrap rounded-2xl bg-card p-1 shadow-card lg:w-auto">
               <TabsTrigger
-                value="individual"
+                value="cms-web"
                 className="flex-1 rounded-xl px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground lg:flex-none"
               >
-                Constructor Individual Web
+                CMS WEB
               </TabsTrigger>
               <TabsTrigger
-                value="masivo"
+                value="cms-app"
                 className="flex-1 rounded-xl px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground lg:flex-none"
               >
-                Constructor Masivo Web
-              </TabsTrigger>
-              <TabsTrigger
-                value="titulo-url-app"
-                className="flex-1 rounded-xl px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground lg:flex-none"
-              >
-                Titulo y URL App
+                CMS APP
               </TabsTrigger>
             </TabsList>
 
-            {activeTab === "masivo" && (
-              <button
-                onClick={() =>
-                  copyValue(
-                    validBatchLinks.join("\n"),
-                    "Links copiados",
-                    `${validBatchLinks.length} links validos copiados al portapapeles.`,
-                  )
-                }
-                disabled={validBatchLinks.length === 0}
-                className="inline-flex h-11 items-center gap-2 rounded-2xl bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Copy size={16} />
-                Copiar todos los links
-              </button>
-            )}
-
-            {activeTab === "titulo-url-app" && appMode === "masivo" && (
+            {activeTab === "cms-app" && appMode === "masivo" && (
               <button
                 onClick={() =>
                   copyValue(
@@ -1244,213 +1211,245 @@ const URLBuilder = () => {
           </div>
 
           <AnimatePresence mode="wait">
-            {activeTab === "individual" ? (
-              <motion.div key="individual" variants={contentVariants} initial="initial" animate="animate" exit="exit">
-                <TabsContent value="individual" forceMount className="mt-4">
-                  <div className="space-y-4">
-                    <div className="grid gap-8 xl:grid-cols-[minmax(0,1.25fr)_minmax(340px,0.9fr)]">
-                      <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
-                        <div className="space-y-6">
-                          <div className="flex flex-col gap-2">
-                            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                              URL Base
-                            </label>
-                            <input
-                              type="text"
-                              value={singleBaseUrl}
-                              onChange={(event) => setSingleBaseUrl(event.target.value)}
-                              placeholder="https://www.santaisabel.cl/santas-ofertas"
-                              className="h-12 rounded-2xl border border-border bg-secondary px-4 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
-                            />
-                          </div>
+            {activeTab === "cms-web" ? (
+              <motion.div key="cms-web" variants={contentVariants} initial="initial" animate="animate" exit="exit">
+                <TabsContent value="cms-web" forceMount className="mt-4">
+                  <div className="grid gap-8">
+                    <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="space-y-2">
+                          <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-foreground">
+                            CMS WEB
+                          </h3>
+                          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+                            Centraliza el constructor web individual y masivo bajo un unico flujo con la misma nomenclatura y controles actuales.
+                          </p>
+                        </div>
 
-                          <div className="rounded-[24px] border border-border bg-secondary/70 p-4 md:p-5">
-                            <div className="flex flex-col gap-3">
-                              <div className="flex items-center justify-between gap-3">
-                                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                                  Descripcion del Banner / Grilla
-                                </label>
-                                <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">
-                                  {singleSlug || "slug pendiente"}
-                                </span>
+                        <Tabs value={webMode} onValueChange={setWebMode}>
+                          <TabsList className="h-auto rounded-2xl bg-secondary p-1 shadow-inner">
+                            <TabsTrigger
+                              value="individual"
+                              className="rounded-xl px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                            >
+                              Modo Individual
+                            </TabsTrigger>
+                            <TabsTrigger
+                              value="masivo"
+                              className="rounded-xl px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                            >
+                              Modo Masivo
+                            </TabsTrigger>
+                          </TabsList>
+                        </Tabs>
+                      </div>
+                    </section>
+
+                    {webMode === "individual" ? (
+                      <>
+                        <div className="space-y-4">
+                          <div className="grid gap-8 xl:grid-cols-[minmax(0,1.25fr)_minmax(340px,0.9fr)]">
+                            <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
+                              <div className="space-y-6">
+                                <div className="flex flex-col gap-2">
+                                  <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                                    URL Base
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={singleBaseUrl}
+                                    onChange={(event) => setSingleBaseUrl(event.target.value)}
+                                    placeholder="https://www.santaisabel.cl/santas-ofertas"
+                                    className="h-12 rounded-2xl border border-border bg-secondary px-4 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
+                                  />
+                                </div>
+
+                                <div className="rounded-[24px] border border-border bg-secondary/70 p-4 md:p-5">
+                                  <div className="flex flex-col gap-3">
+                                    <div className="flex items-center justify-between gap-3">
+                                      <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                                        Descripcion del Banner / Grilla
+                                      </label>
+                                      <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">
+                                        {singleSlug || "slug pendiente"}
+                                      </span>
+                                    </div>
+
+                                    <textarea
+                                      value={singleDescription}
+                                      onChange={(event) => setSingleDescription(event.target.value)}
+                                      placeholder='Pega un texto como: "Prensa/TV - TRUTRO ENTERO $2.790"'
+                                      rows={4}
+                                      className="min-h-[112px] rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
+                                    />
+
+                                    <span className="w-fit rounded-full bg-primary/10 px-3 py-1 font-mono text-xs text-primary">
+                                      {singleSlug || "trutro-entero"}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </section>
+
+                            <section className="rounded-[28px] border border-primary/10 bg-primary p-6 text-primary-foreground shadow-elevated md:p-8">
+                              <div className="mb-6 flex items-start justify-between gap-4">
+                                <div className="space-y-3">
+                                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-foreground/12">
+                                    <ExternalLink size={20} className="text-primary-foreground" />
+                                  </div>
+                                  <div>
+                                    <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-primary-foreground/72">
+                                      Link Final
+                                    </h3>
+                                    <p className="mt-2 max-w-sm text-sm leading-6 text-primary-foreground/80">
+                                      Preview inmediato con slug inteligente y concatenacion automatica.
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <button
+                                  onClick={() =>
+                                    copyValue(singleFinalUrl, "Link copiado", "El link individual fue copiado al portapapeles.")
+                                  }
+                                  disabled={!singleFinalUrl}
+                                  className="inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-2xl bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  <Copy size={16} />
+                                  Copiar Link
+                                </button>
                               </div>
 
-                              <textarea
-                                value={singleDescription}
-                                onChange={(event) => setSingleDescription(event.target.value)}
-                                placeholder='Pega un texto como: "Prensa/TV - TRUTRO ENTERO $2.790"'
-                                rows={4}
-                                className="min-h-[112px] rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
-                              />
-
-                              <span className="w-fit rounded-full bg-primary/10 px-3 py-1 font-mono text-xs text-primary">
-                                {singleSlug || "trutro-entero"}
-                              </span>
-                            </div>
+                              <div className="rounded-2xl bg-black/10 p-4">
+                                <code className="block min-h-[96px] break-all font-mono text-sm leading-7 text-primary-foreground/95">
+                                  {singleFinalUrl || "/santas-ofertas?nombre_promo=home-grilla-trutro-entero-s12-20032026"}
+                                </code>
+                              </div>
+                            </section>
                           </div>
-                        </div>
-                      </section>
 
-                      <section className="rounded-[28px] border border-primary/10 bg-primary p-6 text-primary-foreground shadow-elevated md:p-8">
-                        <div className="mb-6 flex items-start justify-between gap-4">
-                          <div className="space-y-3">
-                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-foreground/12">
-                              <ExternalLink size={20} className="text-primary-foreground" />
-                            </div>
+                          {globalContextSection}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
+                          <div className="mb-5 flex items-center gap-3">
+                            <Rows3 className="h-5 w-5 text-primary" />
                             <div>
-                              <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-primary-foreground/72">
-                                Link Final
+                              <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-foreground">
+                                Procesamiento por Lote
                               </h3>
-                              <p className="mt-2 max-w-sm text-sm leading-6 text-primary-foreground/80">
-                                Preview inmediato con slug inteligente y concatenacion automatica.
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                La linea 1 de descripciones se empareja con la linea 1 de URLs, y asi sucesivamente.
                               </p>
                             </div>
                           </div>
 
-                          <button
-                            onClick={() =>
-                              copyValue(singleFinalUrl, "Link copiado", "El link individual fue copiado al portapapeles.")
-                            }
-                            disabled={!singleFinalUrl}
-                            className="inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-2xl bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <Copy size={16} />
-                            Copiar Link
-                          </button>
-                        </div>
+                          <div className="grid gap-4 lg:grid-cols-2">
+                            <div className="flex flex-col gap-2">
+                              <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                                Lista de Descripciones
+                              </label>
+                              <textarea
+                                value={bulkDescriptions}
+                                onChange={(event) => setBulkDescriptions(event.target.value)}
+                                rows={10}
+                                placeholder={"Prensa/TV - TRUTRO ENTERO $2.790\nCiclos - TODAS LAS OFERTAS CICLO 1"}
+                                className="min-h-[240px] rounded-2xl border border-border bg-secondary px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
+                              />
+                            </div>
 
-                        <div className="rounded-2xl bg-black/10 p-4">
-                          <code className="block min-h-[96px] break-all font-mono text-sm leading-7 text-primary-foreground/95">
-                            {singleFinalUrl || "/santas-ofertas?nombre_promo=home-grilla-trutro-entero-s12-20032026"}
-                          </code>
-                        </div>
-                      </section>
-                    </div>
+                            <NumberedTextarea
+                              label="Lista de URLs Base"
+                              value={bulkBaseUrls}
+                              onChange={setBulkBaseUrls}
+                              rows={10}
+                              placeholder={"/busca?fq=H%3A27791\n/santas-ofertas"}
+                            />
+                          </div>
+                        </section>
 
-                    {globalContextSection}
-                  </div>
-                </TabsContent>
-              </motion.div>
-            ) : activeTab === "masivo" ? (
-              <motion.div key="masivo" variants={contentVariants} initial="initial" animate="animate" exit="exit">
-                <TabsContent value="masivo" forceMount className="mt-4">
-                  <div className="grid gap-8">
-                    <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
-                      <div className="mb-5 flex items-center gap-3">
-                        <Rows3 className="h-5 w-5 text-primary" />
-                        <div>
-                          <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-foreground">
-                            Procesamiento por Lote
-                          </h3>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            La linea 1 de descripciones se empareja con la linea 1 de URLs, y asi sucesivamente.
-                          </p>
-                        </div>
-                      </div>
+                        {globalContextSection}
 
-                      <div className="grid gap-4 lg:grid-cols-2">
-                        <div className="flex flex-col gap-2">
-                          <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                            Lista de Descripciones
-                          </label>
-                          <textarea
-                            value={bulkDescriptions}
-                            onChange={(event) => setBulkDescriptions(event.target.value)}
-                            rows={10}
-                            placeholder={"Prensa/TV - TRUTRO ENTERO $2.790\nCiclos - TODAS LAS OFERTAS CICLO 1"}
-                            className="min-h-[240px] rounded-2xl border border-border bg-secondary px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
-                          />
-                        </div>
+                        <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
+                          <div className="mb-4 flex items-center justify-between gap-4">
+                            <div>
+                              <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-foreground">
+                                Resultados Masivos
+                              </h3>
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                Las filas incompletas se marcan en rojo para advertir inconsistencias.
+                              </p>
+                            </div>
 
-                        <NumberedTextarea
-                          label="Lista de URLs Base"
-                          value={bulkBaseUrls}
-                          onChange={setBulkBaseUrls}
-                          rows={10}
-                          placeholder={"/busca?fq=H%3A27791\n/santas-ofertas"}
-                        />
-                      </div>
-                    </section>
+                            <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
+                              {batchRows.length} filas
+                            </span>
+                          </div>
 
-                    {globalContextSection}
-
-                    <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
-                      <div className="mb-4 flex items-center justify-between gap-4">
-                        <div>
-                          <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-foreground">
-                            Resultados Masivos
-                          </h3>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            Las filas incompletas se marcan en rojo para advertir inconsistencias.
-                          </p>
-                        </div>
-
-                        <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
-                          {batchRows.length} filas
-                        </span>
-                      </div>
-
-                      <div className="relative">
-                        <div
-                          ref={resultsScrollRef}
-                          onScroll={handleResultsScroll}
-                          className="max-h-[60vh] overflow-y-auto overflow-x-hidden rounded-2xl border border-border [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent"
-                        >
-                          <table className="w-full caption-bottom text-sm">
-                            <TableHeader>
-                              <TableRow className="border-b border-border bg-card hover:bg-card">
-                                <TableHead className="sticky top-0 z-10 bg-card shadow-[0_1px_0_hsl(var(--border))]">
-                                  URL Base
-                                </TableHead>
-                                <TableHead className="sticky top-0 z-10 bg-card shadow-[0_1px_0_hsl(var(--border))]">
-                                  Slug generado
-                                </TableHead>
-                                <TableHead className="sticky top-0 z-10 bg-card shadow-[0_1px_0_hsl(var(--border))]">
-                                  Link Final
-                                </TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {batchRows.length === 0 ? (
-                                <TableRow>
-                                  <TableCell colSpan={3} className="text-muted-foreground">
-                                    Agrega descripciones y URLs para generar el lote.
-                                  </TableCell>
-                                </TableRow>
-                              ) : (
-                                batchRows.map((row) => (
-                                  <BulkEditableRow
-                                    key={`${row.index}-${globalParams.ubicacion}-${globalParams.componente}-${globalParams.campana}-${globalParams.semana}-${globalParams.fecha}`}
-                                    row={row}
-                                    defaultContext={globalParams}
-                                    onCopy={copyValue}
-                                    onResolvedChange={handleRowResolvedChange}
-                                    weekOptions={weekOptions}
-                                    currentWeekValue={currentWeekValue}
-                                    isoWeekYear={isoWeekYear}
-                                  />
-                                ))
-                              )}
-                            </TableBody>
-                          </table>
-                        </div>
-                        {showResultsBottomShadow && batchRows.length > 0 && (
-                          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 rounded-b-2xl bg-gradient-to-t from-card via-card/80 to-transparent" />
-                        )}
-                      </div>
-                    </section>
+                          <div className="relative">
+                            <div
+                              ref={resultsScrollRef}
+                              onScroll={handleResultsScroll}
+                              className="max-h-[60vh] overflow-auto rounded-2xl border border-border [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent"
+                            >
+                              <table className="min-w-full caption-bottom text-sm">
+                                <TableHeader>
+                                  <TableRow className="border-b border-border bg-card hover:bg-card">
+                                    <TableHead className="sticky top-0 z-10 bg-card shadow-[0_1px_0_hsl(var(--border))]">
+                                      URL Base
+                                    </TableHead>
+                                    <TableHead className="sticky top-0 z-10 bg-card shadow-[0_1px_0_hsl(var(--border))]">
+                                      Slug generado
+                                    </TableHead>
+                                    <TableHead className="sticky top-0 z-10 bg-card shadow-[0_1px_0_hsl(var(--border))]">
+                                      Link Final
+                                    </TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {batchRows.length === 0 ? (
+                                    <TableRow>
+                                      <TableCell colSpan={3} className="text-muted-foreground">
+                                        Agrega descripciones y URLs para generar el lote.
+                                      </TableCell>
+                                    </TableRow>
+                                  ) : (
+                                    batchRows.map((row) => (
+                                      <BulkEditableRow
+                                        key={`${row.index}-${globalParams.ubicacion}-${globalParams.componente}-${globalParams.campana}-${globalParams.semana}-${globalParams.fecha}`}
+                                        row={row}
+                                        defaultContext={globalParams}
+                                        onCopy={copyValue}
+                                        onResolvedChange={handleRowResolvedChange}
+                                        weekOptions={weekOptions}
+                                        currentWeekValue={currentWeekValue}
+                                        isoWeekYear={isoWeekYear}
+                                      />
+                                    ))
+                                  )}
+                                </TableBody>
+                              </table>
+                            </div>
+                            {showResultsBottomShadow && batchRows.length > 0 && (
+                              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 rounded-b-2xl bg-gradient-to-t from-card via-card/80 to-transparent" />
+                            )}
+                          </div>
+                        </section>
+                      </>
+                    )}
                   </div>
                 </TabsContent>
               </motion.div>
             ) : (
-              <motion.div key="titulo-url-app" variants={contentVariants} initial="initial" animate="animate" exit="exit">
-                <TabsContent value="titulo-url-app" forceMount className="mt-4">
+              <motion.div key="cms-app" variants={contentVariants} initial="initial" animate="animate" exit="exit">
+                <TabsContent value="cms-app" forceMount className="mt-4">
                   <div className="space-y-6">
                     <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
                       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div className="space-y-2">
                           <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-foreground">
-                            Procesador de Titulo y URL App
+                            CMS APP
                           </h3>
                           <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
                             Limpia titulos promocionales y extrae el codigo de coleccion desde la URL final usando regex tolerantes a variaciones.
@@ -1572,7 +1571,7 @@ const URLBuilder = () => {
                                 </button>
                               </div>
                               <p className="mt-3 font-mono text-lg font-semibold text-foreground">
-                                {singleAppCollectionCode || "Coleccion: 0063"}
+                                {singleAppCollectionCode || "10047"}
                               </p>
                             </div>
                           </div>
@@ -1599,25 +1598,39 @@ const URLBuilder = () => {
                         </div>
 
                         <div className="mt-8 rounded-2xl border border-border">
-                          <div className="overflow-x-auto">
-                            <table className="w-full min-w-[720px] caption-bottom text-sm">
+                          <div className="max-h-[560px] overflow-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-track]:bg-transparent">
+                            <table className="w-full min-w-[760px] table-fixed caption-bottom text-sm">
+                              <colgroup>
+                                <col className="w-[50px]" />
+                                <col />
+                                <col />
+                                <col className="w-[112px]" />
+                              </colgroup>
                               <TableHeader>
                                 <TableRow className="border-b border-border bg-card hover:bg-card">
-                                  <TableHead>#</TableHead>
-                                  <TableHead>Titulo Limpio</TableHead>
-                                  <TableHead>Codigo Coleccion</TableHead>
-                                  <TableHead className="text-right">Acciones</TableHead>
+                                  <TableHead className="sticky top-0 z-10 w-[50px] bg-card px-2 shadow-[0_1px_0_hsl(var(--border))]">
+                                    #
+                                  </TableHead>
+                                  <TableHead className="sticky top-0 z-10 bg-card px-2 shadow-[0_1px_0_hsl(var(--border))]">
+                                    Titulo Limpio
+                                  </TableHead>
+                                  <TableHead className="sticky top-0 z-10 bg-card px-2 shadow-[0_1px_0_hsl(var(--border))]">
+                                    Codigo Coleccion
+                                  </TableHead>
+                                  <TableHead className="sticky top-0 z-10 w-[112px] bg-card px-2 text-right shadow-[0_1px_0_hsl(var(--border))]">
+                                    Acciones
+                                  </TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                {appBatchRows.length === 0 ? (
+                                {editableAppRows.length === 0 ? (
                                   <TableRow>
                                     <TableCell colSpan={4} className="text-muted-foreground">
                                       Agrega titulos y URLs para procesar el lote app.
                                     </TableCell>
                                   </TableRow>
                                 ) : (
-                                  appBatchRows.map((row) => {
+                                  editableAppRows.map((row) => {
                                     const rowCopyValue = row.cleanTitle && row.collectionCode
                                       ? `${row.cleanTitle}\t${row.collectionCode}`
                                       : "";
@@ -1627,32 +1640,76 @@ const URLBuilder = () => {
                                         key={`app-row-${row.index}`}
                                         className={row.hasError ? "bg-destructive/5 hover:bg-destructive/10" : "hover:bg-muted/30"}
                                       >
-                                        <TableCell>
-                                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#0055a5] text-xs font-semibold text-white">
-                                            {row.index + 1}
-                                          </span>
+                                        <TableCell className="w-[50px] px-2 py-4 align-middle">
+                                          <div className="flex min-h-[92px] items-center">
+                                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#0055a5] text-xs font-semibold text-white">
+                                              {row.index + 1}
+                                            </span>
+                                          </div>
                                         </TableCell>
-                                        <TableCell className="font-semibold text-foreground">
-                                          {row.cleanTitle || "Sin titulo limpio"}
+                                        <TableCell className="px-2 py-4">
+                                          <div className="min-w-0 space-y-1.5">
+                                            <p
+                                              className="max-w-full truncate whitespace-nowrap text-[11px] italic text-[#64748b]"
+                                              title={row.dirtyTitle || "Sin descripcion original"}
+                                            >
+                                              {row.dirtyTitle || "Sin descripcion original"}
+                                            </p>
+                                            <input
+                                              type="text"
+                                              value={row.cleanTitle}
+                                              onChange={(event) =>
+                                                updateEditableAppRow(
+                                                  row.index,
+                                                  "cleanTitle",
+                                                  event.target.value,
+                                                )
+                                              }
+                                              placeholder="Sin titulo limpio"
+                                              className="h-11 w-full min-w-0 rounded-xl border border-transparent bg-transparent px-2 text-[15px] font-semibold text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-blue-500 focus:bg-white"
+                                            />
+                                          </div>
                                         </TableCell>
-                                        <TableCell className="font-mono text-foreground">
-                                          {row.collectionCode || "Sin codigo"}
+                                        <TableCell className="px-2 py-4">
+                                          <div className="min-w-0 space-y-1.5">
+                                            <span
+                                              className="inline-flex max-w-full truncate whitespace-nowrap rounded-full bg-slate-100 px-2 py-1 text-[10px] font-medium text-[#64748b]"
+                                              title={row.sourceUrl || "Sin URL original"}
+                                            >
+                                              {row.sourceUrl || "Sin URL original"}
+                                            </span>
+                                            <input
+                                              type="text"
+                                              value={row.collectionCode}
+                                              onChange={(event) =>
+                                                updateEditableAppRow(
+                                                  row.index,
+                                                  "collectionCode",
+                                                  event.target.value,
+                                                )
+                                              }
+                                              placeholder="Sin codigo"
+                                              className="h-11 w-full min-w-0 rounded-xl border border-transparent bg-transparent px-2 font-mono text-[15px] font-semibold text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-blue-500 focus:bg-white"
+                                            />
+                                          </div>
                                         </TableCell>
-                                        <TableCell className="text-right">
-                                          <button
-                                            onClick={() =>
-                                              copyValue(
-                                                rowCopyValue,
-                                                "Fila copiada",
-                                                `Se copio la fila ${row.index + 1}.`,
-                                              )
-                                            }
-                                            disabled={!rowCopyValue}
-                                            className="inline-flex h-9 items-center gap-2 rounded-xl bg-accent px-3 text-xs font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-                                          >
-                                            <Copy size={14} />
-                                            Copiar Individual
-                                          </button>
+                                        <TableCell className="w-[112px] px-2 py-4 text-right align-middle">
+                                          <div className="flex min-h-[92px] items-center justify-end">
+                                            <button
+                                              onClick={() =>
+                                                copyValue(
+                                                  rowCopyValue,
+                                                  "Fila copiada",
+                                                  `Se copio la fila ${row.index + 1}.`,
+                                                )
+                                              }
+                                              disabled={!rowCopyValue}
+                                              className="inline-flex h-9 w-[96px] shrink-0 items-center justify-center gap-2 rounded-xl bg-accent px-3 text-xs font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                              <Copy size={14} />
+                                              Copiar
+                                            </button>
+                                          </div>
                                         </TableCell>
                                       </TableRow>
                                     );
@@ -1665,7 +1722,7 @@ const URLBuilder = () => {
 
                         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <p className="text-sm text-muted-foreground">
-                            El boton copia cada fila como `Titulo Limpio[TAB]Coleccion: 0000` para pegar directo en planillas.
+                            El boton copia cada fila como `Titulo Limpio[TAB]10047` para pegar directo en planillas.
                           </p>
                           <button
                             onClick={() =>
@@ -1691,7 +1748,7 @@ const URLBuilder = () => {
           </AnimatePresence>
         </Tabs>
 
-        {activeTab === "individual" && !singleBaseUrl && (
+        {activeTab === "cms-web" && webMode === "individual" && !singleBaseUrl && (
           <div className="flex items-center gap-2 rounded-2xl border border-warning-border bg-warning-bg p-4 text-sm text-warning-foreground">
             <AlertCircle size={16} className="shrink-0" />
             <span>Ingresa una URL base para comenzar a construir el link.</span>

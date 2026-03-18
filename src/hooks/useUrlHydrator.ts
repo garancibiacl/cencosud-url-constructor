@@ -33,18 +33,39 @@ const DESCRIPTION_STOPWORDS = new Set([
   "los",
   "las",
   "y",
-  "co",
   "cia",
 ]);
+
+export const compactDescriptionReference = (value: string) =>
+  value
+    .replace(
+      /\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?(?:\/[a-záéíóúñ]+)?\b(?:\s+al\s+\d{1,2}\/\d{1,2}(?:\/\d{2,4})?(?:\/[a-záéíóúñ]+)?)?/gi,
+      " ",
+    )
+    .replace(/\$\s?\d+(?:[.,]\d+)*/g, " ")
+    .replace(/\(\s*p\.?\s*ref\.?\s*[^)]*\)/gi, " ")
+    .replace(/\(\s*ppum\s*[^)]*\)/gi, " ")
+    .replace(/\s+-\s*$/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+-\s+/g, " - ")
+    .trim();
 
 export const cleanTextToSlug = (value: string) => {
   const normalized = value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
+    .replace(/\b\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?\b(?:\s+al\s+\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?\b)?/g, " ")
+    .replace(
+      /^\s*(?:(?:bombazo(?:s)?|especial(?:es)?|exclusiv[ao]s?|prensa\s*\/\s*tv|santa\s+yapa|ecomm|online|web|app)\s+)*-\s*/g,
+      " ",
+    )
+    .replace(
+      /^\s*(?:(?:bombazo(?:s)?|especial(?:es)?|exclusiv[ao]s?|prensa\s*\/\s*tv|santa\s+yapa|ecomm|online|web|app)\s*)+/g,
+      " ",
+    )
     .replace(/(\d)[.,](\d)/g, "$1$2")
     .replace(/\$\s?\d+(?:[.,]\d+)*/g, " ")
-    .replace(/\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/g, " ")
     .replace(/[%&$@]/g, " ")
     .replace(/[^a-z0-9\s-]/g, " ")
     .replace(/\s+/g, " ")
@@ -55,7 +76,7 @@ export const cleanTextToSlug = (value: string) => {
     .filter(Boolean)
     .filter((word) => /[a-z0-9]/.test(word))
     .filter((word) => !DESCRIPTION_STOPWORDS.has(word))
-    .slice(0, 5)
+    .slice(0, 6)
     .join("-")
     .replace(/-+/g, "-");
 };
@@ -132,6 +153,7 @@ export const hydrateBatchRows = (
 export const useUrlHydrator = () =>
   useMemo(
     () => ({
+      compactDescriptionReference,
       cleanTextToSlug,
       hydrateUrl,
       hydrateBatchRows,

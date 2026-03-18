@@ -108,24 +108,17 @@ export const extractCollectionCode = (rawUrl: string) => {
   }
 
   const withoutHash = trimmed.split("#")[0];
-  const lastParamMatch = withoutHash.match(/[?&]([^&]+)$/);
-  const finalChunk = lastParamMatch ? lastParamMatch[1] : withoutHash;
-
-  let decodedChunk = finalChunk;
-  try {
-    decodedChunk = decodeURIComponent(finalChunk);
-  } catch {
-    decodedChunk = finalChunk;
+  const encodedMatch = withoutHash.match(/%3A(\d+)$/i);
+  if (encodedMatch) {
+    return encodedMatch[1];
   }
 
-  const digitGroups = decodedChunk.match(/\d+/g) ?? withoutHash.match(/\d+/g);
-  const lastDigits = digitGroups?.[digitGroups.length - 1];
-
-  if (!lastDigits) {
-    return "";
+  const plainMatch = withoutHash.match(/A(\d+)$/i);
+  if (plainMatch) {
+    return plainMatch[1];
   }
 
-  return `Coleccion: ${lastDigits.slice(-4).padStart(4, "0")}`;
+  return "";
 };
 
 export interface AppBatchRow {

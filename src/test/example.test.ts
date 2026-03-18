@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildPromoName,
   cleanTextToSlug,
+  compactDescriptionReference,
   hydrateBatchRows,
   hydrateUrl,
   normalizeBaseUrl,
@@ -23,6 +24,22 @@ describe("useUrlHydrator helpers", () => {
 
   it("cleans dirty description text into a short slug", () => {
     expect(cleanTextToSlug("Prensa/TV - TRUTRO ENTERO $2.790")).toBe("trutro-entero");
+  });
+
+  it("removes campaign prefixes and date ranges keeping only the product name", () => {
+    expect(
+      cleanTextToSlug(
+        "Bombazo exclusivo ecomm - CIENTOS DE PRODUCTOS A 1.000 CUISINE & CO - 26/02/2026 al 02/03/2026",
+      ),
+    ).toBe("cientos-productos-a-1000-cuisine-co");
+  });
+
+  it("compacts the original reference removing dates and price blocks", () => {
+    expect(
+      compactDescriptionReference(
+        "CIENTOS DE PRODUCTOS A 1.000 CUISINE & CO - 24/02/martes al 02/03/lunes $4.290 (p. ref. $5.190) (ppum $8.580 x kg)",
+      ),
+    ).toBe("CIENTOS DE PRODUCTOS A 1.000 CUISINE & CO");
   });
 
   it("normalizes base urls removing protocol and domain", () => {
