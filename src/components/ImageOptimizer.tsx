@@ -1,8 +1,9 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import {
   Upload, Monitor, Smartphone, Zap, Download, ImageIcon, X, Info,
-  AlertTriangle, Loader2, CheckCircle2, Crosshair,
+  AlertTriangle, Loader2, CheckCircle2, Crosshair, FileDown, Package,
 } from "lucide-react";
+import JSZip from "jszip";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +11,9 @@ import { Progress } from "@/components/ui/progress";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import { CENCOSUD_PRESETS, type ImagePreset } from "@/lib/image-presets";
+import { processImage, downloadBlob, type ProcessedImage } from "@/lib/image-processor";
 
 const ImageOptimizer = () => {
   const [selectedPresetKey, setSelectedPresetKey] = useState<string>("");
@@ -22,29 +25,37 @@ const ImageOptimizer = () => {
   const [isDraggingFocal, setIsDraggingFocal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processProgress, setProcessProgress] = useState(0);
-  const [isProcessed, setIsProcessed] = useState(false);
+  const [results, setResults] = useState<ProcessedImage[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageContainerRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   const selectedPreset: ImagePreset | null = selectedPresetKey
     ? CENCOSUD_PRESETS[selectedPresetKey]
     : null;
 
   const isOverweight = selectedPreset ? fileSizeKb > selectedPreset.maxWeightKb : false;
-
   const objectPosition = `${focalPoint.x}% ${focalPoint.y}%`;
+  const hasImage = !!uploadedImage;
+  const isProcessed = results.length > 0;
+  const canProcess = hasImage && !!selectedPresetKey && !isProcessing;
+
+  const resetResults = () => {
+    results.forEach((r) => URL.revokeObjectURL(r.dataUrl));
+    setResults([]);
+    setProcessProgress(0);
+  };
 
   const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) return;
     setFileName(file.name);
     setFileSizeKb(Math.round(file.size / 1024));
     setFocalPoint({ x: 50, y: 50 });
-    setIsProcessed(false);
-    setProcessProgress(0);
+    resetResults();
     const reader = new FileReader();
     reader.onload = (e) => setUploadedImage(e.target?.result as string);
     reader.readAsDataURL(file);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -67,12 +78,11 @@ const ImageOptimizer = () => {
     setUploadedImage(null);
     setFileName("");
     setFileSizeKb(0);
-    setIsProcessed(false);
-    setProcessProgress(0);
+    resetResults();
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // --- Focal point interaction ---
+  // --- Focal point ---
   const updateFocalFromEvent = useCallback(
     (clientX: number, clientY: number) => {
       const el = imageContainerRef.current;
@@ -107,31 +117,54 @@ const ImageOptimizer = () => {
     setIsDraggingFocal(false);
   }, []);
 
-  // --- Processing simulation ---
-  const handleProcess = useCallback(() => {
+  // --- Real processing ---
+  const handleProcess = useCallback(async () => {
+    if (!uploadedImage || !selectedPreset || !selectedPresetKey) return;
     setIsProcessing(true);
     setProcessProgress(0);
-    setIsProcessed(false);
-  }, []);
+    resetResults();
 
-  useEffect(() => {
-    if (!isProcessing) return;
-    const interval = setInterval(() => {
-      setProcessProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsProcessing(false);
-          setIsProcessed(true);
-          return 100;
-        }
-        return prev + Math.random() * 18 + 4;
+    try {
+      const processed = await processImage(
+        uploadedImage,
+        selectedPreset,
+        focalPoint.x,
+        focalPoint.y,
+        (pct) => setProcessProgress(pct),
+      );
+      setResults(processed);
+
+      const brandName = selectedPreset.label.split(" - ")[0] || selectedPreset.label;
+      toast({
+        title: "¡Imágenes optimizadas con éxito!",
+        description: `Banners listos para ${brandName}`,
+        className: "border-[hsl(88,72%,43%)] bg-[hsl(88,72%,95%)] text-[hsl(88,72%,20%)]",
       });
-    }, 200);
-    return () => clearInterval(interval);
-  }, [isProcessing]);
+    } catch {
+      toast({
+        title: "Error al procesar",
+        description: "No se pudo procesar la imagen. Intenta con otra.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [uploadedImage, selectedPreset, selectedPresetKey, focalPoint, toast]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const hasImage = !!uploadedImage;
-  const canProcess = hasImage && !!selectedPresetKey && !isProcessing;
+  // --- Downloads ---
+  const handleDownloadSingle = (img: ProcessedImage) => {
+    downloadBlob(img.blob, img.fileName);
+  };
+
+  const handleDownloadAll = async () => {
+    if (results.length === 0) return;
+    const zip = new JSZip();
+    results.forEach((r) => zip.file(r.fileName, r.blob));
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+    const presetSlug = (selectedPreset?.label || "export")
+      .toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+    downloadBlob(zipBlob, `${presetSlug}-banners.zip`);
+  };
 
   return (
     <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
@@ -159,7 +192,7 @@ const ImageOptimizer = () => {
             <label className="text-sm font-semibold text-foreground mb-2 block">
               Formato de destino
             </label>
-            <Select value={selectedPresetKey} onValueChange={(v) => { setSelectedPresetKey(v); setIsProcessed(false); setProcessProgress(0); }}>
+            <Select value={selectedPresetKey} onValueChange={(v) => { setSelectedPresetKey(v); resetResults(); }}>
               <SelectTrigger className="w-full max-w-md h-11 text-sm">
                 <SelectValue placeholder="Selecciona un formato de Cencosud..." />
               </SelectTrigger>
@@ -218,9 +251,7 @@ const ImageOptimizer = () => {
           <Card className="lg:col-span-1">
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-3">
-                <label className="text-sm font-semibold text-foreground">
-                  Imagen Maestra
-                </label>
+                <label className="text-sm font-semibold text-foreground">Imagen Maestra</label>
                 {hasImage && (
                   <Badge variant="secondary" className="gap-1 text-[10px] px-2 py-0.5">
                     <Crosshair size={10} />
@@ -244,19 +275,12 @@ const ImageOptimizer = () => {
                   <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 mb-4">
                     <Upload size={24} className="text-primary" />
                   </div>
-                  <p className="text-sm font-medium text-foreground mb-1">
-                    Arrastra tu imagen aquí
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    o haz clic para seleccionar
-                  </p>
-                  <p className="text-[11px] text-muted-foreground mt-2">
-                    JPG, PNG, WebP
-                  </p>
+                  <p className="text-sm font-medium text-foreground mb-1">Arrastra tu imagen aquí</p>
+                  <p className="text-xs text-muted-foreground">o haz clic para seleccionar</p>
+                  <p className="text-[11px] text-muted-foreground mt-2">JPG, PNG, WebP</p>
                 </div>
               ) : (
                 <div className="relative rounded-xl border border-border overflow-hidden">
-                  {/* Image with focal point overlay */}
                   <div
                     ref={imageContainerRef}
                     className="relative select-none touch-none cursor-crosshair"
@@ -270,7 +294,6 @@ const ImageOptimizer = () => {
                       className="w-full h-auto max-h-[300px] object-contain bg-muted/30 pointer-events-none"
                       draggable={false}
                     />
-                    {/* Focal point indicator */}
                     <div
                       className="absolute pointer-events-none"
                       style={{
@@ -279,13 +302,10 @@ const ImageOptimizer = () => {
                         transform: "translate(-50%, -50%)",
                       }}
                     >
-                      {/* Outer ring */}
                       <div className="w-10 h-10 rounded-full border-2 border-destructive/70 bg-destructive/15 shadow-[0_0_12px_rgba(239,68,68,0.35)] transition-all duration-75" />
-                      {/* Center dot */}
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="w-2.5 h-2.5 rounded-full bg-destructive shadow-sm" />
                       </div>
-                      {/* Crosshair lines */}
                       <div className="absolute top-1/2 left-0 w-full h-px bg-destructive/40" />
                       <div className="absolute left-1/2 top-0 h-full w-px bg-destructive/40" />
                     </div>
@@ -327,7 +347,6 @@ const ImageOptimizer = () => {
                 <Monitor size={16} className="text-primary" />
                 <span className="text-sm font-semibold text-foreground">Vista Previa Desktop</span>
               </div>
-
               <div
                 className="relative rounded-xl border border-border bg-muted/30 overflow-hidden"
                 style={{
@@ -350,11 +369,9 @@ const ImageOptimizer = () => {
                   </div>
                 )}
               </div>
-
               {selectedPreset && (
                 <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                  {selectedPreset.desktop.width}×{selectedPreset.desktop.height}px · Ratio{" "}
-                  {selectedPreset.desktop.ratio}
+                  {selectedPreset.desktop.width}×{selectedPreset.desktop.height}px · Ratio {selectedPreset.desktop.ratio}
                 </p>
               )}
             </CardContent>
@@ -367,7 +384,6 @@ const ImageOptimizer = () => {
                 <Smartphone size={16} className="text-primary" />
                 <span className="text-sm font-semibold text-foreground">Vista Previa Mobile</span>
               </div>
-
               <div
                 className="relative rounded-xl border border-border bg-muted/30 overflow-hidden mx-auto"
                 style={{
@@ -391,11 +407,9 @@ const ImageOptimizer = () => {
                   </div>
                 )}
               </div>
-
               {selectedPreset && (
                 <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                  {selectedPreset.mobile.width}×{selectedPreset.mobile.height}px · Ratio{" "}
-                  {selectedPreset.mobile.ratio}
+                  {selectedPreset.mobile.width}×{selectedPreset.mobile.height}px · Ratio {selectedPreset.mobile.ratio}
                 </p>
               )}
             </CardContent>
@@ -429,27 +443,93 @@ const ImageOptimizer = () => {
           </Card>
         )}
 
+        {/* Results Gallery */}
+        {isProcessed && (
+          <Card className="animate-fade-in">
+            <CardContent className="p-5">
+              <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                <Package size={16} className="text-primary" />
+                Resultados — Listos para descarga
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {results.map((img) => (
+                  <div
+                    key={img.device}
+                    className="rounded-xl border border-border overflow-hidden bg-muted/20"
+                  >
+                    <div
+                      className="relative bg-muted/30"
+                      style={{
+                        aspectRatio: img.device === "desktop"
+                          ? selectedPreset?.desktop.ratio.replace("/", " / ")
+                          : selectedPreset?.mobile.ratio.replace("/", " / "),
+                        maxHeight: "200px",
+                      }}
+                    >
+                      <img
+                        src={img.dataUrl}
+                        alt={`${img.device} result`}
+                        className="absolute inset-0 w-full h-full object-contain"
+                      />
+                    </div>
+
+                    <div className="px-4 py-3 border-t border-border flex items-center justify-between">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          {img.device === "desktop" ? (
+                            <Monitor size={13} className="text-primary shrink-0" />
+                          ) : (
+                            <Smartphone size={13} className="text-primary shrink-0" />
+                          )}
+                          <span className="text-xs font-semibold text-foreground capitalize">
+                            {img.device}
+                          </span>
+                          <Badge
+                            variant={
+                              selectedPreset && img.sizeKb <= selectedPreset.maxWeightKb
+                                ? "secondary"
+                                : "destructive"
+                            }
+                            className="text-[10px] px-1.5 py-0"
+                          >
+                            {img.sizeKb} KB
+                          </Badge>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground truncate">{img.fileName}</p>
+                      </div>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 shrink-0 ml-2"
+                        onClick={() => handleDownloadSingle(img)}
+                      >
+                        <FileDown size={14} />
+                        Descargar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-3">
-          <Button
-            disabled={!canProcess}
-            onClick={handleProcess}
-            className="gap-2"
-          >
-            {isProcessing ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <Zap size={16} />
-            )}
+          <Button disabled={!canProcess} onClick={handleProcess} className="gap-2">
+            {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
             {isProcessing ? "Procesando…" : "Procesar Imágenes"}
           </Button>
           <Button
             disabled={!isProcessed}
             variant="outline"
             className="gap-2 border-accent text-accent hover:bg-accent hover:text-accent-foreground"
+            onClick={handleDownloadAll}
           >
             <Download size={16} />
-            Descargar Todo
+            Descargar Todo (.zip)
           </Button>
         </div>
       </div>
