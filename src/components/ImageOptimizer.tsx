@@ -384,8 +384,8 @@ const ImageOptimizer = () => {
           </CardContent>
         </Card>
 
-        {/* ── Dropzone + Queue + Preview ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* ── Dropzone + Queue ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Col 1: Dropzone + Queue list */}
           <Card className="lg:col-span-1">
             <CardContent className="p-5">
@@ -484,197 +484,209 @@ const ImageOptimizer = () => {
             </CardContent>
           </Card>
 
-          {/* Col 2: Focal point editor OR Desktop preview */}
-          <Card className="lg:col-span-1">
-            <CardContent className="p-5">
-              {editingItem && editingItem.dataUrl ? (
-                <>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <Crosshair size={14} className="text-primary" />
-                      <span className="text-sm font-semibold text-foreground">Punto Focal</span>
-                    </div>
-                    <Button size="sm" variant="ghost" className="h-6 text-[10px] gap-1 px-2" onClick={() => setEditingId(null)}>
-                      <ChevronLeft size={10} /> Volver a preview
-                    </Button>
-                  </div>
+          {/* Col 2-4: Focal Point Editor + Previews */}
+          <div className="lg:col-span-3 space-y-6">
+            {/* Focal Point Editor — always visible when an image is selected */}
+            {(() => {
+              const activeItem = editingItem || (queue.length > 0 ? queue[0] : null);
+              const activeDataUrl = activeItem?.dataUrl || null;
+              const activeFocal = activeItem?.focalPoint || { x: 50, y: 50 };
+              const activeObjPos = `${activeFocal.x}% ${activeFocal.y}%`;
 
-                  <div
-                    ref={imageContainerRef}
-                    className="relative select-none touch-none cursor-crosshair rounded-xl border border-border overflow-hidden"
-                    onPointerDown={handlePointerDown}
-                    onPointerMove={handlePointerMove}
-                    onPointerUp={handlePointerUp}
-                  >
-                    <img
-                      src={editingItem.dataUrl}
-                      alt="Focal editor"
-                      className="w-full h-auto max-h-[300px] object-contain bg-muted/30 pointer-events-none"
-                      draggable={false}
-                    />
-                    <div
-                      className="absolute pointer-events-none"
-                      style={{
-                        left: `${editingItem.focalPoint.x}%`,
-                        top: `${editingItem.focalPoint.y}%`,
-                        transform: "translate(-50%, -50%)",
-                      }}
-                    >
-                      <div className="w-10 h-10 rounded-full border-2 border-destructive/70 bg-destructive/15 shadow-[0_0_12px_rgba(239,68,68,0.35)] transition-all duration-75" />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-2.5 h-2.5 rounded-full bg-destructive shadow-sm" />
-                      </div>
-                      <div className="absolute top-1/2 left-0 w-full h-px bg-destructive/40" />
-                      <div className="absolute left-1/2 top-0 h-full w-px bg-destructive/40" />
-                    </div>
-                  </div>
+              // Auto-select first item if none editing
+              if (!editingId && queue.length > 0 && queue[0]?.dataUrl) {
+                // We'll handle via useEffect, for now show first item
+              }
 
-                  <p className="text-[11px] text-muted-foreground mt-2 text-center truncate">
-                    {editingItem.fileName} — Focal: {Math.round(editingItem.focalPoint.x)}%, {Math.round(editingItem.focalPoint.y)}%
-                  </p>
-                </>
-              ) : (
+              return (
                 <>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Monitor size={16} className="text-primary" />
-                    <span className="text-sm font-semibold text-foreground">Vista Previa Desktop</span>
-                  </div>
-                  <div
-                    className="relative rounded-xl border border-border bg-muted/30 overflow-hidden"
-                    style={{
-                      aspectRatio: selectedPreset
-                        ? selectedPreset.desktop.ratio.replace("/", " / ")
-                        : "16 / 9",
-                    }}
-                  >
-                    {previewImage ? (
-                      <img
-                        src={previewImage}
-                        alt="Preview desktop"
-                        className="absolute inset-0 w-full h-full object-cover transition-[object-position] duration-150 ease-out"
-                        style={{ objectPosition }}
-                      />
-                    ) : queue.length > 0 && queue[0]?.dataUrl ? (
-                      <img
-                        src={queue[0].dataUrl}
-                        alt="Preview desktop"
-                        className="absolute inset-0 w-full h-full object-cover"
-                        style={{ objectPosition: `${queue[0].focalPoint.x}% ${queue[0].focalPoint.y}%` }}
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
-                        <Monitor size={28} className="mb-2 opacity-40" />
-                        <span className="text-xs">Sin imagen</span>
-                      </div>
-                    )}
-                    {/* Safe zone overlay - Desktop */}
-                    {showSafeZones && selectedPreset?.safeZone && (
-                      <div
-                        className="absolute inset-0 pointer-events-none z-10"
-                        style={{
-                          border: `${(selectedPreset.safeZone.desktop / selectedPreset.desktop.width) * 100}% dashed`,
-                          borderColor: "hsla(24, 83%, 52%, 0.55)",
-                        }}
-                      >
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-accent/80 text-accent-foreground text-[8px] font-bold px-1.5 py-0.5 rounded-b">
-                          {selectedPreset.safeZone.desktop}px
+                  {activeDataUrl && (
+                    <Card>
+                      <CardContent className="p-5">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <Crosshair size={14} className="text-primary" />
+                            <span className="text-sm font-semibold text-foreground">
+                              Imagen Maestra — Punto Focal
+                            </span>
+                            <Badge variant="outline" className="text-[10px] px-2 py-0 font-mono">
+                              {Math.round(activeFocal.x)}%, {Math.round(activeFocal.y)}%
+                            </Badge>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground truncate max-w-[200px]">
+                            {activeItem?.fileName}
+                          </p>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                  {selectedPreset && (
-                    <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                      {selectedPreset.desktop.width}×{selectedPreset.desktop.height}px · Ratio {selectedPreset.desktop.ratio}
-                    </p>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
 
-          {/* Col 3: Mobile preview */}
-          <Card className="lg:col-span-1">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <Smartphone size={16} className="text-primary" />
-                <span className="text-sm font-semibold text-foreground">Vista Previa Mobile</span>
-              </div>
-              <div
-                className="relative rounded-xl border border-border bg-muted/30 overflow-hidden mx-auto"
-                style={{
-                  aspectRatio: selectedPreset
-                    ? selectedPreset.mobile.ratio.replace("/", " / ")
-                    : "9 / 16",
-                  maxHeight: "320px",
-                }}
-              >
-                {(() => {
-                  const src = previewImage || (queue.length > 0 ? queue[0]?.dataUrl : null);
-                  const fp = editingItem?.focalPoint || (queue.length > 0 ? queue[0]?.focalPoint : null);
-                  if (src) {
-                    return (
-                      <img
-                        src={src}
-                        alt="Preview mobile"
-                        className="absolute inset-0 w-full h-full object-cover transition-[object-position] duration-150 ease-out"
-                        style={{ objectPosition: fp ? `${fp.x}% ${fp.y}%` : "50% 50%" }}
-                      />
-                    );
-                  }
-                  return (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
-                      <Smartphone size={28} className="mb-2 opacity-40" />
-                      <span className="text-xs">Sin imagen</span>
-                    </div>
-                  );
-                })()}
-                {/* Safe zone overlay - Mobile */}
-                {showSafeZones && selectedPreset?.safeZone && (
-                  <div
-                    className="absolute inset-0 pointer-events-none z-10"
-                    style={{
-                      border: `${(selectedPreset.safeZone.mobile / selectedPreset.mobile.width) * 100}% dashed`,
-                      borderColor: "hsla(24, 83%, 52%, 0.55)",
-                    }}
-                  >
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-accent/80 text-accent-foreground text-[8px] font-bold px-1.5 py-0.5 rounded-b">
-                      {selectedPreset.safeZone.mobile}px
-                    </div>
-                  </div>
-                )}
-              </div>
-              {selectedPreset && (
-                <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                  {selectedPreset.mobile.width}×{selectedPreset.mobile.height}px · Ratio {selectedPreset.mobile.ratio}
-                </p>
-              )}
-              {/* Quick focal point editing buttons for queue */}
-              {queue.length > 0 && !editingId && (
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {queue.slice(0, 6).map((item, i) => (
-                    <button
-                      key={item.id}
-                      onClick={() => setEditingId(item.id)}
-                      className="group relative w-9 h-9 rounded-md border border-border overflow-hidden hover:ring-2 hover:ring-primary/40 transition-all"
-                      title={`Editar focal: ${item.fileName}`}
-                    >
-                      {item.dataUrl ? (
-                        <img src={item.dataUrl} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-muted flex items-center justify-center text-[9px] text-muted-foreground">{i + 1}</div>
-                      )}
-                      <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/20 flex items-center justify-center transition-all">
-                        <Eye size={10} className="text-background opacity-0 group-hover:opacity-100" />
-                      </div>
-                    </button>
-                  ))}
-                  {queue.length > 6 && (
-                    <span className="text-[10px] text-muted-foreground self-center ml-1">+{queue.length - 6} más</span>
+                        <div
+                          ref={imageContainerRef}
+                          className="relative select-none touch-none cursor-crosshair rounded-xl border-2 border-border overflow-hidden bg-muted/20"
+                          onPointerDown={(e) => {
+                            // Auto-select first item if none editing
+                            if (!editingId && queue.length > 0) {
+                              setEditingId(queue[0].id);
+                            }
+                            handlePointerDown(e);
+                          }}
+                          onPointerMove={handlePointerMove}
+                          onPointerUp={handlePointerUp}
+                        >
+                          <img
+                            src={activeDataUrl}
+                            alt="Imagen maestra"
+                            className="w-full h-auto max-h-[350px] object-contain pointer-events-none"
+                            draggable={false}
+                          />
+                          {/* Focal point indicator */}
+                          <div
+                            className="absolute pointer-events-none z-20"
+                            style={{
+                              left: `${activeFocal.x}%`,
+                              top: `${activeFocal.y}%`,
+                              transform: "translate(-50%, -50%)",
+                            }}
+                          >
+                            {/* Outer ring */}
+                            <div className="w-12 h-12 rounded-full border-[2.5px] border-destructive/80 bg-destructive/10 shadow-[0_0_20px_rgba(239,68,68,0.4)] transition-all duration-75" />
+                            {/* Center dot */}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="w-3 h-3 rounded-full bg-destructive shadow-md ring-2 ring-background/50" />
+                            </div>
+                            {/* Crosshair lines */}
+                            <div className="absolute top-1/2 -left-4 w-[calc(100%+32px)] h-px bg-destructive/50" />
+                            <div className="absolute left-1/2 -top-4 h-[calc(100%+32px)] w-px bg-destructive/50" />
+                          </div>
+                        </div>
+
+                        <p className="text-[10px] text-muted-foreground mt-2 text-center">
+                          Haz clic o arrastra el punto rojo para centrar el contenido importante
+                        </p>
+                      </CardContent>
+                    </Card>
                   )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+
+                  {/* Previews side by side */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Desktop Preview */}
+                    <Card>
+                      <CardContent className="p-5">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Monitor size={16} className="text-primary" />
+                          <span className="text-sm font-semibold text-foreground">Vista Previa Desktop</span>
+                        </div>
+                        <div
+                          className="relative rounded-xl border border-border bg-muted/30 overflow-hidden"
+                          style={{
+                            aspectRatio: selectedPreset
+                              ? selectedPreset.desktop.ratio.replace("/", " / ")
+                              : "16 / 9",
+                          }}
+                        >
+                          {activeDataUrl ? (
+                            <img
+                              src={activeDataUrl}
+                              alt="Preview desktop"
+                              className="absolute inset-0 w-full h-full object-cover transition-[object-position] duration-150 ease-out"
+                              style={{ objectPosition: activeObjPos }}
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
+                              <Monitor size={28} className="mb-2 opacity-40" />
+                              <span className="text-xs">Sin imagen</span>
+                            </div>
+                          )}
+                          {/* Safe zone overlay - Desktop */}
+                          {showSafeZones && selectedPreset?.safeZone && (
+                            <div
+                              className="absolute pointer-events-none z-10"
+                              style={{
+                                inset: 0,
+                                border: `${(selectedPreset.safeZone.desktop / selectedPreset.desktop.width) * 100}% dashed`,
+                                borderColor: "hsla(24, 83%, 52%, 0.6)",
+                              }}
+                            >
+                              <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-accent/80 text-accent-foreground text-[8px] font-bold px-1.5 py-0.5 rounded-b">
+                                {selectedPreset.safeZone.desktop}px margen
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        {selectedPreset && (
+                          <p className="text-[11px] text-muted-foreground mt-2 text-center">
+                            {selectedPreset.desktop.width}×{selectedPreset.desktop.height}px · Ratio {selectedPreset.desktop.ratio}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Mobile Preview */}
+                    <Card>
+                      <CardContent className="p-5">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Smartphone size={16} className="text-primary" />
+                          <span className="text-sm font-semibold text-foreground">Vista Previa Mobile</span>
+                        </div>
+                        <div
+                          className="relative rounded-xl border border-border bg-muted/30 overflow-hidden mx-auto"
+                          style={{
+                            aspectRatio: selectedPreset
+                              ? selectedPreset.mobile.ratio.replace("/", " / ")
+                              : "9 / 16",
+                            maxHeight: "320px",
+                          }}
+                        >
+                          {activeDataUrl ? (
+                            <img
+                              src={activeDataUrl}
+                              alt="Preview mobile"
+                              className="absolute inset-0 w-full h-full object-cover transition-[object-position] duration-150 ease-out"
+                              style={{ objectPosition: activeObjPos }}
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
+                              <Smartphone size={28} className="mb-2 opacity-40" />
+                              <span className="text-xs">Sin imagen</span>
+                            </div>
+                          )}
+                          {/* Safe zone overlay - Mobile */}
+                          {showSafeZones && selectedPreset?.safeZone && (
+                            <div
+                              className="absolute pointer-events-none z-10"
+                              style={{
+                                inset: 0,
+                                border: `${(selectedPreset.safeZone.mobile / selectedPreset.mobile.width) * 100}% dashed`,
+                                borderColor: "hsla(24, 83%, 52%, 0.6)",
+                              }}
+                            >
+                              <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-accent/80 text-accent-foreground text-[8px] font-bold px-1.5 py-0.5 rounded-b">
+                                {selectedPreset.safeZone.mobile}px margen
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        {selectedPreset && (
+                          <p className="text-[11px] text-muted-foreground mt-2 text-center">
+                            {selectedPreset.mobile.width}×{selectedPreset.mobile.height}px · Ratio {selectedPreset.mobile.ratio}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                </>
+              );
+            })()}
+
+            {/* Empty state when no images */}
+            {queue.length === 0 && (
+              <Card>
+                <CardContent className="p-12 flex flex-col items-center justify-center text-center">
+                  <Crosshair size={32} className="text-muted-foreground/30 mb-3" />
+                  <p className="text-sm font-medium text-muted-foreground">Sube una imagen para ver el editor de Punto Focal</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">Las previsualizaciones Desktop y Mobile se sincronizarán en tiempo real</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
 
         {/* Batch processing progress */}
