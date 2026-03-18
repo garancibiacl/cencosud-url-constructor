@@ -344,6 +344,41 @@ const ImageOptimizer = () => {
                   <Info size={13} />
                   Peso máx: {selectedPreset.maxWeightKb} KB
                 </Badge>
+                {selectedPreset.outputFormat && (
+                  <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-xs font-medium">
+                    Formato: .{selectedPreset.outputFormat}
+                  </Badge>
+                )}
+              </div>
+            )}
+
+            {/* Safe zone toggle + text limits */}
+            {selectedPreset?.safeZone && (
+              <div className="mt-4 flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="safe-zones"
+                    checked={showSafeZones}
+                    onCheckedChange={setShowSafeZones}
+                  />
+                  <label htmlFor="safe-zones" className="text-xs font-medium text-foreground cursor-pointer flex items-center gap-1.5">
+                    <ShieldCheck size={13} className="text-primary" />
+                    Ver Márgenes de Seguridad
+                  </label>
+                </div>
+                <span className="text-[10px] text-muted-foreground">
+                  Desktop: {selectedPreset.safeZone.desktop}px · Mobile: {selectedPreset.safeZone.mobile}px
+                </span>
+              </div>
+            )}
+
+            {selectedPreset?.textLimits && (
+              <div className="mt-3 rounded-lg border border-border bg-muted/30 px-4 py-2.5 flex items-center gap-4">
+                <Type size={14} className="text-primary shrink-0" />
+                <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
+                  <span>Título: máx. <strong className="text-foreground">{selectedPreset.textLimits.titleMax}</strong> caracteres</span>
+                  <span>Párrafo: máx. <strong className="text-foreground">{selectedPreset.textLimits.paragraphMax}</strong> caracteres</span>
+                </div>
               </div>
             )}
           </CardContent>
