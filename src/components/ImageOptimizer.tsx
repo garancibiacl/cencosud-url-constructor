@@ -1,14 +1,14 @@
-import { useState, useCallback, useRef } from "react";
-import { Upload, Monitor, Smartphone, Zap, Download, ImageIcon, X, Info } from "lucide-react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import {
+  Upload, Monitor, Smartphone, Zap, Download, ImageIcon, X, Info,
+  AlertTriangle, Loader2, CheckCircle2, Crosshair,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { CENCOSUD_PRESETS, type ImagePreset } from "@/lib/image-presets";
 
@@ -16,16 +16,31 @@ const ImageOptimizer = () => {
   const [selectedPresetKey, setSelectedPresetKey] = useState<string>("");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string>("");
+  const [fileSizeKb, setFileSizeKb] = useState<number>(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [focalPoint, setFocalPoint] = useState({ x: 50, y: 50 });
+  const [isDraggingFocal, setIsDraggingFocal] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processProgress, setProcessProgress] = useState(0);
+  const [isProcessed, setIsProcessed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageContainerRef = useRef<HTMLDivElement>(null);
 
   const selectedPreset: ImagePreset | null = selectedPresetKey
     ? CENCOSUD_PRESETS[selectedPresetKey]
     : null;
 
+  const isOverweight = selectedPreset ? fileSizeKb > selectedPreset.maxWeightKb : false;
+
+  const objectPosition = `${focalPoint.x}% ${focalPoint.y}%`;
+
   const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) return;
     setFileName(file.name);
+    setFileSizeKb(Math.round(file.size / 1024));
+    setFocalPoint({ x: 50, y: 50 });
+    setIsProcessed(false);
+    setProcessProgress(0);
     const reader = new FileReader();
     reader.onload = (e) => setUploadedImage(e.target?.result as string);
     reader.readAsDataURL(file);
@@ -38,7 +53,7 @@ const ImageOptimizer = () => {
       const file = e.dataTransfer.files[0];
       if (file) handleFile(file);
     },
-    [handleFile]
+    [handleFile],
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -51,10 +66,72 @@ const ImageOptimizer = () => {
   const clearImage = () => {
     setUploadedImage(null);
     setFileName("");
+    setFileSizeKb(0);
+    setIsProcessed(false);
+    setProcessProgress(0);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  // --- Focal point interaction ---
+  const updateFocalFromEvent = useCallback(
+    (clientX: number, clientY: number) => {
+      const el = imageContainerRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+      const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
+      setFocalPoint({ x, y });
+    },
+    [],
+  );
+
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      e.preventDefault();
+      setIsDraggingFocal(true);
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      updateFocalFromEvent(e.clientX, e.clientY);
+    },
+    [updateFocalFromEvent],
+  );
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!isDraggingFocal) return;
+      updateFocalFromEvent(e.clientX, e.clientY);
+    },
+    [isDraggingFocal, updateFocalFromEvent],
+  );
+
+  const handlePointerUp = useCallback(() => {
+    setIsDraggingFocal(false);
+  }, []);
+
+  // --- Processing simulation ---
+  const handleProcess = useCallback(() => {
+    setIsProcessing(true);
+    setProcessProgress(0);
+    setIsProcessed(false);
+  }, []);
+
+  useEffect(() => {
+    if (!isProcessing) return;
+    const interval = setInterval(() => {
+      setProcessProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setIsProcessing(false);
+          setIsProcessed(true);
+          return 100;
+        }
+        return prev + Math.random() * 18 + 4;
+      });
+    }, 200);
+    return () => clearInterval(interval);
+  }, [isProcessing]);
+
   const hasImage = !!uploadedImage;
+  const canProcess = hasImage && !!selectedPresetKey && !isProcessing;
 
   return (
     <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
@@ -82,7 +159,7 @@ const ImageOptimizer = () => {
             <label className="text-sm font-semibold text-foreground mb-2 block">
               Formato de destino
             </label>
-            <Select value={selectedPresetKey} onValueChange={setSelectedPresetKey}>
+            <Select value={selectedPresetKey} onValueChange={(v) => { setSelectedPresetKey(v); setIsProcessed(false); setProcessProgress(0); }}>
               <SelectTrigger className="w-full max-w-md h-11 text-sm">
                 <SelectValue placeholder="Selecciona un formato de Cencosud..." />
               </SelectTrigger>
@@ -114,14 +191,43 @@ const ImageOptimizer = () => {
           </CardContent>
         </Card>
 
+        {/* Weight alert */}
+        {hasImage && selectedPreset && isOverweight && (
+          <div className="flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 animate-fade-in">
+            <AlertTriangle size={18} className="text-destructive shrink-0" />
+            <p className="text-sm text-destructive">
+              La imagen pesa <strong>{fileSizeKb} KB</strong> y supera el límite de{" "}
+              <strong>{selectedPreset.maxWeightKb} KB</strong>. Será optimizada al procesar.
+            </p>
+          </div>
+        )}
+
+        {hasImage && selectedPreset && !isOverweight && (
+          <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 animate-fade-in">
+            <CheckCircle2 size={18} className="text-primary shrink-0" />
+            <p className="text-sm text-primary">
+              Peso actual: <strong>{fileSizeKb} KB</strong> — dentro del límite de{" "}
+              <strong>{selectedPreset.maxWeightKb} KB</strong>.
+            </p>
+          </div>
+        )}
+
         {/* Dropzone + Previews */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Dropzone */}
+          {/* Dropzone / Focal Point */}
           <Card className="lg:col-span-1">
             <CardContent className="p-5">
-              <label className="text-sm font-semibold text-foreground mb-3 block">
-                Imagen Maestra
-              </label>
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-semibold text-foreground">
+                  Imagen Maestra
+                </label>
+                {hasImage && (
+                  <Badge variant="secondary" className="gap-1 text-[10px] px-2 py-0.5">
+                    <Crosshair size={10} />
+                    Arrastra el punto focal
+                  </Badge>
+                )}
+              </div>
 
               {!hasImage ? (
                 <div
@@ -150,19 +256,53 @@ const ImageOptimizer = () => {
                 </div>
               ) : (
                 <div className="relative rounded-xl border border-border overflow-hidden">
-                  <img
-                    src={uploadedImage}
-                    alt="Imagen subida"
-                    className="w-full h-auto max-h-[300px] object-contain bg-muted/30"
-                  />
+                  {/* Image with focal point overlay */}
+                  <div
+                    ref={imageContainerRef}
+                    className="relative select-none touch-none cursor-crosshair"
+                    onPointerDown={handlePointerDown}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                  >
+                    <img
+                      src={uploadedImage}
+                      alt="Imagen subida"
+                      className="w-full h-auto max-h-[300px] object-contain bg-muted/30 pointer-events-none"
+                      draggable={false}
+                    />
+                    {/* Focal point indicator */}
+                    <div
+                      className="absolute pointer-events-none"
+                      style={{
+                        left: `${focalPoint.x}%`,
+                        top: `${focalPoint.y}%`,
+                        transform: "translate(-50%, -50%)",
+                      }}
+                    >
+                      {/* Outer ring */}
+                      <div className="w-10 h-10 rounded-full border-2 border-destructive/70 bg-destructive/15 shadow-[0_0_12px_rgba(239,68,68,0.35)] transition-all duration-75" />
+                      {/* Center dot */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-2.5 h-2.5 rounded-full bg-destructive shadow-sm" />
+                      </div>
+                      {/* Crosshair lines */}
+                      <div className="absolute top-1/2 left-0 w-full h-px bg-destructive/40" />
+                      <div className="absolute left-1/2 top-0 h-full w-px bg-destructive/40" />
+                    </div>
+                  </div>
+
                   <button
                     onClick={clearImage}
-                    className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-foreground/80 text-background hover:bg-foreground transition-colors"
+                    className="absolute top-2 right-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-foreground/80 text-background hover:bg-foreground transition-colors"
                   >
                     <X size={14} />
                   </button>
-                  <div className="px-3 py-2 bg-muted/50 border-t border-border">
-                    <p className="text-xs text-muted-foreground truncate">{fileName}</p>
+
+                  <div className="px-3 py-2 bg-muted/50 border-t border-border flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground truncate flex-1">{fileName}</p>
+                    <span className={`text-xs font-medium ml-2 ${isOverweight ? "text-destructive" : "text-muted-foreground"}`}>
+                      {fileSizeKb} KB
+                    </span>
                   </div>
                 </div>
               )}
@@ -200,7 +340,8 @@ const ImageOptimizer = () => {
                   <img
                     src={uploadedImage}
                     alt="Preview desktop"
-                    className="absolute inset-0 w-full h-full object-cover object-center"
+                    className="absolute inset-0 w-full h-full object-cover transition-[object-position] duration-150 ease-out"
+                    style={{ objectPosition }}
                   />
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
@@ -240,7 +381,8 @@ const ImageOptimizer = () => {
                   <img
                     src={uploadedImage}
                     alt="Preview mobile"
-                    className="absolute inset-0 w-full h-full object-cover object-center"
+                    className="absolute inset-0 w-full h-full object-cover transition-[object-position] duration-150 ease-out"
+                    style={{ objectPosition }}
                   />
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
@@ -260,17 +402,49 @@ const ImageOptimizer = () => {
           </Card>
         </div>
 
+        {/* Processing progress */}
+        {(isProcessing || isProcessed) && (
+          <Card className="animate-fade-in">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-3 mb-3">
+                {isProcessing ? (
+                  <>
+                    <Loader2 size={18} className="text-primary animate-spin" />
+                    <span className="text-sm font-medium text-foreground">Optimizando imágenes…</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={18} className="text-primary" />
+                    <span className="text-sm font-medium text-foreground">¡Imágenes procesadas con éxito!</span>
+                  </>
+                )}
+              </div>
+              <Progress value={Math.min(processProgress, 100)} className="h-2" />
+              <p className="text-[11px] text-muted-foreground mt-2">
+                {isProcessing
+                  ? `Progreso: ${Math.min(Math.round(processProgress), 100)}%`
+                  : "Desktop y Mobile listos para descarga"}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-3">
           <Button
-            disabled={!hasImage || !selectedPresetKey}
-            className="gap-2 bg-[hsl(210,100%,32%)] hover:bg-[hsl(210,100%,28%)] text-white"
+            disabled={!canProcess}
+            onClick={handleProcess}
+            className="gap-2"
           >
-            <Zap size={16} />
-            Procesar Imágenes
+            {isProcessing ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Zap size={16} />
+            )}
+            {isProcessing ? "Procesando…" : "Procesar Imágenes"}
           </Button>
           <Button
-            disabled={!hasImage || !selectedPresetKey}
+            disabled={!isProcessed}
             variant="outline"
             className="gap-2 border-accent text-accent hover:bg-accent hover:text-accent-foreground"
           >
