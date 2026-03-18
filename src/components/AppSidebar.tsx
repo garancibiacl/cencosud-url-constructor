@@ -12,7 +12,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: "url-generator", label: "Constructor de URLs", icon: Link },
-  { id: "optimizer", label: "Optimizador de Imagenes", icon: Image, comingSoon: true },
+  { id: "optimizer", label: "Optimizador de Imagenes", icon: Image },
   { id: "history", label: "Historial de Campanas", icon: History },
   { id: "settings", label: "Configuracion", icon: Settings },
 ];
