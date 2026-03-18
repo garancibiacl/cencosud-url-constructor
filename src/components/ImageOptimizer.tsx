@@ -628,6 +628,20 @@ const ImageOptimizer = () => {
                     </div>
                   );
                 })()}
+                {/* Safe zone overlay - Mobile */}
+                {showSafeZones && selectedPreset?.safeZone && (
+                  <div
+                    className="absolute inset-0 pointer-events-none z-10"
+                    style={{
+                      border: `${(selectedPreset.safeZone.mobile / selectedPreset.mobile.width) * 100}% dashed`,
+                      borderColor: "hsla(24, 83%, 52%, 0.55)",
+                    }}
+                  >
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-accent/80 text-accent-foreground text-[8px] font-bold px-1.5 py-0.5 rounded-b">
+                      {selectedPreset.safeZone.mobile}px
+                    </div>
+                  </div>
+                )}
               </div>
               {selectedPreset && (
                 <p className="text-[11px] text-muted-foreground mt-2 text-center">
