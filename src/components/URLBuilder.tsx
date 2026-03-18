@@ -963,6 +963,8 @@ const URLBuilder = () => {
   });
   const [singleBaseUrl, setSingleBaseUrl] = useState("");
   const [singleDescription, setSingleDescription] = useState("");
+  const [singleFinalUrlDraft, setSingleFinalUrlDraft] = useState("");
+  const [isSingleFinalUrlEditing, setIsSingleFinalUrlEditing] = useState(false);
   const [singleAppDirtyTitle, setSingleAppDirtyTitle] = useState("");
   const [singleAppUrl, setSingleAppUrl] = useState("");
   const [bulkDescriptions, setBulkDescriptions] = useState("");
@@ -973,6 +975,7 @@ const URLBuilder = () => {
   const [bulkResolvedLinks, setBulkResolvedLinks] = useState<Record<string, string>>({});
   const [showResultsBottomShadow, setShowResultsBottomShadow] = useState(false);
   const resultsScrollRef = useRef<HTMLDivElement>(null);
+  const singleFinalUrlInputRef = useRef<HTMLTextAreaElement>(null);
 
   const singleSlug = cleanTextToSlug(singleDescription);
   const singleAppCleanTitle = extractCleanTitle(singleAppDirtyTitle);
@@ -997,6 +1000,28 @@ const URLBuilder = () => {
   useEffect(() => {
     setEditableAppRows(appBatchRows);
   }, [appBatchRows]);
+
+  useEffect(() => {
+    if (!isSingleFinalUrlEditing) {
+      setSingleFinalUrlDraft(singleFinalUrl);
+    }
+  }, [isSingleFinalUrlEditing, singleFinalUrl]);
+
+  useEffect(() => {
+    if (!isSingleFinalUrlEditing) {
+      return;
+    }
+
+    const input = singleFinalUrlInputRef.current;
+    if (!input) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+    });
+  }, [isSingleFinalUrlEditing]);
 
   useEffect(() => {
     const container = resultsScrollRef.current;
@@ -1041,6 +1066,8 @@ const URLBuilder = () => {
     });
     setSingleBaseUrl("");
     setSingleDescription("");
+    setSingleFinalUrlDraft("");
+    setIsSingleFinalUrlEditing(false);
     setSingleAppDirtyTitle("");
     setSingleAppUrl("");
     setBulkDescriptions("");
@@ -1098,6 +1125,8 @@ const URLBuilder = () => {
     const nextShowShadow = container.scrollHeight - container.scrollTop - container.clientHeight > 8;
     setShowResultsBottomShadow(nextShowShadow);
   };
+
+  const displayedSingleFinalUrl = singleFinalUrlDraft || singleFinalUrl;
 
   const globalContextSection = (
     <section className="mt-4 rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
@@ -1309,9 +1338,13 @@ const URLBuilder = () => {
 
                                 <button
                                   onClick={() =>
-                                    copyValue(singleFinalUrl, "Link copiado", "El link individual fue copiado al portapapeles.")
+                                    copyValue(
+                                      displayedSingleFinalUrl,
+                                      "Link copiado",
+                                      "El link individual fue copiado al portapapeles.",
+                                    )
                                   }
-                                  disabled={!singleFinalUrl}
+                                  disabled={!displayedSingleFinalUrl}
                                   className="inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-2xl bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                   <Copy size={16} />
@@ -1319,11 +1352,36 @@ const URLBuilder = () => {
                                 </button>
                               </div>
 
-                              <div className="rounded-2xl bg-black/10 p-4">
-                                <code className="block min-h-[96px] break-all font-mono text-sm leading-7 text-primary-foreground/95">
-                                  {singleFinalUrl || "/santas-ofertas?nombre_promo=home-grilla-trutro-entero-s12-20032026"}
-                                </code>
-                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setIsSingleFinalUrlEditing(true)}
+                                className={`block w-full rounded-2xl bg-black/10 p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/20 ${
+                                  isSingleFinalUrlEditing ? "bg-black/15" : "hover:bg-black/15"
+                                }`}
+                                aria-label="Editar link final"
+                              >
+                                <textarea
+                                  ref={singleFinalUrlInputRef}
+                                  value={
+                                    displayedSingleFinalUrl ||
+                                    "/santas-ofertas?nombre_promo=home-grilla-trutro-entero-s12-20032026"
+                                  }
+                                  onChange={(event) => setSingleFinalUrlDraft(event.target.value)}
+                                  onFocus={() => setIsSingleFinalUrlEditing(true)}
+                                  onBlur={() => setIsSingleFinalUrlEditing(false)}
+                                  onKeyDown={(event) => {
+                                    if (event.key === "Escape") {
+                                      event.preventDefault();
+                                      setSingleFinalUrlDraft(singleFinalUrl);
+                                      setIsSingleFinalUrlEditing(false);
+                                    }
+                                  }}
+                                  rows={3}
+                                  spellCheck={false}
+                                  aria-label="Link final editable"
+                                  className="block min-h-[96px] w-full resize-none bg-transparent font-mono text-sm leading-7 text-primary-foreground/95 outline-none placeholder:text-primary-foreground/60"
+                                />
+                              </button>
                             </section>
                           </div>
 
