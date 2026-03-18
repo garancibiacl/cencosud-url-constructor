@@ -1672,20 +1672,25 @@ const URLBuilder = () => {
                                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
                                   Titulo Limpio
                                 </p>
-                                <button
-                                  onClick={() =>
-                                    copyValue(
-                                      displayedSingleAppCleanTitle,
-                                      "Titulo copiado",
-                                      "El titulo limpio fue copiado al portapapeles.",
-                                    )
-                                  }
-                                  disabled={!displayedSingleAppCleanTitle}
-                                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-                                  aria-label="Copiar titulo limpio"
-                                >
-                                  <Copy size={14} />
-                                </button>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      onClick={() =>
+                                        copyValue(
+                                          displayedSingleAppCleanTitle,
+                                          "Titulo copiado",
+                                          "El titulo limpio fue copiado al portapapeles.",
+                                        )
+                                      }
+                                      disabled={!displayedSingleAppCleanTitle}
+                                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-[#EA7120] transition-colors hover:bg-[#FCE6D5] hover:text-[#EA7120] disabled:cursor-not-allowed disabled:opacity-40"
+                                      aria-label="Copiar titulo limpio"
+                                    >
+                                      <Copy size={14} />
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top">Copiar en el portapapeles</TooltipContent>
+                                </Tooltip>
                               </div>
                               <button
                                 type="button"
@@ -1733,20 +1738,25 @@ const URLBuilder = () => {
                                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
                                   Codigo Coleccion
                                 </p>
-                                <button
-                                  onClick={() =>
-                                    copyValue(
-                                      displayedSingleAppCollectionCode,
-                                      "Codigo copiado",
-                                      "El codigo de coleccion fue copiado al portapapeles.",
-                                    )
-                                  }
-                                  disabled={!displayedSingleAppCollectionCode}
-                                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-                                  aria-label="Copiar codigo coleccion"
-                                >
-                                  <Copy size={14} />
-                                </button>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      onClick={() =>
+                                        copyValue(
+                                          displayedSingleAppCollectionCode,
+                                          "Codigo copiado",
+                                          "El codigo de coleccion fue copiado al portapapeles.",
+                                        )
+                                      }
+                                      disabled={!displayedSingleAppCollectionCode}
+                                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-[#EA7120] transition-colors hover:bg-[#FCE6D5] hover:text-[#EA7120] disabled:cursor-not-allowed disabled:opacity-40"
+                                      aria-label="Copiar codigo coleccion"
+                                    >
+                                      <Copy size={14} />
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top">Copiar en el portapapeles</TooltipContent>
+                                </Tooltip>
                               </div>
                               <button
                                 type="button"
