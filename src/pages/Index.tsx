@@ -1,6 +1,7 @@
 import { useState } from "react";
 import AppSidebar from "@/components/AppSidebar";
 import URLBuilder from "@/components/URLBuilder";
+import ImageOptimizer from "@/components/ImageOptimizer";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("url-generator");
