@@ -12,10 +12,13 @@ export interface ProcessedImage {
 
 /**
  * Generate a SEO-friendly filename from the preset label.
- * Format: [bandera]-[tipo]-[dispositivo]-[fecha].webp
- * Example: paris-home-principal-mobile-18-03-26.webp
+ * Format: [bandera]-[tipo]-[dispositivo]-[fecha].[ext]
  */
-export function generateFileName(presetLabel: string, device: "desktop" | "mobile"): string {
+export function generateFileName(
+  presetLabel: string,
+  device: "desktop" | "mobile",
+  format: "webp" | "jpg" = "webp",
+): string {
   const now = new Date();
   const dd = String(now.getDate()).padStart(2, "0");
   const mm = String(now.getMonth() + 1).padStart(2, "0");
@@ -31,12 +34,11 @@ export function generateFileName(presetLabel: string, device: "desktop" | "mobil
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
 
-  return `${slug}-${device}-${dateStr}.webp`;
+  return `${slug}-${device}-${dateStr}.${format}`;
 }
 
 /**
  * Crop an image using Canvas based on focal point and target dimensions.
- * Applies the same logic as CSS object-fit: cover + object-position.
  */
 function cropWithFocalPoint(
   img: HTMLImageElement,
@@ -57,20 +59,17 @@ function cropWithFocalPoint(
   let srcW: number, srcH: number, srcX: number, srcY: number;
 
   if (imgAspect > targetAspect) {
-    // Image is wider — crop horizontally
     srcH = imgH;
     srcW = imgH * targetAspect;
     srcX = (focalX / 100) * imgW - srcW / 2;
     srcY = 0;
   } else {
-    // Image is taller — crop vertically
     srcW = imgW;
     srcH = imgW / targetAspect;
     srcX = 0;
     srcY = (focalY / 100) * imgH - srcH / 2;
   }
 
-  // Clamp to image bounds
   srcX = Math.max(0, Math.min(imgW - srcW, srcX));
   srcY = Math.max(0, Math.min(imgH - srcH, srcY));
 
@@ -79,15 +78,21 @@ function cropWithFocalPoint(
 }
 
 /**
- * Export a canvas to a WebP blob, reducing quality if needed to meet maxKb.
+ * Export a canvas to a blob, reducing quality if needed to meet maxKb.
+ * Supports both WebP and JPEG formats.
  */
-async function exportOptimized(canvas: HTMLCanvasElement, maxKb: number): Promise<Blob> {
+async function exportOptimized(
+  canvas: HTMLCanvasElement,
+  maxKb: number,
+  format: "webp" | "jpg" = "webp",
+): Promise<Blob> {
+  const mimeType = format === "jpg" ? "image/jpeg" : "image/webp";
   let quality = 0.82;
   const minQuality = 0.3;
 
   while (quality >= minQuality) {
     const blob = await new Promise<Blob>((resolve) =>
-      canvas.toBlob((b) => resolve(b!), "image/webp", quality),
+      canvas.toBlob((b) => resolve(b!), mimeType, quality),
     );
     if (blob.size / 1024 <= maxKb || quality <= minQuality) {
       return blob;
@@ -95,15 +100,11 @@ async function exportOptimized(canvas: HTMLCanvasElement, maxKb: number): Promis
     quality -= 0.08;
   }
 
-  // Final attempt at minimum quality
   return new Promise<Blob>((resolve) =>
-    canvas.toBlob((b) => resolve(b!), "image/webp", minQuality),
+    canvas.toBlob((b) => resolve(b!), mimeType, minQuality),
   );
 }
 
-/**
- * Load an image from a data URL.
- */
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -115,39 +116,41 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 
 /**
  * Process an uploaded image into Desktop and Mobile variants.
- * Returns processed images with blobs, data URLs, filenames, and sizes.
  */
 export async function processImage(
   imageSrc: string,
-  preset: { label: string; desktop: PresetDimension; mobile: PresetDimension; maxWeightKb: number },
+  preset: {
+    label: string;
+    desktop: PresetDimension;
+    mobile: PresetDimension;
+    maxWeightKb: number;
+    outputFormat?: "webp" | "jpg";
+  },
   focalX: number,
   focalY: number,
   onProgress?: (pct: number) => void,
 ): Promise<ProcessedImage[]> {
-  onProgress?.(5);
+  const format = preset.outputFormat || "webp";
 
+  onProgress?.(5);
   const img = await loadImage(imageSrc);
   onProgress?.(15);
 
-  // Desktop
   const desktopCanvas = cropWithFocalPoint(img, preset.desktop, focalX, focalY);
   onProgress?.(35);
-
-  const desktopBlob = await exportOptimized(desktopCanvas, preset.maxWeightKb);
+  const desktopBlob = await exportOptimized(desktopCanvas, preset.maxWeightKb, format);
   onProgress?.(55);
 
-  // Mobile
   const mobileCanvas = cropWithFocalPoint(img, preset.mobile, focalX, focalY);
   onProgress?.(70);
-
-  const mobileBlob = await exportOptimized(mobileCanvas, preset.maxWeightKb);
+  const mobileBlob = await exportOptimized(mobileCanvas, preset.maxWeightKb, format);
   onProgress?.(90);
 
   const results: ProcessedImage[] = [
     {
       blob: desktopBlob,
       dataUrl: URL.createObjectURL(desktopBlob),
-      fileName: generateFileName(preset.label, "desktop"),
+      fileName: generateFileName(preset.label, "desktop", format),
       sizeKb: Math.round(desktopBlob.size / 1024),
       width: preset.desktop.width,
       height: preset.desktop.height,
@@ -156,7 +159,7 @@ export async function processImage(
     {
       blob: mobileBlob,
       dataUrl: URL.createObjectURL(mobileBlob),
-      fileName: generateFileName(preset.label, "mobile"),
+      fileName: generateFileName(preset.label, "mobile", format),
       sizeKb: Math.round(mobileBlob.size / 1024),
       width: preset.mobile.width,
       height: preset.mobile.height,
@@ -168,9 +171,6 @@ export async function processImage(
   return results;
 }
 
-/**
- * Download a single blob as a file.
- */
 export function downloadBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
