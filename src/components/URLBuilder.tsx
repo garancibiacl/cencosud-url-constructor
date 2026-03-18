@@ -48,6 +48,11 @@ import type { URLParams } from "@/lib/url-builder";
 import type { BatchRow } from "@/hooks/useUrlHydrator";
 import { useUrlHydrator } from "@/hooks/useUrlHydrator";
 import {
+  buildAppBatchRows,
+  extractCleanTitle,
+  extractCollectionCode,
+} from "@/lib/title-url-app";
+import {
   buildWeekOptions,
   findWeekOption,
   getCurrentISOWeekValue,
@@ -980,6 +985,7 @@ const URLBuilder = () => {
   const currentWeekValue = useMemo(() => getCurrentISOWeekValue(), []);
 
   const [activeTab, setActiveTab] = useState("individual");
+  const [appMode, setAppMode] = useState("individual");
   const [globalParams, setGlobalParams] = useState<Omit<URLParams, "descripcion">>({
     ubicacion: "",
     componente: "",
@@ -989,13 +995,19 @@ const URLBuilder = () => {
   });
   const [singleBaseUrl, setSingleBaseUrl] = useState("");
   const [singleDescription, setSingleDescription] = useState("");
+  const [singleAppDirtyTitle, setSingleAppDirtyTitle] = useState("");
+  const [singleAppUrl, setSingleAppUrl] = useState("");
   const [bulkDescriptions, setBulkDescriptions] = useState("");
   const [bulkBaseUrls, setBulkBaseUrls] = useState("");
+  const [bulkAppTitles, setBulkAppTitles] = useState("");
+  const [bulkAppUrls, setBulkAppUrls] = useState("");
   const [bulkResolvedLinks, setBulkResolvedLinks] = useState<Record<string, string>>({});
   const [showResultsBottomShadow, setShowResultsBottomShadow] = useState(false);
   const resultsScrollRef = useRef<HTMLDivElement>(null);
 
   const singleSlug = cleanTextToSlug(singleDescription);
+  const singleAppCleanTitle = extractCleanTitle(singleAppDirtyTitle);
+  const singleAppCollectionCode = extractCollectionCode(singleAppUrl);
   const singleFinalUrl = hydrateUrl(singleBaseUrl, {
     ...globalParams,
     descripcion: singleSlug,
@@ -1003,6 +1015,10 @@ const URLBuilder = () => {
   const batchRows = useMemo(
     () => hydrateBatchRows(bulkBaseUrls, bulkDescriptions, globalParams),
     [bulkBaseUrls, bulkDescriptions, globalParams, hydrateBatchRows],
+  );
+  const appBatchRows = useMemo(
+    () => buildAppBatchRows(bulkAppTitles, bulkAppUrls),
+    [bulkAppTitles, bulkAppUrls],
   );
 
   useEffect(() => {
@@ -1022,6 +1038,10 @@ const URLBuilder = () => {
   const validBatchLinks = batchRows
     .map((row) => bulkResolvedLinks[`row-${row.index}`] || "")
     .filter(Boolean);
+  const validAppRows = appBatchRows.filter((row) => row.cleanTitle && row.collectionCode);
+  const bulkAppCopyValue = validAppRows
+    .map((row) => `${row.cleanTitle}\t${row.collectionCode}`)
+    .join("\n");
 
   const updateGlobalParam = (key: GlobalParamKey, value: string) => {
     setGlobalParams((current) => {
@@ -1048,8 +1068,12 @@ const URLBuilder = () => {
     });
     setSingleBaseUrl("");
     setSingleDescription("");
+    setSingleAppDirtyTitle("");
+    setSingleAppUrl("");
     setBulkDescriptions("");
     setBulkBaseUrls("");
+    setBulkAppTitles("");
+    setBulkAppUrls("");
   };
 
   const copyValue = async (value: string, title: string, description: string) => {
@@ -1162,19 +1186,25 @@ const URLBuilder = () => {
         </header>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="flex items-center justify-between gap-4">
-            <TabsList className="h-auto rounded-2xl bg-card p-1 shadow-card">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <TabsList className="flex h-auto w-full flex-wrap rounded-2xl bg-card p-1 shadow-card lg:w-auto">
               <TabsTrigger
                 value="individual"
-                className="rounded-xl px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                className="flex-1 rounded-xl px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground lg:flex-none"
               >
-                Constructor Individual
+                Constructor Individual Web
               </TabsTrigger>
               <TabsTrigger
                 value="masivo"
-                className="rounded-xl px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                className="flex-1 rounded-xl px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground lg:flex-none"
               >
-                Constructor Masivo
+                Constructor Masivo Web
+              </TabsTrigger>
+              <TabsTrigger
+                value="titulo-url-app"
+                className="flex-1 rounded-xl px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground lg:flex-none"
+              >
+                Titulo y URL App
               </TabsTrigger>
             </TabsList>
 
@@ -1192,6 +1222,23 @@ const URLBuilder = () => {
               >
                 <Copy size={16} />
                 Copiar todos los links
+              </button>
+            )}
+
+            {activeTab === "titulo-url-app" && appMode === "masivo" && (
+              <button
+                onClick={() =>
+                  copyValue(
+                    bulkAppCopyValue,
+                    "Filas copiadas",
+                    `${validAppRows.length} filas limpias copiadas al portapapeles.`,
+                  )
+                }
+                disabled={!bulkAppCopyValue}
+                className="inline-flex h-11 items-center gap-2 rounded-2xl bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Copy size={16} />
+                Copiar todo
               </button>
             )}
           </div>
@@ -1284,7 +1331,7 @@ const URLBuilder = () => {
                   </div>
                 </TabsContent>
               </motion.div>
-            ) : (
+            ) : activeTab === "masivo" ? (
               <motion.div key="masivo" variants={contentVariants} initial="initial" animate="animate" exit="exit">
                 <TabsContent value="masivo" forceMount className="mt-4">
                   <div className="grid gap-8">
@@ -1392,6 +1439,251 @@ const URLBuilder = () => {
                         )}
                       </div>
                     </section>
+                  </div>
+                </TabsContent>
+              </motion.div>
+            ) : (
+              <motion.div key="titulo-url-app" variants={contentVariants} initial="initial" animate="animate" exit="exit">
+                <TabsContent value="titulo-url-app" forceMount className="mt-4">
+                  <div className="space-y-6">
+                    <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="space-y-2">
+                          <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-foreground">
+                            Procesador de Titulo y URL App
+                          </h3>
+                          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+                            Limpia titulos promocionales y extrae el codigo de coleccion desde la URL final usando regex tolerantes a variaciones.
+                          </p>
+                        </div>
+
+                        <Tabs value={appMode} onValueChange={setAppMode}>
+                          <TabsList className="h-auto rounded-2xl bg-secondary p-1 shadow-inner">
+                            <TabsTrigger
+                              value="individual"
+                              className="rounded-xl px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                            >
+                              Modo Individual
+                            </TabsTrigger>
+                            <TabsTrigger
+                              value="masivo"
+                              className="rounded-xl px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                            >
+                              Modo Masivo
+                            </TabsTrigger>
+                          </TabsList>
+                        </Tabs>
+                      </div>
+                    </section>
+
+                    {appMode === "individual" ? (
+                      <div className="grid gap-8 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.88fr)]">
+                        <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
+                          <div className="space-y-6">
+                            <div className="flex flex-col gap-2">
+                              <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                                Titulo Sucio
+                              </label>
+                              <textarea
+                                value={singleAppDirtyTitle}
+                                onChange={(event) => setSingleAppDirtyTitle(event.target.value)}
+                                placeholder="Prensa/TV - Santa Yapa-PACK NECTAR WATT'S VARIEDADES 6X200CC 3X2"
+                                rows={5}
+                                className="min-h-[132px] rounded-2xl border border-border bg-secondary px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
+                              />
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                              <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                                URL Base
+                              </label>
+                              <input
+                                type="text"
+                                value={singleAppUrl}
+                                onChange={(event) => setSingleAppUrl(event.target.value)}
+                                placeholder="https://www.sitio.cl/busca?fq=H%3A10063"
+                                className="h-12 rounded-2xl border border-border bg-secondary px-4 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
+                              />
+                            </div>
+                          </div>
+                        </section>
+
+                        <section className="rounded-[28px] border border-primary/10 bg-card p-6 shadow-card md:p-8">
+                          <div className="mb-6 flex items-start justify-between gap-4">
+                            <div className="space-y-3">
+                              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10">
+                                <ExternalLink size={20} className="text-primary" />
+                              </div>
+                              <div>
+                                <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-foreground">
+                                  Previsualizacion
+                                </h3>
+                                <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
+                                  Los resultados quedan listos para copiar de forma individual.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-4">
+                            <div className="rounded-2xl border border-border bg-secondary/50 p-4">
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                                  Titulo Limpio
+                                </p>
+                                <button
+                                  onClick={() =>
+                                    copyValue(
+                                      singleAppCleanTitle,
+                                      "Titulo copiado",
+                                      "El titulo limpio fue copiado al portapapeles.",
+                                    )
+                                  }
+                                  disabled={!singleAppCleanTitle}
+                                  className="inline-flex h-9 items-center gap-2 rounded-xl bg-accent px-3 text-xs font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  <Copy size={14} />
+                                  Copiar
+                                </button>
+                              </div>
+                              <p className="mt-3 text-lg font-semibold text-foreground">
+                                {singleAppCleanTitle || "Nectar Watt's"}
+                              </p>
+                            </div>
+
+                            <div className="rounded-2xl border border-border bg-secondary/50 p-4">
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                                  Codigo Coleccion
+                                </p>
+                                <button
+                                  onClick={() =>
+                                    copyValue(
+                                      singleAppCollectionCode,
+                                      "Codigo copiado",
+                                      "El codigo de coleccion fue copiado al portapapeles.",
+                                    )
+                                  }
+                                  disabled={!singleAppCollectionCode}
+                                  className="inline-flex h-9 items-center gap-2 rounded-xl bg-accent px-3 text-xs font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  <Copy size={14} />
+                                  Copiar
+                                </button>
+                              </div>
+                              <p className="mt-3 font-mono text-lg font-semibold text-foreground">
+                                {singleAppCollectionCode || "Coleccion: 0063"}
+                              </p>
+                            </div>
+                          </div>
+                        </section>
+                      </div>
+                    ) : (
+                      <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
+                        <div className="grid gap-4 lg:grid-cols-2">
+                          <NumberedTextarea
+                            label="Titulos Sucios"
+                            value={bulkAppTitles}
+                            onChange={setBulkAppTitles}
+                            rows={10}
+                            placeholder={"Prensa/TV - Santa Yapa-PACK NECTAR WATT'S VARIEDADES 6X200CC 3X2\nCatalogo - PACK ARROZ TUCAPEL 1KG"}
+                          />
+
+                          <NumberedTextarea
+                            label="URLs Base"
+                            value={bulkAppUrls}
+                            onChange={setBulkAppUrls}
+                            rows={10}
+                            placeholder={"https://www.sitio.cl/busca?fq=H%3A10063\n/busca?fq=H%3A27791"}
+                          />
+                        </div>
+
+                        <div className="mt-8 rounded-2xl border border-border">
+                          <div className="overflow-x-auto">
+                            <table className="w-full min-w-[720px] caption-bottom text-sm">
+                              <TableHeader>
+                                <TableRow className="border-b border-border bg-card hover:bg-card">
+                                  <TableHead>#</TableHead>
+                                  <TableHead>Titulo Limpio</TableHead>
+                                  <TableHead>Codigo Coleccion</TableHead>
+                                  <TableHead className="text-right">Acciones</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {appBatchRows.length === 0 ? (
+                                  <TableRow>
+                                    <TableCell colSpan={4} className="text-muted-foreground">
+                                      Agrega titulos y URLs para procesar el lote app.
+                                    </TableCell>
+                                  </TableRow>
+                                ) : (
+                                  appBatchRows.map((row) => {
+                                    const rowCopyValue = row.cleanTitle && row.collectionCode
+                                      ? `${row.cleanTitle}\t${row.collectionCode}`
+                                      : "";
+
+                                    return (
+                                      <TableRow
+                                        key={`app-row-${row.index}`}
+                                        className={row.hasError ? "bg-destructive/5 hover:bg-destructive/10" : "hover:bg-muted/30"}
+                                      >
+                                        <TableCell>
+                                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#0055a5] text-xs font-semibold text-white">
+                                            {row.index + 1}
+                                          </span>
+                                        </TableCell>
+                                        <TableCell className="font-semibold text-foreground">
+                                          {row.cleanTitle || "Sin titulo limpio"}
+                                        </TableCell>
+                                        <TableCell className="font-mono text-foreground">
+                                          {row.collectionCode || "Sin codigo"}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                          <button
+                                            onClick={() =>
+                                              copyValue(
+                                                rowCopyValue,
+                                                "Fila copiada",
+                                                `Se copio la fila ${row.index + 1}.`,
+                                              )
+                                            }
+                                            disabled={!rowCopyValue}
+                                            className="inline-flex h-9 items-center gap-2 rounded-xl bg-accent px-3 text-xs font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                                          >
+                                            <Copy size={14} />
+                                            Copiar Individual
+                                          </button>
+                                        </TableCell>
+                                      </TableRow>
+                                    );
+                                  })
+                                )}
+                              </TableBody>
+                            </table>
+                          </div>
+                        </div>
+
+                        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <p className="text-sm text-muted-foreground">
+                            El boton copia cada fila como `Titulo Limpio[TAB]Coleccion: 0000` para pegar directo en planillas.
+                          </p>
+                          <button
+                            onClick={() =>
+                              copyValue(
+                                bulkAppCopyValue,
+                                "Filas copiadas",
+                                `${validAppRows.length} filas limpias copiadas al portapapeles.`,
+                              )
+                            }
+                            disabled={!bulkAppCopyValue}
+                            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-accent px-5 text-sm font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <Copy size={16} />
+                            Copiar Todo
+                          </button>
+                        </div>
+                      </section>
+                    )}
                   </div>
                 </TabsContent>
               </motion.div>
