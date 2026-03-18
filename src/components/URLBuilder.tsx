@@ -80,6 +80,11 @@ const formatDateValue = (date: Date) => format(date, "ddMMyyyy");
 
 const formatDateDisplay = (date: Date) => format(date, "dd/MM/yyyy");
 
+const formatEditableTitleCase = (value: string) =>
+  value
+    .toLocaleLowerCase("es-CL")
+    .replace(/(^|[\s/+(])\p{L}/gu, (match) => match.toLocaleUpperCase("es-CL"));
+
 const validateEditableBaseUrl = (value: string) => {
   const normalized = value.trim();
 
@@ -967,6 +972,12 @@ const URLBuilder = () => {
   const [isSingleFinalUrlEditing, setIsSingleFinalUrlEditing] = useState(false);
   const [singleAppDirtyTitle, setSingleAppDirtyTitle] = useState("");
   const [singleAppUrl, setSingleAppUrl] = useState("");
+  const [singleAppCleanTitleDraft, setSingleAppCleanTitleDraft] = useState("");
+  const [singleAppCollectionCodeDraft, setSingleAppCollectionCodeDraft] = useState("");
+  const [isSingleAppTitleEditing, setIsSingleAppTitleEditing] = useState(false);
+  const [isSingleAppCodeEditing, setIsSingleAppCodeEditing] = useState(false);
+  const [hasManualSingleAppTitle, setHasManualSingleAppTitle] = useState(false);
+  const [hasManualSingleAppCode, setHasManualSingleAppCode] = useState(false);
   const [bulkDescriptions, setBulkDescriptions] = useState("");
   const [bulkBaseUrls, setBulkBaseUrls] = useState("");
   const [bulkAppTitles, setBulkAppTitles] = useState("");
@@ -976,6 +987,8 @@ const URLBuilder = () => {
   const [showResultsBottomShadow, setShowResultsBottomShadow] = useState(false);
   const resultsScrollRef = useRef<HTMLDivElement>(null);
   const singleFinalUrlInputRef = useRef<HTMLTextAreaElement>(null);
+  const singleAppTitleInputRef = useRef<HTMLInputElement>(null);
+  const singleAppCodeInputRef = useRef<HTMLInputElement>(null);
 
   const singleSlug = cleanTextToSlug(singleDescription);
   const singleAppCleanTitle = extractCleanTitle(singleAppDirtyTitle);
@@ -1008,6 +1021,18 @@ const URLBuilder = () => {
   }, [isSingleFinalUrlEditing, singleFinalUrl]);
 
   useEffect(() => {
+    if (!isSingleAppTitleEditing && !hasManualSingleAppTitle) {
+      setSingleAppCleanTitleDraft(singleAppCleanTitle);
+    }
+  }, [hasManualSingleAppTitle, isSingleAppTitleEditing, singleAppCleanTitle]);
+
+  useEffect(() => {
+    if (!isSingleAppCodeEditing && !hasManualSingleAppCode) {
+      setSingleAppCollectionCodeDraft(singleAppCollectionCode);
+    }
+  }, [hasManualSingleAppCode, isSingleAppCodeEditing, singleAppCollectionCode]);
+
+  useEffect(() => {
     if (!isSingleFinalUrlEditing) {
       return;
     }
@@ -1022,6 +1047,38 @@ const URLBuilder = () => {
       input.setSelectionRange(input.value.length, input.value.length);
     });
   }, [isSingleFinalUrlEditing]);
+
+  useEffect(() => {
+    if (!isSingleAppTitleEditing) {
+      return;
+    }
+
+    const input = singleAppTitleInputRef.current;
+    if (!input) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+    });
+  }, [isSingleAppTitleEditing]);
+
+  useEffect(() => {
+    if (!isSingleAppCodeEditing) {
+      return;
+    }
+
+    const input = singleAppCodeInputRef.current;
+    if (!input) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+    });
+  }, [isSingleAppCodeEditing]);
 
   useEffect(() => {
     const container = resultsScrollRef.current;
@@ -1070,6 +1127,12 @@ const URLBuilder = () => {
     setIsSingleFinalUrlEditing(false);
     setSingleAppDirtyTitle("");
     setSingleAppUrl("");
+    setSingleAppCleanTitleDraft("");
+    setSingleAppCollectionCodeDraft("");
+    setIsSingleAppTitleEditing(false);
+    setIsSingleAppCodeEditing(false);
+    setHasManualSingleAppTitle(false);
+    setHasManualSingleAppCode(false);
     setBulkDescriptions("");
     setBulkBaseUrls("");
     setBulkAppTitles("");
@@ -1127,6 +1190,12 @@ const URLBuilder = () => {
   };
 
   const displayedSingleFinalUrl = singleFinalUrlDraft || singleFinalUrl;
+  const displayedSingleAppCleanTitle = hasManualSingleAppTitle
+    ? singleAppCleanTitleDraft
+    : (singleAppCleanTitleDraft || singleAppCleanTitle);
+  const displayedSingleAppCollectionCode = hasManualSingleAppCode
+    ? singleAppCollectionCodeDraft
+    : (singleAppCollectionCodeDraft || singleAppCollectionCode);
 
   const globalContextSection = (
     <section className="mt-4 rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
@@ -1580,6 +1649,21 @@ const URLBuilder = () => {
                                 </p>
                               </div>
                             </div>
+
+                            <button
+                              onClick={() =>
+                                copyValue(
+                                  `${displayedSingleAppCleanTitle} --> ${displayedSingleAppCollectionCode}`,
+                                  "Contenido copiado",
+                                  "Se copiaron Titulo Limpio y Codigo Coleccion.",
+                                )
+                              }
+                              disabled={!displayedSingleAppCleanTitle || !displayedSingleAppCollectionCode}
+                              className="inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-2xl bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <Copy size={16} />
+                              Copiar todo
+                            </button>
                           </div>
 
                           <div className="space-y-4">
@@ -1591,21 +1675,57 @@ const URLBuilder = () => {
                                 <button
                                   onClick={() =>
                                     copyValue(
-                                      singleAppCleanTitle,
+                                      displayedSingleAppCleanTitle,
                                       "Titulo copiado",
                                       "El titulo limpio fue copiado al portapapeles.",
                                     )
                                   }
-                                  disabled={!singleAppCleanTitle}
-                                  className="inline-flex h-9 items-center gap-2 rounded-xl bg-accent px-3 text-xs font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                                  disabled={!displayedSingleAppCleanTitle}
+                                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                                  aria-label="Copiar titulo limpio"
                                 >
                                   <Copy size={14} />
-                                  Copiar
                                 </button>
                               </div>
-                              <p className="mt-3 text-lg font-semibold text-foreground">
-                                {singleAppCleanTitle || "Nectar Watt's"}
-                              </p>
+                              <button
+                                type="button"
+                                onClick={() => setIsSingleAppTitleEditing(true)}
+                                className={`mt-3 block w-full rounded-xl border text-left transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15 ${
+                                  isSingleAppTitleEditing
+                                    ? "border-[#0055a5] bg-white shadow-sm ring-4 ring-[#0055a5]/15"
+                                    : hasManualSingleAppTitle
+                                      ? "border-primary/30 bg-white/60"
+                                      : "border-transparent hover:bg-white/40"
+                                }`}
+                                aria-label="Editar titulo limpio"
+                              >
+                                <input
+                                  ref={singleAppTitleInputRef}
+                                  type="text"
+                                  value={displayedSingleAppCleanTitle || "Nectar Watt's"}
+                                  onChange={(event) => {
+                                    setSingleAppCleanTitleDraft(
+                                      formatEditableTitleCase(event.target.value),
+                                    );
+                                    setHasManualSingleAppTitle(true);
+                                  }}
+                                  onFocus={() => setIsSingleAppTitleEditing(true)}
+                                  onBlur={() => {
+                                    setHasManualSingleAppTitle(true);
+                                    setIsSingleAppTitleEditing(false);
+                                  }}
+                                  onKeyDown={(event) => {
+                                    if (event.key === "Escape") {
+                                      event.preventDefault();
+                                      setSingleAppCleanTitleDraft(singleAppCleanTitle);
+                                      setHasManualSingleAppTitle(false);
+                                      setIsSingleAppTitleEditing(false);
+                                    }
+                                  }}
+                                  className="h-11 w-full rounded-xl bg-transparent px-3 text-lg font-semibold text-foreground outline-none"
+                                  aria-label="Titulo limpio editable"
+                                />
+                              </button>
                             </div>
 
                             <div className="rounded-2xl border border-border bg-secondary/50 p-4">
@@ -1616,21 +1736,55 @@ const URLBuilder = () => {
                                 <button
                                   onClick={() =>
                                     copyValue(
-                                      singleAppCollectionCode,
+                                      displayedSingleAppCollectionCode,
                                       "Codigo copiado",
                                       "El codigo de coleccion fue copiado al portapapeles.",
                                     )
                                   }
-                                  disabled={!singleAppCollectionCode}
-                                  className="inline-flex h-9 items-center gap-2 rounded-xl bg-accent px-3 text-xs font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                                  disabled={!displayedSingleAppCollectionCode}
+                                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                                  aria-label="Copiar codigo coleccion"
                                 >
                                   <Copy size={14} />
-                                  Copiar
                                 </button>
                               </div>
-                              <p className="mt-3 font-mono text-lg font-semibold text-foreground">
-                                {singleAppCollectionCode || "10047"}
-                              </p>
+                              <button
+                                type="button"
+                                onClick={() => setIsSingleAppCodeEditing(true)}
+                                className={`mt-3 block w-full rounded-xl border text-left transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15 ${
+                                  isSingleAppCodeEditing
+                                    ? "border-[#0055a5] bg-white shadow-sm ring-4 ring-[#0055a5]/15"
+                                    : hasManualSingleAppCode
+                                      ? "border-primary/30 bg-white/60"
+                                      : "border-transparent hover:bg-white/40"
+                                }`}
+                                aria-label="Editar codigo coleccion"
+                              >
+                                <input
+                                  ref={singleAppCodeInputRef}
+                                  type="text"
+                                  value={displayedSingleAppCollectionCode || "10047"}
+                                  onChange={(event) => {
+                                    setSingleAppCollectionCodeDraft(event.target.value);
+                                    setHasManualSingleAppCode(true);
+                                  }}
+                                  onFocus={() => setIsSingleAppCodeEditing(true)}
+                                  onBlur={() => {
+                                    setHasManualSingleAppCode(true);
+                                    setIsSingleAppCodeEditing(false);
+                                  }}
+                                  onKeyDown={(event) => {
+                                    if (event.key === "Escape") {
+                                      event.preventDefault();
+                                      setSingleAppCollectionCodeDraft(singleAppCollectionCode);
+                                      setHasManualSingleAppCode(false);
+                                      setIsSingleAppCodeEditing(false);
+                                    }
+                                  }}
+                                  className="h-11 w-full rounded-xl bg-transparent px-3 font-mono text-lg font-semibold text-foreground outline-none"
+                                  aria-label="Codigo coleccion editable"
+                                />
+                              </button>
                             </div>
                           </div>
                         </section>
