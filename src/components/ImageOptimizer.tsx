@@ -2,13 +2,14 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Upload, Monitor, Smartphone, Zap, Download, ImageIcon, X, Info,
   AlertTriangle, Loader2, CheckCircle2, Crosshair, FileDown, Package,
-  History, RotateCcw, Trash2, Layers, Eye, ChevronLeft,
+  History, RotateCcw, Trash2, Layers, Eye, ChevronLeft, ShieldCheck, Type,
 } from "lucide-react";
 import JSZip from "jszip";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -70,6 +71,7 @@ const ImageOptimizer = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [showSafeZones, setShowSafeZones] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -342,6 +344,41 @@ const ImageOptimizer = () => {
                   <Info size={13} />
                   Peso máx: {selectedPreset.maxWeightKb} KB
                 </Badge>
+                {selectedPreset.outputFormat && (
+                  <Badge variant="outline" className="gap-1.5 px-3 py-1.5 text-xs font-medium">
+                    Formato: .{selectedPreset.outputFormat}
+                  </Badge>
+                )}
+              </div>
+            )}
+
+            {/* Safe zone toggle + text limits */}
+            {selectedPreset?.safeZone && (
+              <div className="mt-4 flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="safe-zones"
+                    checked={showSafeZones}
+                    onCheckedChange={setShowSafeZones}
+                  />
+                  <label htmlFor="safe-zones" className="text-xs font-medium text-foreground cursor-pointer flex items-center gap-1.5">
+                    <ShieldCheck size={13} className="text-primary" />
+                    Ver Márgenes de Seguridad
+                  </label>
+                </div>
+                <span className="text-[10px] text-muted-foreground">
+                  Desktop: {selectedPreset.safeZone.desktop}px · Mobile: {selectedPreset.safeZone.mobile}px
+                </span>
+              </div>
+            )}
+
+            {selectedPreset?.textLimits && (
+              <div className="mt-3 rounded-lg border border-border bg-muted/30 px-4 py-2.5 flex items-center gap-4">
+                <Type size={14} className="text-primary shrink-0" />
+                <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
+                  <span>Título: máx. <strong className="text-foreground">{selectedPreset.textLimits.titleMax}</strong> caracteres</span>
+                  <span>Párrafo: máx. <strong className="text-foreground">{selectedPreset.textLimits.paragraphMax}</strong> caracteres</span>
+                </div>
               </div>
             )}
           </CardContent>
@@ -530,6 +567,20 @@ const ImageOptimizer = () => {
                         <span className="text-xs">Sin imagen</span>
                       </div>
                     )}
+                    {/* Safe zone overlay - Desktop */}
+                    {showSafeZones && selectedPreset?.safeZone && (
+                      <div
+                        className="absolute inset-0 pointer-events-none z-10"
+                        style={{
+                          border: `${(selectedPreset.safeZone.desktop / selectedPreset.desktop.width) * 100}% dashed`,
+                          borderColor: "hsla(24, 83%, 52%, 0.55)",
+                        }}
+                      >
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-accent/80 text-accent-foreground text-[8px] font-bold px-1.5 py-0.5 rounded-b">
+                          {selectedPreset.safeZone.desktop}px
+                        </div>
+                      </div>
+                    )}
                   </div>
                   {selectedPreset && (
                     <p className="text-[11px] text-muted-foreground mt-2 text-center">
@@ -577,6 +628,20 @@ const ImageOptimizer = () => {
                     </div>
                   );
                 })()}
+                {/* Safe zone overlay - Mobile */}
+                {showSafeZones && selectedPreset?.safeZone && (
+                  <div
+                    className="absolute inset-0 pointer-events-none z-10"
+                    style={{
+                      border: `${(selectedPreset.safeZone.mobile / selectedPreset.mobile.width) * 100}% dashed`,
+                      borderColor: "hsla(24, 83%, 52%, 0.55)",
+                    }}
+                  >
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-accent/80 text-accent-foreground text-[8px] font-bold px-1.5 py-0.5 rounded-b">
+                      {selectedPreset.safeZone.mobile}px
+                    </div>
+                  </div>
+                )}
               </div>
               {selectedPreset && (
                 <p className="text-[11px] text-muted-foreground mt-2 text-center">
