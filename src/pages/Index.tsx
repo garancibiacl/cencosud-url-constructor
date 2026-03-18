@@ -1,6 +1,7 @@
 import { useState } from "react";
 import AppSidebar from "@/components/AppSidebar";
 import URLBuilder from "@/components/URLBuilder";
+import ImageOptimizer from "@/components/ImageOptimizer";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("url-generator");
@@ -11,6 +12,7 @@ const Index = () => {
 
       <main className="flex-1 flex flex-col min-w-0">
         {activeTab === "url-generator" && <URLBuilder />}
+        {activeTab === "optimizer" && <ImageOptimizer />}
         {activeTab === "history" && (
           <div className="flex-1 flex items-center justify-center p-8">
             <div className="text-center">
