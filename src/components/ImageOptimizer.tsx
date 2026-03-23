@@ -3,6 +3,7 @@ import {
   Upload, Monitor, Smartphone, Zap, Download, ImageIcon, X, Info,
   AlertTriangle, Loader2, CheckCircle2, Crosshair, FileDown, Package,
   History, RotateCcw, Trash2, Layers, Eye, ChevronLeft, ShieldCheck, Type,
+  Wand2, Settings, KeyRound, EyeOff,
 } from "lucide-react";
 import JSZip from "jszip";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -21,6 +23,7 @@ import {
   getHistory, addHistoryEntry, clearHistory,
   type HistoryEntry,
 } from "@/lib/optimizer-history";
+import { generateOutpaint, getOpenAIKey, saveOpenAIKey, getOutpaintingNeed } from "@/lib/openai-outpainting";
 
 /* ── Types ── */
 interface QueueItem {
@@ -143,6 +146,13 @@ const ImageOptimizer = () => {
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showSafeZones, setShowSafeZones] = useState(false);
+  // ── AI Generative Fill ───────────────────────────────────────
+  const [openAIKey, setOpenAIKeyState] = useState(() => getOpenAIKey());
+  const [openAIKeyInput, setOpenAIKeyInput] = useState(() => getOpenAIKey());
+  const [showAIKeyValue, setShowAIKeyValue] = useState(false);
+  const [showAISettings, setShowAISettings] = useState(false);
+  const [isOutpainting, setIsOutpainting] = useState(false);
+  const [outpaintStatus, setOutpaintStatus] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -375,24 +385,151 @@ const ImageOptimizer = () => {
     }));
   }, [editingId]);
 
+  /* ── AI Generative Fill ── */
+  const handleSaveOpenAIKey = useCallback(() => {
+    saveOpenAIKey(openAIKeyInput);
+    setOpenAIKeyState(openAIKeyInput.trim());
+    toast({ title: "API Key guardada", description: "Tu clave de OpenAI fue almacenada en este navegador." });
+  }, [openAIKeyInput, toast]);
+
+  const handleOutpaint = useCallback(async () => {
+    const activeItem = editingItem || (queue.length > 0 ? queue[0] : null);
+    if (!activeItem?.dataUrl || !selectedPreset) return;
+
+    if (!openAIKey) {
+      setShowAISettings(true);
+      toast({ title: "Se necesita API Key", description: "Abre la configuración IA e ingresa tu clave de OpenAI." });
+      return;
+    }
+
+    const variants = getPresetVariants(selectedPreset);
+    const targetVariant = variants.find((v) => v.id !== "mobile") ?? variants[0];
+
+    setIsOutpainting(true);
+    setOutpaintStatus("Iniciando Relleno Generativo…");
+
+    try {
+      const result = await generateOutpaint({
+        imageSrc: activeItem.dataUrl,
+        presetWidth: targetVariant.dimension.width,
+        presetHeight: targetVariant.dimension.height,
+        apiKey: openAIKey,
+        onProgress: setOutpaintStatus,
+      });
+
+      const targetId = activeItem.id;
+      setQueue((prev) => prev.map((q) =>
+        q.id === targetId
+          ? { ...q, dataUrl: result.dataUrl, status: "pending", results: [] }
+          : q,
+      ));
+
+      toast({
+        title: "¡Relleno Generativo completado!",
+        description: "La imagen fue expandida con IA. Ajusta el punto focal y procesa.",
+        className: "border-violet-300 bg-violet-50 text-violet-900",
+      });
+    } catch (err) {
+      toast({
+        title: "Error en Relleno IA",
+        description: err instanceof Error ? err.message : "Error desconocido.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsOutpainting(false);
+      setOutpaintStatus("");
+    }
+  }, [editingItem, queue, selectedPreset, openAIKey, toast]);
 
   return (
     <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
       {/* Header */}
       <div className="border-b border-border bg-card px-8 py-6">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-            <ImageIcon size={20} className="text-primary" />
+        <div className="flex items-center justify-between gap-3 mb-1">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+              <ImageIcon size={20} className="text-primary" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-foreground">
+                Optimizador de Imágenes Inteligente
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Adapta banners maestros a formatos Mobile y Desktop de Cencosud
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground">
-              Optimizador de Imágenes Inteligente
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Adapta banners maestros a formatos Mobile y Desktop de Cencosud
-            </p>
-          </div>
+          <Button
+            variant={showAISettings ? "default" : "outline"}
+            size="sm"
+            className="gap-2 shrink-0"
+            onClick={() => setShowAISettings((v) => !v)}
+          >
+            <Settings size={14} />
+            Configuración IA
+            {openAIKey && (
+              <span className="ml-1 h-2 w-2 rounded-full bg-green-500 inline-block" title="API Key configurada" />
+            )}
+          </Button>
         </div>
+
+        {/* AI Settings Panel */}
+        {showAISettings && (
+          <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <KeyRound size={15} className="text-violet-600" />
+              <span className="text-sm font-semibold text-violet-900">OpenAI API Key</span>
+              <Badge variant="outline" className="text-[10px] border-violet-300 text-violet-700">Relleno Generativo</Badge>
+            </div>
+            <p className="text-[11px] text-violet-700 mb-3">
+              Tu clave se guarda únicamente en este navegador (localStorage) y nunca se envía a ningún servidor nuestro.
+              Obtén una en <span className="font-mono font-semibold">platform.openai.com</span>.
+            </p>
+            <div className="flex gap-2 items-center">
+              <div className="relative flex-1">
+                <Input
+                  type={showAIKeyValue ? "text" : "password"}
+                  placeholder="sk-..."
+                  value={openAIKeyInput}
+                  onChange={(e) => setOpenAIKeyInput(e.target.value)}
+                  className="pr-10 font-mono text-sm bg-white border-violet-300 focus-visible:ring-violet-400"
+                  onKeyDown={(e) => { if (e.key === "Enter") handleSaveOpenAIKey(); }}
+                />
+                <button
+                  type="button"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowAIKeyValue((v) => !v)}
+                >
+                  {showAIKeyValue ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+              <Button size="sm" onClick={handleSaveOpenAIKey} className="bg-violet-600 hover:bg-violet-700 text-white">
+                Guardar
+              </Button>
+              {openAIKey && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive hover:bg-destructive/10"
+                  onClick={() => {
+                    saveOpenAIKey("");
+                    setOpenAIKeyState("");
+                    setOpenAIKeyInput("");
+                    toast({ title: "API Key eliminada" });
+                  }}
+                >
+                  Eliminar
+                </Button>
+              )}
+            </div>
+            {openAIKey && (
+              <p className="mt-2 text-[11px] text-green-700 flex items-center gap-1">
+                <CheckCircle2 size={11} />
+                API Key configurada correctamente.
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 p-8 space-y-6">
@@ -744,6 +881,69 @@ const ImageOptimizer = () => {
                             </span>
                           </div>
                         )}
+
+                        {/* ── Generative Fill Section ── */}
+                        {selectedPreset && activeItem?.dataUrl && (() => {
+                          // Detect whether outpainting would add value
+                          const img = document.querySelector(`img[alt="Imagen maestra"]`) as HTMLImageElement | null;
+                          const variants = getPresetVariants(selectedPreset);
+                          const target = variants.find((v) => v.id !== "mobile") ?? variants[0];
+                          const need = img
+                            ? getOutpaintingNeed(img.naturalWidth || 1, img.naturalHeight || 1, target.dimension.width, target.dimension.height)
+                            : 1;
+                          const showHint = need > 0.05;
+                          return (
+                            <div className="mt-4 rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 to-purple-50 p-3">
+                              <div className="flex flex-wrap items-center gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-0.5">
+                                    <Wand2 size={14} className="text-violet-600 shrink-0" />
+                                    <span className="text-xs font-semibold text-violet-900">Relleno Generativo IA</span>
+                                    <Badge variant="outline" className="text-[9px] border-violet-300 text-violet-600 px-1.5 py-0">DALL-E 2</Badge>
+                                  </div>
+                                  {showHint ? (
+                                    <p className="text-[11px] text-violet-700">
+                                      La imagen no cubre el formato completo. La IA extenderá el fondo para llenar los espacios vacíos.
+                                    </p>
+                                  ) : (
+                                    <p className="text-[11px] text-violet-500">
+                                      La imagen ya coincide bastante con el aspecto del preset.
+                                    </p>
+                                  )}
+                                </div>
+                                <Button
+                                  size="sm"
+                                  disabled={isOutpainting || !selectedPresetKey}
+                                  onClick={handleOutpaint}
+                                  className="bg-violet-600 hover:bg-violet-700 text-white gap-1.5 shrink-0"
+                                >
+                                  {isOutpainting
+                                    ? <><Loader2 size={13} className="animate-spin" /> Procesando…</>
+                                    : <><Wand2 size={13} /> Aplicar Relleno IA</>}
+                                </Button>
+                              </div>
+                              {isOutpainting && outpaintStatus && (
+                                <p className="mt-2 text-[11px] text-violet-700 flex items-center gap-1.5">
+                                  <Loader2 size={10} className="animate-spin" />
+                                  {outpaintStatus}
+                                </p>
+                              )}
+                              {!openAIKey && (
+                                <p className="mt-2 text-[11px] text-amber-700 flex items-center gap-1.5">
+                                  <AlertTriangle size={11} />
+                                  Sin API Key configurada.{" "}
+                                  <button
+                                    type="button"
+                                    className="underline font-medium"
+                                    onClick={() => setShowAISettings(true)}
+                                  >
+                                    Configurar ahora
+                                  </button>
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </CardContent>
                     </Card>
                   )}

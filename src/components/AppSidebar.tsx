@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Image, History, Settings, ChevronLeft, ChevronRight, Moon, Sun, Droplets } from "lucide-react";
+import { Link, Image, History, Settings, ChevronLeft, ChevronRight, Moon, Sun, Droplets, Wand2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -11,10 +11,11 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { id: "url-generator", label: "Constructor de URLs", icon: Link },
-  { id: "optimizer", label: "Optimizador de Imagenes", icon: Image },
-  { id: "history", label: "Historial de Campanas", icon: History },
-  { id: "settings", label: "Configuracion", icon: Settings },
+  { id: "url-generator",  label: "Constructor de URLs",      icon: Link    },
+  { id: "optimizer",      label: "Optimizador de Imágenes",  icon: Image   },
+  { id: "banner-expand",  label: "Relleno Generativo IA",    icon: Wand2   },
+  { id: "history",        label: "Historial de Campañas",    icon: History },
+  { id: "settings",       label: "Configuración",            icon: Settings },
 ];
 
 interface AppSidebarProps {

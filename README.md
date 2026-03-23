@@ -1,73 +1,40 @@
-# Welcome to your Lovable project
+# Cencosud URL Constructor
 
-## Project info
+Herramienta interna de marketing para el grupo Cencosud (Paris, Jumbo, Santa Isabel, SISA). Genera URLs promocionales estandarizadas y adapta imágenes banner a los formatos oficiales de cada marca y dispositivo.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Módulos
 
-## How can I edit this code?
+### Constructor de URLs
+Genera URLs con el parámetro `?nombre_promo=` a partir de parámetros estructurados (ubicación, componente, campaña, semana, fecha). Soporta modo individual y procesamiento en lote.
 
-There are several ways of editing your application.
+### Optimizador de Imágenes
+Recorta y exporta imágenes maestras a los formatos Desktop/Mobile/App de cada preset de Cencosud. Usa un editor de punto focal (clic/arrastrar) para controlar el recorte. Exporta siempre a JPEG con reducción automática de calidad hasta cumplir el peso máximo del preset. Incluye historial local en IndexedDB y descarga en ZIP.
 
-**Use Lovable**
+## Stack
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+- **Vite + React + TypeScript**
+- **Tailwind CSS + shadcn-ui** (Radix UI)
+- **Vitest** (unit tests) · **Playwright** (e2e)
+- **JSZip** · **date-fns** · **Framer Motion**
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+## Desarrollo
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+npm install
+npm run dev       # servidor de desarrollo
+npm run build     # build de producción
+npm run lint      # ESLint
+npm run test      # tests unitarios (Vitest)
 ```
 
-**Edit a file directly in GitHub**
+## Presets disponibles
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Los presets están definidos en `src/lib/image-presets.ts` y cubren:
 
-**Use GitHub Codespaces**
+| Categoría | Ejemplos |
+|-----------|---------|
+| Web y Retail | Huincha (2088×198), Banner Principal (1920×364), Carrusel Ofertas (652×352) |
+| Jumbo App | Banner Principal 3X (1032×399), Banner Doble 2X (332×332), Huincha 2X (686×120) |
+| SISA App | Banner Principal 3X, Banner Secundario, Shortcuts, Huincha 2X |
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Todos los outputs son `.jpg` con peso máximo por preset (100–250 KB).

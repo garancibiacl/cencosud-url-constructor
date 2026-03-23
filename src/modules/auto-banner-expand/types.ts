@@ -1,0 +1,110 @@
+/**
+ * Shared types for the Auto Banner Expand module.
+ */
+
+export type ExpandStatus = "idle" | "loading" | "success" | "error";
+
+// ── Presets ────────────────────────────────────────────────────────────────
+
+export interface BannerPreset {
+  id: string;
+  label: string;
+  width: number;
+  height: number;
+  maxWeightKb?: number;
+}
+
+export const BANNER_PRESETS: BannerPreset[] = [
+  { id: "huincha_desktop",    label: "Huincha Desktop (2088×198)",          width: 2088, height: 198,  maxWeightKb: 200 },
+  { id: "huincha_mobile",     label: "Huincha Mobile (1179×474)",           width: 1179, height: 474,  maxWeightKb: 200 },
+  { id: "banner_principal",   label: "Banner Principal Desktop (1920×364)", width: 1920, height: 364,  maxWeightKb: 200 },
+  { id: "banner_mobile",      label: "Banner Principal Mobile (700×330)",   width: 700,  height: 330,  maxWeightKb: 200 },
+  { id: "carrusel_desktop",   label: "Carrusel Desktop (652×352)",          width: 652,  height: 352,  maxWeightKb: 200 },
+  { id: "carrusel_mobile",    label: "Carrusel Mobile (440×280)",           width: 440,  height: 280,  maxWeightKb: 200 },
+  { id: "paris_home",         label: "Paris Home Desktop (1920×450)",       width: 1920, height: 450,  maxWeightKb: 250 },
+];
+
+// ── Analysis ───────────────────────────────────────────────────────────────
+
+/** Pixel dimensions of any image */
+export interface ImageDimensions {
+  width: number;
+  height: number;
+  aspectRatio: number;
+}
+
+/**
+ * Result of comparing an image against a preset.
+ * All px values are in 1024×1024 working space.
+ */
+export interface ExpansionAnalysis {
+  /** True if the image does not cover the full preset aspect */
+  needsExpansion: boolean;
+  /** Pixel gap on each side within the 1024-canvas */
+  leftGap: number;
+  rightGap: number;
+  topGap: number;
+  bottomGap: number;
+  /** Scaled preset rect inside the 1024 canvas */
+  scaledPresetW: number;
+  scaledPresetH: number;
+  /** Offset to center the preset in the 1024 canvas */
+  offsetX: number;
+  offsetY: number;
+  /** Where the contained product image lands inside the 1024 canvas */
+  drawX: number;
+  drawY: number;
+  drawW: number;
+  drawH: number;
+  /** Ratio of uncovered area (0 = perfect, 1 = totally different) */
+  gapRatio: number;
+}
+
+// ── Service ────────────────────────────────────────────────────────────────
+
+export interface OpenAIEditPayload {
+  imageBlob: Blob;
+  maskBlob: Blob;
+  prompt: string;
+  apiKey: string;
+}
+
+export interface OpenAIEditResult {
+  b64: string;
+}
+
+// ── Hook ──────────────────────────────────────────────────────────────────
+
+export interface ExpandResult {
+  /** JPEG dataURL of the AI-expanded image, cropped to preset */
+  dataUrl: string;
+  width: number;
+  height: number;
+}
+
+export interface UseAutoExpandBannerReturn {
+  /** Current process status */
+  status: ExpandStatus;
+  /** Human-readable progress message */
+  statusMessage: string;
+  /** Error message if status === "error" */
+  errorMessage: string | null;
+  /** Original uploaded image dataURL */
+  originalDataUrl: string | null;
+  /** AI-expanded result dataURL (available on success) */
+  resultDataUrl: string | null;
+  /** Analysis of how much expansion is needed */
+  analysis: ExpansionAnalysis | null;
+  /** Currently active preset */
+  preset: BannerPreset;
+  /** Set the active preset */
+  setPreset: (preset: BannerPreset) => void;
+  /** Load an image from a File object */
+  loadImage: (file: File) => void;
+  /** Trigger the AI outpainting process */
+  runExpansion: () => Promise<void>;
+  /** Export the result as a JPEG file download */
+  exportResult: () => void;
+  /** Reset all state back to idle */
+  reset: () => void;
+}
