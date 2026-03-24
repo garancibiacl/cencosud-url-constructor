@@ -20,7 +20,6 @@ import {
   Upload, Settings, Wand2, Download, RotateCcw,
   AlertTriangle, Loader2, CheckCircle2, ImageIcon, Info,
   AlignLeft, AlignCenter, AlignRight, Tag, SlidersHorizontal,
-  ChevronDown, ChevronUp, Sparkles,
 } from "lucide-react";
 
 import { Button }   from "@/components/ui/button";
@@ -125,7 +124,6 @@ export function AutoBannerExpand({ defaultPresetId }: AutoBannerExpandProps) {
   const [isDragging,   setIsDragging]   = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [hasKey,       setHasKey]       = useState(() => !!getStoredAPIKey());
-  const [showPrompt,   setShowPrompt]   = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Custom preset state ─────────────────────────────────────────────────
@@ -173,7 +171,6 @@ export function AutoBannerExpand({ defaultPresetId }: AutoBannerExpandProps) {
   const displayUrl  = isSuccess && resultDataUrl ? resultDataUrl : originalDataUrl;
 
   const activePosition = focusXToPosition(focusX);
-  const livePrompt     = buildDynamicPrompt(activePosition, hasElements, sceneDescription);
 
   // Gap overlay values (only shown on original, before expansion)
   const gapOverlay = analysis && !isSuccess
@@ -420,28 +417,6 @@ export function AutoBannerExpand({ defaultPresetId }: AutoBannerExpandProps) {
             </p>
           </div>
 
-          {/* Live prompt preview */}
-          <div className="rounded-lg border border-border overflow-hidden">
-            <button
-              onClick={() => setShowPrompt((v) => !v)}
-              className="w-full flex items-center justify-between px-3 py-2 bg-muted/40 hover:bg-muted/70 transition-colors"
-            >
-              <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
-                <Sparkles size={12} className="text-violet-500" />
-                Prompt dinámico generado
-              </span>
-              {showPrompt
-                ? <ChevronUp size={13} className="text-muted-foreground" />
-                : <ChevronDown size={13} className="text-muted-foreground" />}
-            </button>
-            {showPrompt && (
-              <div className="px-3 py-2.5 bg-muted/20">
-                <p className="text-[11px] leading-relaxed text-foreground font-mono whitespace-pre-wrap break-words">
-                  {livePrompt}
-                </p>
-              </div>
-            )}
-          </div>
 
         </CardContent>
       </Card>
