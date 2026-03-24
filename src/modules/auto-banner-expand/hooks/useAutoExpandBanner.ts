@@ -59,8 +59,9 @@ export function useAutoExpandBanner(
   const [originalDataUrl, setOriginalDataUrl] = useState<string | null>(null);
   const [resultDataUrl,   setResultDataUrl]   = useState<string | null>(null);
   const [analysis,        setAnalysis]        = useState<ExpansionAnalysis | null>(null);
-  const [focusX,          setFocusXRaw]       = useState<number>(50);
-  const [hasElements,     setHasElements]     = useState<boolean>(false);
+  const [focusX,           setFocusXRaw]        = useState<number>(50);
+  const [hasElements,      setHasElements]      = useState<boolean>(false);
+  const [sceneDescription, setSceneDescription] = useState<string>("");
 
   // ── Load image ──────────────────────────────────────────────────────────
 
@@ -143,7 +144,7 @@ export function useAutoExpandBanner(
         {
           imageBlob,
           maskBlob,
-          prompt: buildDynamicPrompt(focusPosition, hasElements),
+          prompt: buildDynamicPrompt(focusPosition, hasElements, sceneDescription),
           apiKey,
         },
         false, // do not silently fall back — surface errors to user
@@ -161,7 +162,7 @@ export function useAutoExpandBanner(
       setStatus("error");
       setStatusMessage("");
     }
-  }, [originalDataUrl, analysis, focusX, hasElements]);
+  }, [originalDataUrl, analysis, focusX, hasElements, sceneDescription]);
 
   // ── Export ──────────────────────────────────────────────────────────────
 
@@ -198,6 +199,7 @@ export function useAutoExpandBanner(
     setAnalysis(null);
     setFocusXRaw(50);
     setHasElements(false);
+    setSceneDescription("");
   }, []);
 
   return {
@@ -213,6 +215,8 @@ export function useAutoExpandBanner(
     setFocusX,
     hasElements,
     setHasElements,
+    sceneDescription,
+    setSceneDescription,
     loadImage,
     runExpansion,
     exportResult,

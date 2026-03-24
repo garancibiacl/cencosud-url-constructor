@@ -159,6 +159,9 @@ export interface UseAutoExpandBannerReturn {
   hasElements: boolean;
   /** Toggle preserve-elements mode */
   setHasElements: (v: boolean) => void;
+  /** Free-text description of background materials/scene for the dynamic prompt */
+  sceneDescription: string;
+  setSceneDescription: (v: string) => void;
   /** Load an image from a File object */
   loadImage: (file: File) => void;
   /** Trigger the AI outpainting process */

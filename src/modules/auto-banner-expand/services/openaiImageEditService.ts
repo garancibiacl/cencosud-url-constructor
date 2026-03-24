@@ -21,14 +21,18 @@ const OPENAI_EDITS_URL = "https://api.openai.com/v1/images/edits";
 const API_SIZE_PX = 1024;
 
 /**
- * Builds a dynamic outpainting prompt based on the user's composition choices.
+ * Builds a dynamic outpainting prompt based on the user's composition choices
+ * and an optional scene description (materials, textures, lighting keywords).
  *
- * @param focusPosition - Where the main subject sits in the final banner
- * @param hasElements   - Whether the image contains labels, seals, or text to preserve
+ * @param focusPosition    - Where the main subject sits in the final banner
+ * @param hasElements      - Whether the image contains labels, seals, or text to preserve
+ * @param sceneDescription - Optional free-text describing background materials/scene
+ *                           (e.g. "madera cálida, luz natural lateral, tonos tierra")
  */
 export function buildDynamicPrompt(
   focusPosition: FocusPosition,
   hasElements: boolean,
+  sceneDescription = "",
 ): string {
   const positionDesc: Record<FocusPosition, string> = {
     left:   "positioned in the left third of the composition",
@@ -36,21 +40,21 @@ export function buildDynamicPrompt(
     right:  "positioned in the right third of the composition",
   };
 
-  let prompt =
-    `Extend the image into a wide commercial banner while preserving the main subject ` +
-    `${positionDesc[focusPosition]}. Do not recenter the composition. ` +
-    `Seamlessly continue the background using consistent textures, lighting direction, and depth of field. ` +
-    `Maintain realistic shadows and perspective. ` +
-    `Enhance the composition to match professional retail banners: clean negative space, smooth light falloff, ` +
-    `subtle edge blur, and balanced layout suitable for text placement. ` +
-    `Avoid repeating objects or creating artificial patterns. ` +
-    `The result must look like a real commercial banner photograph, not AI-generated.`;
+  // Resolved materials string: use user input or a safe generic fallback
+  const materials = sceneDescription.trim()
+    ? sceneDescription.trim()
+    : "background materials, textures, and colors";
 
-  if (hasElements) {
-    prompt +=
-      ` Preserve all labels, seals, price tags, and text elements at their original positions ` +
-      `without duplication, distortion, or blending into the background.`;
-  }
+  const prompt =
+    `Continue the existing scene exactly as it would naturally extend beyond the frame. ` +
+    `Match the same ${materials}, perspective, lighting, shadows, and depth of field already visible. ` +
+    `The main subject is ${positionDesc[focusPosition]} — do not recenter the composition. ` +
+    `Preserve all original products and graphic elements without duplication or distortion. ` +
+    `Do not add new objects. ` +
+    `The generated area must look like a seamless extension of the same professional product photograph.` +
+    (hasElements
+      ? ` Preserve all labels, seals, price tags, and text elements at their original positions without distortion.`
+      : "");
 
   return prompt;
 }

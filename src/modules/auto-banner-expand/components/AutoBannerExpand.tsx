@@ -15,11 +15,12 @@
  * - Settings modal trigger (API key)
  */
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Upload, Settings, Wand2, Download, RotateCcw,
   AlertTriangle, Loader2, CheckCircle2, ImageIcon, Info,
-  AlignLeft, AlignCenter, AlignRight, Tag,
+  AlignLeft, AlignCenter, AlignRight, Tag, SlidersHorizontal,
+  ChevronDown, ChevronUp, Sparkles,
 } from "lucide-react";
 
 import { Button }   from "@/components/ui/button";
@@ -27,6 +28,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge }    from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Slider }   from "@/components/ui/slider";
+import { Input }    from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -37,7 +40,7 @@ import { useAutoExpandBanner }  from "../hooks/useAutoExpandBanner";
 import { AISettingsModal }       from "./AISettingsModal";
 import { getGapOverlayStyle }    from "../utils/maskGenerator";
 import { describeGaps }          from "../utils/imageSizeUtils";
-import { getStoredAPIKey }       from "../services/openaiImageEditService";
+import { getStoredAPIKey, buildDynamicPrompt } from "../services/openaiImageEditService";
 
 // ── Sub-components ────────────────────────────────────────────────────────
 
@@ -71,6 +74,10 @@ function GapOverlay({ leftPct, rightPct, topPct, bottomPct }: {
     </>
   );
 }
+
+// ── Custom preset ─────────────────────────────────────────────────────────
+
+const CUSTOM_PRESET_ID = "__custom__";
 
 // ── Focus position helpers ─────────────────────────────────────────────────
 
@@ -111,13 +118,35 @@ export function AutoBannerExpand({ defaultPresetId }: AutoBannerExpandProps) {
     analysis, preset,
     focusX, setFocusX,
     hasElements, setHasElements,
+    sceneDescription, setSceneDescription,
     setPreset, loadImage, runExpansion, exportResult, reset,
   } = useAutoExpandBanner(defaultPreset);
 
   const [isDragging,   setIsDragging]   = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [hasKey,       setHasKey]       = useState(() => !!getStoredAPIKey());
+  const [showPrompt,   setShowPrompt]   = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Custom preset state ─────────────────────────────────────────────────
+  const [isCustom,     setIsCustom]     = useState(false);
+  const [customW,      setCustomW]      = useState("");
+  const [customH,      setCustomH]      = useState("");
+
+  // Build and apply custom preset when both inputs are valid numbers
+  useEffect(() => {
+    if (!isCustom) return;
+    const w = parseInt(customW, 10);
+    const h = parseInt(customH, 10);
+    if (!w || !h || w < 10 || h < 10) return;
+    setPreset({
+      id: CUSTOM_PRESET_ID,
+      label: `Personalizado (${w}×${h})`,
+      width: w,
+      height: h,
+      category: "Personalizado",
+    });
+  }, [customW, customH, isCustom, setPreset]);
 
   // ── File handling ───────────────────────────────────────────────────────
 
@@ -144,6 +173,7 @@ export function AutoBannerExpand({ defaultPresetId }: AutoBannerExpandProps) {
   const displayUrl  = isSuccess && resultDataUrl ? resultDataUrl : originalDataUrl;
 
   const activePosition = focusXToPosition(focusX);
+  const livePrompt     = buildDynamicPrompt(activePosition, hasElements, sceneDescription);
 
   // Gap overlay values (only shown on original, before expansion)
   const gapOverlay = analysis && !isSuccess
@@ -194,8 +224,15 @@ export function AutoBannerExpand({ defaultPresetId }: AutoBannerExpandProps) {
         <CardContent className="p-4">
           <p className="text-xs font-semibold text-foreground mb-2">Formato de destino</p>
           <Select
-            value={preset.id}
+            value={isCustom ? CUSTOM_PRESET_ID : preset.id}
             onValueChange={(id) => {
+              if (id === CUSTOM_PRESET_ID) {
+                setIsCustom(true);
+                return;
+              }
+              setIsCustom(false);
+              setCustomW("");
+              setCustomH("");
               const found = BANNER_PRESETS.find((p) => p.id === id);
               if (found) setPreset(found);
             }}
@@ -205,7 +242,6 @@ export function AutoBannerExpand({ defaultPresetId }: AutoBannerExpandProps) {
             </SelectTrigger>
             <SelectContent>
               {(() => {
-                // Group presets by category, preserving insertion order
                 const groups = new Map<string, typeof BANNER_PRESETS>();
                 for (const p of BANNER_PRESETS) {
                   if (!groups.has(p.category)) groups.set(p.category, []);
@@ -224,20 +260,68 @@ export function AutoBannerExpand({ defaultPresetId }: AutoBannerExpandProps) {
                   </SelectGroup>
                 ));
               })()}
+
+              {/* Personalizado */}
+              <SelectGroup>
+                <SelectLabel className="text-xs font-bold text-foreground px-2 py-1.5">
+                  Personalizado
+                </SelectLabel>
+                <SelectItem value={CUSTOM_PRESET_ID} className="text-sm gap-2">
+                  <span className="flex items-center gap-2">
+                    <SlidersHorizontal size={12} className="text-violet-500" />
+                    Medidas personalizadas…
+                  </span>
+                </SelectItem>
+              </SelectGroup>
             </SelectContent>
           </Select>
 
+          {/* Custom dimension inputs */}
+          {isCustom && (
+            <div className="mt-3 flex items-center gap-2">
+              <div className="flex-1">
+                <label className="text-[10px] text-muted-foreground mb-1 block">Ancho (px)</label>
+                <Input
+                  type="number"
+                  min={10}
+                  max={9999}
+                  placeholder="ej. 1920"
+                  value={customW}
+                  onChange={(e) => setCustomW(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <span className="text-muted-foreground text-sm mt-4">×</span>
+              <div className="flex-1">
+                <label className="text-[10px] text-muted-foreground mb-1 block">Alto (px)</label>
+                <Input
+                  type="number"
+                  min={10}
+                  max={9999}
+                  placeholder="ej. 400"
+                  value={customH}
+                  onChange={(e) => setCustomH(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-2 items-center mt-2.5">
-            <Badge variant="secondary" className="text-xs px-3 py-1 gap-1.5">
-              <ImageIcon size={11} /> {preset.width}×{preset.height} px
-            </Badge>
-            <Badge variant="outline" className="text-[10px]">
-              Ratio {(preset.width / preset.height).toFixed(2)}:1
-            </Badge>
-            {preset.maxWeightKb && (
-              <Badge variant="outline" className="text-[10px]">
-                Máx. {preset.maxWeightKb} KB
-              </Badge>
+            {(!isCustom || (parseInt(customW) > 0 && parseInt(customH) > 0)) && (
+              <>
+                <Badge variant="secondary" className="text-xs px-3 py-1 gap-1.5">
+                  <ImageIcon size={11} /> {preset.width}×{preset.height} px
+                </Badge>
+                <Badge variant="outline" className="text-[10px]">
+                  Ratio {(preset.width / preset.height).toFixed(2)}:1
+                </Badge>
+                {preset.maxWeightKb && (
+                  <Badge variant="outline" className="text-[10px]">
+                    Máx. {preset.maxWeightKb} KB
+                  </Badge>
+                )}
+              </>
             )}
           </div>
         </CardContent>
@@ -317,6 +401,48 @@ export function AutoBannerExpand({ defaultPresetId }: AutoBannerExpandProps) {
               </p>
             </div>
           </button>
+
+          {/* Scene description input */}
+          <div>
+            <label className="text-xs font-semibold text-foreground block mb-1.5">
+              Descripción de la escena
+              <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">(opcional)</span>
+            </label>
+            <Textarea
+              placeholder="ej. madera cálida, luz natural lateral, tonos tierra, fondo difuminado…"
+              value={sceneDescription}
+              onChange={(e) => setSceneDescription(e.target.value)}
+              rows={2}
+              className="text-xs resize-none placeholder:text-muted-foreground/60"
+            />
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Describe materiales, colores o iluminación del fondo para guiar a la IA.
+            </p>
+          </div>
+
+          {/* Live prompt preview */}
+          <div className="rounded-lg border border-border overflow-hidden">
+            <button
+              onClick={() => setShowPrompt((v) => !v)}
+              className="w-full flex items-center justify-between px-3 py-2 bg-muted/40 hover:bg-muted/70 transition-colors"
+            >
+              <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                <Sparkles size={12} className="text-violet-500" />
+                Prompt dinámico generado
+              </span>
+              {showPrompt
+                ? <ChevronUp size={13} className="text-muted-foreground" />
+                : <ChevronDown size={13} className="text-muted-foreground" />}
+            </button>
+            {showPrompt && (
+              <div className="px-3 py-2.5 bg-muted/20">
+                <p className="text-[11px] leading-relaxed text-foreground font-mono whitespace-pre-wrap break-words">
+                  {livePrompt}
+                </p>
+              </div>
+            )}
+          </div>
+
         </CardContent>
       </Card>
 
