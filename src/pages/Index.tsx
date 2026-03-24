@@ -35,7 +35,7 @@ const Index = () => {
             {/* Content */}
             <div className="flex-1 p-8">
               <div className="max-w-3xl mx-auto">
-                <AutoBannerExpand defaultPresetId="huincha_desktop" />
+                <AutoBannerExpand defaultPresetId="HUINCHA_JUMBO_SISA_desktop" />
               </div>
             </div>
           </div>

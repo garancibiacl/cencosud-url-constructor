@@ -17,6 +17,7 @@ import type {
   BannerPreset,
   ExpandStatus,
   ExpansionAnalysis,
+  FocusPosition,
   UseAutoExpandBannerReturn,
 } from "../types";
 import { BANNER_PRESETS } from "../types";
@@ -31,7 +32,7 @@ import {
 import {
   callOpenAIImageEdit,
   getStoredAPIKey,
-  DEFAULT_PROMPT,
+  buildDynamicPrompt,
 } from "../services/openaiImageEditService";
 import { downloadBlob } from "@/lib/image-processor";
 
@@ -58,6 +59,8 @@ export function useAutoExpandBanner(
   const [originalDataUrl, setOriginalDataUrl] = useState<string | null>(null);
   const [resultDataUrl,   setResultDataUrl]   = useState<string | null>(null);
   const [analysis,        setAnalysis]        = useState<ExpansionAnalysis | null>(null);
+  const [focusX,          setFocusXRaw]       = useState<number>(50);
+  const [hasElements,     setHasElements]     = useState<boolean>(false);
 
   // ── Load image ──────────────────────────────────────────────────────────
 
@@ -72,14 +75,14 @@ export function useAutoExpandBanner(
       const dataUrl = await readFileAsDataURL(file);
       setOriginalDataUrl(dataUrl);
 
-      const dims     = await getImageDimensions(dataUrl);
-      const newAnalysis = analyzeExpansionNeeds(dims, preset);
+      const dims        = await getImageDimensions(dataUrl);
+      const newAnalysis = analyzeExpansionNeeds(dims, preset, focusX);
       setAnalysis(newAnalysis);
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Error al cargar imagen.");
       setStatus("error");
     }
-  }, [preset]);
+  }, [preset, focusX]);
 
   // Re-run analysis when preset changes but image is already loaded
   const handleSetPreset = useCallback(async (newPreset: BannerPreset) => {
@@ -89,12 +92,27 @@ export function useAutoExpandBanner(
     if (!originalDataUrl) return;
     try {
       const dims        = await getImageDimensions(originalDataUrl);
-      const newAnalysis = analyzeExpansionNeeds(dims, newPreset);
+      const newAnalysis = analyzeExpansionNeeds(dims, newPreset, focusX);
       setAnalysis(newAnalysis);
     } catch {
       // ignore — image may not be loaded yet
     }
-  }, [originalDataUrl]);
+  }, [originalDataUrl, focusX]);
+
+  // Re-run analysis when focusX changes
+  const setFocusX = useCallback(async (x: number) => {
+    setFocusXRaw(x);
+    setResultDataUrl(null);
+
+    if (!originalDataUrl) return;
+    try {
+      const dims        = await getImageDimensions(originalDataUrl);
+      const newAnalysis = analyzeExpansionNeeds(dims, preset, x);
+      setAnalysis(newAnalysis);
+    } catch {
+      // ignore
+    }
+  }, [originalDataUrl, preset]);
 
   // ── Run AI expansion ────────────────────────────────────────────────────
 
@@ -117,11 +135,15 @@ export function useAutoExpandBanner(
       ]);
 
       setStatusMessage("Enviando a OpenAI DALL-E 2…");
+      // Map focusX (0–100) to a semantic position for the prompt
+      const focusPosition: FocusPosition =
+        focusX < 33 ? "left" : focusX > 67 ? "right" : "center";
+
       const { b64 } = await callOpenAIImageEdit(
         {
           imageBlob,
           maskBlob,
-          prompt: DEFAULT_PROMPT,
+          prompt: buildDynamicPrompt(focusPosition, hasElements),
           apiKey,
         },
         false, // do not silently fall back — surface errors to user
@@ -139,7 +161,7 @@ export function useAutoExpandBanner(
       setStatus("error");
       setStatusMessage("");
     }
-  }, [originalDataUrl, analysis]);
+  }, [originalDataUrl, analysis, focusX, hasElements]);
 
   // ── Export ──────────────────────────────────────────────────────────────
 
@@ -174,6 +196,8 @@ export function useAutoExpandBanner(
     setOriginalDataUrl(null);
     setResultDataUrl(null);
     setAnalysis(null);
+    setFocusXRaw(50);
+    setHasElements(false);
   }, []);
 
   return {
@@ -185,6 +209,10 @@ export function useAutoExpandBanner(
     analysis,
     preset,
     setPreset: handleSetPreset,
+    focusX,
+    setFocusX,
+    hasElements,
+    setHasElements,
     loadImage,
     runExpansion,
     exportResult,

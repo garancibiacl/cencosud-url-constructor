@@ -2,7 +2,12 @@
  * Shared types for the Auto Banner Expand module.
  */
 
+import { CENCOSUD_PRESETS } from "@/lib/image-presets";
+
 export type ExpandStatus = "idle" | "loading" | "success" | "error";
+
+/** Horizontal position of the main subject within the banner */
+export type FocusPosition = "left" | "center" | "right";
 
 // ── Presets ────────────────────────────────────────────────────────────────
 
@@ -12,17 +17,64 @@ export interface BannerPreset {
   width: number;
   height: number;
   maxWeightKb?: number;
+  /** Category group for the selector (e.g. "Web y Retail", "Jumbo App") */
+  category: string;
 }
 
-export const BANNER_PRESETS: BannerPreset[] = [
-  { id: "huincha_desktop",    label: "Huincha Desktop (2088×198)",          width: 2088, height: 198,  maxWeightKb: 200 },
-  { id: "huincha_mobile",     label: "Huincha Mobile (1179×474)",           width: 1179, height: 474,  maxWeightKb: 200 },
-  { id: "banner_principal",   label: "Banner Principal Desktop (1920×364)", width: 1920, height: 364,  maxWeightKb: 200 },
-  { id: "banner_mobile",      label: "Banner Principal Mobile (700×330)",   width: 700,  height: 330,  maxWeightKb: 200 },
-  { id: "carrusel_desktop",   label: "Carrusel Desktop (652×352)",          width: 652,  height: 352,  maxWeightKb: 200 },
-  { id: "carrusel_mobile",    label: "Carrusel Mobile (440×280)",           width: 440,  height: 280,  maxWeightKb: 200 },
-  { id: "paris_home",         label: "Paris Home Desktop (1920×450)",       width: 1920, height: 450,  maxWeightKb: 250 },
-];
+// ── Derive BANNER_PRESETS from CENCOSUD_PRESETS (single source of truth) ─────
+
+const EXCLUDED_PRESET_KEYS = new Set(["PARIS_HOME", "JUMBO_OFERTA", "SANTA_ISABEL_GRILLA"]);
+
+function buildBannerPresets(): BannerPreset[] {
+  const result: BannerPreset[] = [];
+
+  for (const [key, preset] of Object.entries(CENCOSUD_PRESETS)) {
+    if (EXCLUDED_PRESET_KEYS.has(key)) continue;
+    const category = preset.category ?? "Web y Retail";
+    const densityTag = preset.densityLabel ? ` (${preset.densityLabel})` : "";
+
+    if (preset.variants?.length) {
+      // App-only preset — single output dimension
+      const variant = preset.variants[0];
+      result.push({
+        id: `${key}_app`,
+        label: `${preset.label}${densityTag}`,
+        width: variant.dimension.width,
+        height: variant.dimension.height,
+        maxWeightKb: preset.maxWeightKb,
+        category,
+      });
+    } else {
+      // Desktop variant
+      result.push({
+        id: `${key}_desktop`,
+        label: `${preset.label} — Desktop`,
+        width: preset.desktop.width,
+        height: preset.desktop.height,
+        maxWeightKb: preset.maxWeightKb,
+        category,
+      });
+      // Mobile variant (only if different from desktop)
+      if (
+        preset.mobile.width !== preset.desktop.width ||
+        preset.mobile.height !== preset.desktop.height
+      ) {
+        result.push({
+          id: `${key}_mobile`,
+          label: `${preset.label} — Mobile`,
+          width: preset.mobile.width,
+          height: preset.mobile.height,
+          maxWeightKb: preset.maxWeightKb,
+          category,
+        });
+      }
+    }
+  }
+
+  return result;
+}
+
+export const BANNER_PRESETS: BannerPreset[] = buildBannerPresets();
 
 // ── Analysis ───────────────────────────────────────────────────────────────
 
@@ -99,6 +151,14 @@ export interface UseAutoExpandBannerReturn {
   preset: BannerPreset;
   /** Set the active preset */
   setPreset: (preset: BannerPreset) => void;
+  /** Horizontal focus position 0–100 (0 = full left, 50 = center, 100 = full right) */
+  focusX: number;
+  /** Set the horizontal focus position */
+  setFocusX: (x: number) => void;
+  /** Whether the image contains labels/seals/text elements to preserve */
+  hasElements: boolean;
+  /** Toggle preserve-elements mode */
+  setHasElements: (v: boolean) => void;
   /** Load an image from a File object */
   loadImage: (file: File) => void;
   /** Trigger the AI outpainting process */

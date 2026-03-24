@@ -20,6 +20,7 @@ export {
   storeAPIKey,
   clearAPIKey,
   DEFAULT_PROMPT,
+  buildDynamicPrompt,
 } from "./services/openaiImageEditService";
 
 // Utilities (for advanced use)
@@ -33,6 +34,7 @@ export type {
   ExpandStatus,
   ExpansionAnalysis,
   ExpandResult,
+  FocusPosition,
   UseAutoExpandBannerReturn,
 } from "./types";
 

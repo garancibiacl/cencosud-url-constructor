@@ -34,10 +34,13 @@ export function getImageDimensions(dataUrl: string): Promise<ImageDimensions> {
  * Decision logic:
  * - If gapRatio < 0.03 → almost perfect fit → needsExpansion = false
  * - Otherwise → expansion is worthwhile
+ *
+ * @param focusX - Horizontal position of subject: 0 = full left, 50 = center, 100 = full right
  */
 export function analyzeExpansionNeeds(
   img: ImageDimensions,
   preset: BannerPreset,
+  focusX = 50,
 ): ExpansionAnalysis {
   const imgAspect = img.width / img.height;
   const presetAspect = preset.width / preset.height;
@@ -61,7 +64,11 @@ export function analyzeExpansionNeeds(
   const containScale = Math.min(scaledPresetW / img.width, scaledPresetH / img.height);
   const drawW = Math.round(img.width * containScale);
   const drawH = Math.round(img.height * containScale);
-  const drawX = offsetX + Math.floor((scaledPresetW - drawW) / 2);
+
+  // Horizontal placement driven by focusX (0–100)
+  const availableX = scaledPresetW - drawW;
+  const drawX = offsetX + Math.round((availableX * Math.max(0, Math.min(100, focusX))) / 100);
+  // Vertical: always centered
   const drawY = offsetY + Math.floor((scaledPresetH - drawH) / 2);
 
   // ── Gaps inside the preset area ─────────────────────────────────────────

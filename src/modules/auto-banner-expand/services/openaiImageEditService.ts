@@ -15,18 +15,48 @@
  * The hook (useAutoExpandBanner) owns state and calls this service.
  */
 
-import type { OpenAIEditPayload, OpenAIEditResult } from "../types";
+import type { FocusPosition, OpenAIEditPayload, OpenAIEditResult } from "../types";
 
 const OPENAI_EDITS_URL = "https://api.openai.com/v1/images/edits";
 const API_SIZE_PX = 1024;
 
-export const DEFAULT_PROMPT =
-  "Extend the scene into a wide cinematic banner while preserving the original beer glasses as the central subject. " +
-  "Seamlessly reconstruct the surrounding environment using the same wooden surface, warm tones, and natural lighting direction. " +
-  "Maintain depth of field and realistic shadows, ensuring the background blends organically without visible repetition. " +
-  "Enhance the composition to feel like a professional product advertisement: balanced spacing, subtle background blur on the sides, " +
-  "smooth light falloff, and natural texture continuation. Avoid distortion or duplication of the main objects. " +
-  "The result should look like a high-end commercial banner photograph, not AI-generated.";
+/**
+ * Builds a dynamic outpainting prompt based on the user's composition choices.
+ *
+ * @param focusPosition - Where the main subject sits in the final banner
+ * @param hasElements   - Whether the image contains labels, seals, or text to preserve
+ */
+export function buildDynamicPrompt(
+  focusPosition: FocusPosition,
+  hasElements: boolean,
+): string {
+  const positionDesc: Record<FocusPosition, string> = {
+    left:   "positioned in the left third of the composition",
+    center: "centered as the main focal point",
+    right:  "positioned in the right third of the composition",
+  };
+
+  let prompt =
+    `Extend the image into a wide commercial banner while preserving the main subject ` +
+    `${positionDesc[focusPosition]}. Do not recenter the composition. ` +
+    `Seamlessly continue the background using consistent textures, lighting direction, and depth of field. ` +
+    `Maintain realistic shadows and perspective. ` +
+    `Enhance the composition to match professional retail banners: clean negative space, smooth light falloff, ` +
+    `subtle edge blur, and balanced layout suitable for text placement. ` +
+    `Avoid repeating objects or creating artificial patterns. ` +
+    `The result must look like a real commercial banner photograph, not AI-generated.`;
+
+  if (hasElements) {
+    prompt +=
+      ` Preserve all labels, seals, price tags, and text elements at their original positions ` +
+      `without duplication, distortion, or blending into the background.`;
+  }
+
+  return prompt;
+}
+
+/** Fallback prompt for when focusPosition/hasElements are not provided */
+export const DEFAULT_PROMPT = buildDynamicPrompt("center", false);
 
 // ── API Key management ────────────────────────────────────────────────────
 

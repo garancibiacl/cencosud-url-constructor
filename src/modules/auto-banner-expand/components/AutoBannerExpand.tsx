@@ -5,7 +5,9 @@
  *
  * Responsibilities:
  * - Drag-and-drop / click-to-upload image input
- * - Preset selector
+ * - Preset selector dropdown
+ * - Focus position control (left / center / right) + fine-tune slider
+ * - "Preserve elements" toggle (labels, seals, text)
  * - Real-time preview with visual gap overlay
  * - "Expandir con IA" action button
  * - Progress / error feedback
@@ -17,18 +19,25 @@ import { useCallback, useRef, useState } from "react";
 import {
   Upload, Settings, Wand2, Download, RotateCcw,
   AlertTriangle, Loader2, CheckCircle2, ImageIcon, Info,
+  AlignLeft, AlignCenter, AlignRight, Tag,
 } from "lucide-react";
 
-import { Button }  from "@/components/ui/button";
+import { Button }   from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge }   from "@/components/ui/badge";
+import { Badge }    from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Slider }   from "@/components/ui/slider";
+import {
+  Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+
 import { BANNER_PRESETS } from "../types";
-import { useAutoExpandBanner } from "../hooks/useAutoExpandBanner";
-import { AISettingsModal }     from "./AISettingsModal";
-import { getGapOverlayStyle }  from "../utils/maskGenerator";
-import { describeGaps }        from "../utils/imageSizeUtils";
-import { getStoredAPIKey }     from "../services/openaiImageEditService";
+import type { FocusPosition } from "../types";
+import { useAutoExpandBanner }  from "../hooks/useAutoExpandBanner";
+import { AISettingsModal }       from "./AISettingsModal";
+import { getGapOverlayStyle }    from "../utils/maskGenerator";
+import { describeGaps }          from "../utils/imageSizeUtils";
+import { getStoredAPIKey }       from "../services/openaiImageEditService";
 
 // ── Sub-components ────────────────────────────────────────────────────────
 
@@ -63,6 +72,28 @@ function GapOverlay({ leftPct, rightPct, topPct, bottomPct }: {
   );
 }
 
+// ── Focus position helpers ─────────────────────────────────────────────────
+
+const FOCUS_BUTTONS: { value: FocusPosition; label: string; Icon: React.ElementType }[] = [
+  { value: "left",   label: "Izquierda", Icon: AlignLeft   },
+  { value: "center", label: "Centro",    Icon: AlignCenter },
+  { value: "right",  label: "Derecha",   Icon: AlignRight  },
+];
+
+/** Map focusX (0–100) to the nearest FocusPosition bucket */
+function focusXToPosition(x: number): FocusPosition {
+  if (x < 33) return "left";
+  if (x > 67) return "right";
+  return "center";
+}
+
+/** Map a FocusPosition preset to a representative focusX value */
+const POSITION_TO_X: Record<FocusPosition, number> = {
+  left: 15,
+  center: 50,
+  right: 85,
+};
+
 // ── Main component ────────────────────────────────────────────────────────
 
 interface AutoBannerExpandProps {
@@ -78,12 +109,14 @@ export function AutoBannerExpand({ defaultPresetId }: AutoBannerExpandProps) {
     status, statusMessage, errorMessage,
     originalDataUrl, resultDataUrl,
     analysis, preset,
+    focusX, setFocusX,
+    hasElements, setHasElements,
     setPreset, loadImage, runExpansion, exportResult, reset,
   } = useAutoExpandBanner(defaultPreset);
 
-  const [isDragging,       setIsDragging]       = useState(false);
-  const [showSettings,     setShowSettings]      = useState(false);
-  const [hasKey,           setHasKey]            = useState(() => !!getStoredAPIKey());
+  const [isDragging,   setIsDragging]   = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [hasKey,       setHasKey]       = useState(() => !!getStoredAPIKey());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── File handling ───────────────────────────────────────────────────────
@@ -102,13 +135,15 @@ export function AutoBannerExpand({ defaultPresetId }: AutoBannerExpandProps) {
 
   // ── Computed ────────────────────────────────────────────────────────────
 
-  const isLoading    = status === "loading";
-  const isSuccess    = status === "success";
-  const isError      = status === "error";
-  const hasImage     = !!originalDataUrl;
-  const needsExpand  = analysis?.needsExpansion ?? false;
-  const canExpand    = hasImage && needsExpand && !isLoading;
-  const displayUrl   = isSuccess && resultDataUrl ? resultDataUrl : originalDataUrl;
+  const isLoading   = status === "loading";
+  const isSuccess   = status === "success";
+  const isError     = status === "error";
+  const hasImage    = !!originalDataUrl;
+  const needsExpand = analysis?.needsExpansion ?? false;
+  const canExpand   = hasImage && needsExpand && !isLoading;
+  const displayUrl  = isSuccess && resultDataUrl ? resultDataUrl : originalDataUrl;
+
+  const activePosition = focusXToPosition(focusX);
 
   // Gap overlay values (only shown on original, before expansion)
   const gapOverlay = analysis && !isSuccess
@@ -154,16 +189,47 @@ export function AutoBannerExpand({ defaultPresetId }: AutoBannerExpandProps) {
         </Button>
       </div>
 
-      {/* ── Preset info (static) ── */}
+      {/* ── Preset selector ── */}
       <Card>
         <CardContent className="p-4">
           <p className="text-xs font-semibold text-foreground mb-2">Formato de destino</p>
-          <div className="flex flex-wrap gap-2 items-center">
+          <Select
+            value={preset.id}
+            onValueChange={(id) => {
+              const found = BANNER_PRESETS.find((p) => p.id === id);
+              if (found) setPreset(found);
+            }}
+          >
+            <SelectTrigger className="w-full text-sm border-border">
+              <SelectValue placeholder="Selecciona un formato de Cencosud..." />
+            </SelectTrigger>
+            <SelectContent>
+              {(() => {
+                // Group presets by category, preserving insertion order
+                const groups = new Map<string, typeof BANNER_PRESETS>();
+                for (const p of BANNER_PRESETS) {
+                  if (!groups.has(p.category)) groups.set(p.category, []);
+                  groups.get(p.category)!.push(p);
+                }
+                return Array.from(groups.entries()).map(([cat, items]) => (
+                  <SelectGroup key={cat}>
+                    <SelectLabel className="text-xs font-bold text-foreground px-2 py-1.5">
+                      {cat}
+                    </SelectLabel>
+                    {items.map((p) => (
+                      <SelectItem key={p.id} value={p.id} className="text-sm">
+                        {p.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                ));
+              })()}
+            </SelectContent>
+          </Select>
+
+          <div className="flex flex-wrap gap-2 items-center mt-2.5">
             <Badge variant="secondary" className="text-xs px-3 py-1 gap-1.5">
-              <ImageIcon size={11} /> {preset.label}
-            </Badge>
-            <Badge variant="outline" className="text-[10px]">
-              {preset.width}×{preset.height} px
+              <ImageIcon size={11} /> {preset.width}×{preset.height} px
             </Badge>
             <Badge variant="outline" className="text-[10px]">
               Ratio {(preset.width / preset.height).toFixed(2)}:1
@@ -174,6 +240,83 @@ export function AutoBannerExpand({ defaultPresetId }: AutoBannerExpandProps) {
               </Badge>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Composition controls ── */}
+      <Card>
+        <CardContent className="p-4 flex flex-col gap-4">
+          {/* Focus position */}
+          <div>
+            <p className="text-xs font-semibold text-foreground mb-2">
+              Posición del foco (sujeto principal)
+            </p>
+            <div className="flex gap-2">
+              {FOCUS_BUTTONS.map(({ value, label, Icon }) => (
+                <button
+                  key={value}
+                  onClick={() => setFocusX(POSITION_TO_X[value])}
+                  className={`
+                    flex-1 flex flex-col items-center gap-1 rounded-lg border py-2 px-1 text-[11px] font-medium
+                    transition-all cursor-pointer
+                    ${activePosition === value
+                      ? "border-violet-500 bg-violet-50 text-violet-700"
+                      : "border-border text-muted-foreground hover:border-violet-300 hover:bg-violet-50/40"}
+                  `}
+                >
+                  <Icon size={15} />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Fine-tune slider */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-xs text-muted-foreground">Ajuste fino horizontal</p>
+              <span className="text-[11px] font-mono text-muted-foreground">{focusX}%</span>
+            </div>
+            <Slider
+              min={0}
+              max={100}
+              step={1}
+              value={[focusX]}
+              onValueChange={([v]) => setFocusX(v)}
+              className="[&_[role=slider]]:bg-violet-600 [&_[role=slider]]:border-violet-600"
+            />
+            <div className="flex justify-between text-[9px] text-muted-foreground mt-1">
+              <span>← Izquierda</span>
+              <span>Derecha →</span>
+            </div>
+          </div>
+
+          {/* Preserve elements toggle */}
+          <button
+            onClick={() => setHasElements(!hasElements)}
+            className={`
+              flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left w-full
+              transition-all cursor-pointer
+              ${hasElements
+                ? "border-amber-400 bg-amber-50"
+                : "border-border hover:border-amber-300 hover:bg-amber-50/40"}
+            `}
+          >
+            <div className={`
+              flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors
+              ${hasElements ? "border-amber-500 bg-amber-500" : "border-muted-foreground/40"}
+            `}>
+              {hasElements && <Tag size={10} className="text-white" />}
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-foreground leading-tight">
+                Contiene sellos, precios o texto
+              </p>
+              <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">
+                La IA preservará estos elementos sin distorsión ni duplicación
+              </p>
+            </div>
+          </button>
         </CardContent>
       </Card>
 
@@ -225,6 +368,9 @@ export function AutoBannerExpand({ defaultPresetId }: AutoBannerExpandProps) {
                   src={displayUrl!}
                   alt="Preview"
                   className="absolute inset-0 w-full h-full object-contain"
+                  style={{
+                    objectPosition: isSuccess ? "center" : `${focusX}% 50%`,
+                  }}
                 />
 
                 {/* Gap overlay — only on original before expansion */}
