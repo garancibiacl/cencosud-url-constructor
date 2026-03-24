@@ -158,6 +158,7 @@ const dropdownOptions: Record<GlobalParamKey, { value: string; label: string }[]
     { value: "dsp-gratis-prime-dsps-gratis-30k", label: "Dsp gratis Prime + dsps gratis 30k" },
     { value: "especial", label: "Especial" },
     { value: "proveedor", label: "Proveedor" },
+    { value: "exlusivas", label: "Exlusivas" },
     { value: "semanasanta", label: "Semana Santa" },
     { value: "cyber-day", label: "Cyber Day" },
     { value: "black-friday", label: "Black Friday" },
@@ -172,7 +173,7 @@ const dropdownOptions: Record<GlobalParamKey, { value: string; label: string }[]
 const globalFieldOrder: { key: GlobalParamKey; label: string; placeholder: string }[] = [
   { key: "ubicacion", label: "Ubicacion", placeholder: "Seleccionar ubicacion" },
   { key: "componente", label: "Componente", placeholder: "Seleccionar componente" },
-  { key: "campana", label: "Campana", placeholder: "Seleccionar campana" },
+  { key: "campana", label: "Campaña", placeholder: "Seleccionar campaña" },
   { key: "semana", label: "Semana Actual", placeholder: "Seleccionar semana" },
   { key: "fecha", label: "Fecha", placeholder: "Seleccionar fecha" },
 ];
