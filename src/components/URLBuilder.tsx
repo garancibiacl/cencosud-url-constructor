@@ -38,8 +38,11 @@ import type { URLParams } from "@/lib/url-builder";
 import type { BatchRow } from "@/hooks/useUrlHydrator";
 import { compactDescriptionReference, useUrlHydrator } from "@/hooks/useUrlHydrator";
 import {
+  buildBulkAppClipboardRows,
+  buildBulkWebClipboardRows,
   type AppBatchRow,
   buildAppBatchRows,
+  extractBrandDetail,
   extractCleanTitle,
   extractCollectionCode,
 } from "@/lib/title-url-app";
@@ -985,6 +988,8 @@ const URLBuilder = () => {
   const [bulkAppUrls, setBulkAppUrls] = useState("");
   const [editableAppRows, setEditableAppRows] = useState<AppBatchRow[]>([]);
   const [bulkResolvedLinks, setBulkResolvedLinks] = useState<Record<string, string>>({});
+  const [isBulkWebCopySuccess, setIsBulkWebCopySuccess] = useState(false);
+  const [isBulkAppCopySuccess, setIsBulkAppCopySuccess] = useState(false);
   const [showResultsBottomShadow, setShowResultsBottomShadow] = useState(false);
   const resultsScrollRef = useRef<HTMLDivElement>(null);
   const singleFinalUrlInputRef = useRef<HTMLTextAreaElement>(null);
@@ -1094,10 +1099,24 @@ const URLBuilder = () => {
   const validBatchLinks = batchRows
     .map((row) => bulkResolvedLinks[`row-${row.index}`] || "")
     .filter(Boolean);
-  const validAppRows = editableAppRows.filter((row) => row.cleanTitle && row.collectionCode);
-  const bulkAppCopyValue = validAppRows
-    .map((row) => `${row.cleanTitle}\t${row.collectionCode}`)
-    .join("\n");
+  const bulkWebClipboardRows = useMemo(
+    () =>
+      buildBulkWebClipboardRows(
+        batchRows.map((row) => ({
+          productName: extractCleanTitle(row.rawDescription),
+          brandDetail: extractBrandDetail(row.rawDescription),
+          finalUrl: bulkResolvedLinks[`row-${row.index}`] || "",
+          collectionCode: extractCollectionCode(row.baseUrl),
+        })),
+      ),
+    [batchRows, bulkResolvedLinks],
+  );
+  const bulkWebCopyValue = bulkWebClipboardRows.join("\n\n");
+  const bulkAppClipboardRows = useMemo(
+    () => buildBulkAppClipboardRows(editableAppRows),
+    [editableAppRows],
+  );
+  const bulkAppCopyValue = bulkAppClipboardRows.join("\n");
 
   const updateGlobalParam = (key: GlobalParamKey, value: string) => {
     setGlobalParams((current) => {
@@ -1141,12 +1160,84 @@ const URLBuilder = () => {
   };
 
   const copyValue = async (value: string, title: string, description: string) => {
-    if (!value) {
+    const normalizedValue = value.trim();
+
+    if (!normalizedValue) {
+      return false;
+    }
+
+    if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+      toast({
+        variant: "destructive",
+        title: "No se pudo copiar",
+        description: "El portapapeles no esta disponible en este navegador.",
+      });
+      return false;
+    }
+
+    try {
+      await navigator.clipboard.writeText(normalizedValue);
+      toast({ title, description });
+      return true;
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "No se pudo copiar",
+        description: "Hubo un problema al escribir en el portapapeles.",
+      });
+      return false;
+    }
+  };
+
+  const handleBulkAppCopy = async () => {
+    if (!bulkAppCopyValue) {
       return;
     }
-    await navigator.clipboard.writeText(value);
-    toast({ title, description });
+
+    const didCopy = await copyValue(
+      bulkAppCopyValue,
+      "Copiado al portapapeles",
+      `${bulkAppClipboardRows.length} filas limpias copiadas al portapapeles.`,
+    );
+
+    if (didCopy) {
+      setIsBulkAppCopySuccess(true);
+    }
   };
+
+  const handleBulkWebCopy = async () => {
+    if (!bulkWebCopyValue) {
+      return;
+    }
+
+    const didCopy = await copyValue(
+      bulkWebCopyValue,
+      "Copiado al portapapeles",
+      `${bulkWebClipboardRows.length} filas de CMS Web copiadas al portapapeles.`,
+    );
+
+    if (didCopy) {
+      setIsBulkWebCopySuccess(true);
+    }
+  };
+
+  useEffect(() => {
+    if (!isBulkAppCopySuccess) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setIsBulkAppCopySuccess(false), 1800);
+    return () => window.clearTimeout(timeoutId);
+  }, [isBulkAppCopySuccess]);
+
+  useEffect(() => {
+    if (!isBulkWebCopySuccess) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setIsBulkWebCopySuccess(false), 1800);
+    return () => window.clearTimeout(timeoutId);
+  }, [isBulkWebCopySuccess]);
 
   const handleRowResolvedChange = (rowId: string, finalUrl: string) => {
     setBulkResolvedLinks((current) => {
@@ -1293,18 +1384,12 @@ const URLBuilder = () => {
 
             {activeTab === "cms-app" && appMode === "masivo" && (
               <button
-                onClick={() =>
-                  copyValue(
-                    bulkAppCopyValue,
-                    "Filas copiadas",
-                    `${validAppRows.length} filas limpias copiadas al portapapeles.`,
-                  )
-                }
+                onClick={handleBulkAppCopy}
                 disabled={!bulkAppCopyValue}
-                className="inline-flex h-11 items-center gap-2 rounded-2xl bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-11 items-center gap-2 rounded-2xl bg-[#EA7120] px-4 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#d96517] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <Copy size={16} />
-                Copiar todo
+                {isBulkAppCopySuccess ? <Check size={16} /> : <Copy size={16} />}
+                {isBulkAppCopySuccess ? "Copiado al portapapeles" : "Copiar Todo"}
               </button>
             )}
           </div>
@@ -1562,6 +1647,20 @@ const URLBuilder = () => {
                             {showResultsBottomShadow && batchRows.length > 0 && (
                               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 rounded-b-2xl bg-gradient-to-t from-card via-card/80 to-transparent" />
                             )}
+                          </div>
+
+                          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-sm text-muted-foreground">
+                              El boton copia cada fila como bloque `Nombre`, `Url` y `Codigo`, separado por una linea en blanco.
+                            </p>
+                            <button
+                              onClick={handleBulkWebCopy}
+                              disabled={!bulkWebCopyValue}
+                              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#EA7120] px-5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#d96517] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {isBulkWebCopySuccess ? <Check size={16} /> : <Copy size={16} />}
+                              {isBulkWebCopySuccess ? "Copiado al portapapeles" : "Copiar Todo"}
+                            </button>
                           </div>
                         </section>
                       </>
@@ -1948,18 +2047,12 @@ const URLBuilder = () => {
                             El boton copia cada fila como `Titulo Limpio[TAB]10047` para pegar directo en planillas.
                           </p>
                           <button
-                            onClick={() =>
-                              copyValue(
-                                bulkAppCopyValue,
-                                "Filas copiadas",
-                                `${validAppRows.length} filas limpias copiadas al portapapeles.`,
-                              )
-                            }
+                            onClick={handleBulkAppCopy}
                             disabled={!bulkAppCopyValue}
-                            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-accent px-5 text-sm font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#EA7120] px-5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#d96517] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            <Copy size={16} />
-                            Copiar Todo
+                            {isBulkAppCopySuccess ? <Check size={16} /> : <Copy size={16} />}
+                            {isBulkAppCopySuccess ? "Copiado al portapapeles" : "Copiar Todo"}
                           </button>
                         </div>
                       </section>
