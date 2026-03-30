@@ -200,12 +200,12 @@ export const extractCollectionCode = (rawUrl: string) => {
   }
 
   const withoutHash = trimmed.split("#")[0];
-  const encodedMatch = withoutHash.match(/%3A(\d+)$/i);
+  const encodedMatch = withoutHash.match(/(?:%3A|:A)(\d+)(?:[&#]|$)/i);
   if (encodedMatch) {
     return encodedMatch[1];
   }
 
-  const plainMatch = withoutHash.match(/A(\d+)$/i);
+  const plainMatch = withoutHash.match(/A(\d+)(?:[&#]|$)/i);
   if (plainMatch) {
     return plainMatch[1];
   }
@@ -265,17 +265,22 @@ export interface WebClipboardRow {
   collectionCode?: string;
 }
 
+export const buildWebClipboardBlock = (row: WebClipboardRow) => {
+  const productName = String(row.productName ?? "").trim();
+  const brandDetail = String(row.brandDetail ?? "").trim();
+  const finalUrl = String(row.finalUrl ?? "").trim();
+  const collectionCode = String(row.collectionCode ?? "").trim();
+  const displayName = [productName, brandDetail].filter(Boolean).join(" ").trim();
+
+  if (!displayName || !finalUrl || !collectionCode) {
+    return "";
+  }
+
+  return `Nombre: ${displayName}\nUrl: ${finalUrl}\nCodigo: ${collectionCode}`;
+};
+
 export const buildBulkWebClipboardRows = (rows: WebClipboardRow[]) =>
   rows.flatMap((row) => {
-    const productName = String(row.productName ?? "").trim();
-    const brandDetail = String(row.brandDetail ?? "").trim();
-    const finalUrl = String(row.finalUrl ?? "").trim();
-    const collectionCode = String(row.collectionCode ?? "").trim();
-    const displayName = [productName, brandDetail].filter(Boolean).join(" ").trim();
-
-    if (!displayName || !finalUrl || !collectionCode) {
-      return [];
-    }
-
-    return [`Nombre: ${displayName}\nUrl: ${finalUrl}\nCodigo: ${collectionCode}`];
+    const block = buildWebClipboardBlock(row);
+    return block ? [block] : [];
   });

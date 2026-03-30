@@ -67,6 +67,17 @@ describe("title-url-app helpers", () => {
     expect(extractCollectionCode("https://www.sitio.cl/busca?fq=H:A10047")).toBe("10047");
   });
 
+  it("extracts the collection code from resolved cms web links with extra query params", () => {
+    expect(
+      extractCollectionCode("/busca?fq=H%3A10042&nombre_promo=home-grilla-bombazo-todos-vinos"),
+    ).toBe("10042");
+    expect(
+      extractCollectionCode(
+        "https://www.sitio.cl/busca?fq=H%3A10113&nombre_promo=home-banner-leche-s14-31032026",
+      ),
+    ).toBe("10113");
+  });
+
   it("builds batch rows line by line for title and url inputs", () => {
     expect(
       buildAppBatchRows(

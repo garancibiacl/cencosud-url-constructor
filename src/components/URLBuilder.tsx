@@ -40,6 +40,7 @@ import { compactDescriptionReference, useUrlHydrator } from "@/hooks/useUrlHydra
 import {
   buildBulkAppClipboardRows,
   buildBulkWebClipboardRows,
+  buildWebClipboardBlock,
   type AppBatchRow,
   buildAppBatchRows,
   extractBrandDetail,
@@ -625,7 +626,7 @@ const NumberedTextarea = ({
 interface BulkEditableRowProps {
   row: BatchRow;
   defaultContext: Omit<URLParams, "descripcion">;
-  onCopy: (value: string, title: string, description: string) => Promise<void>;
+  onCopy: (value: string, title: string, description: string) => Promise<boolean>;
   onResolvedChange: (rowId: string, finalUrl: string) => void;
   weekOptions: WeekOption[];
   currentWeekValue: string;
@@ -668,10 +669,19 @@ const BulkEditableRow = ({
   const hasMissingUrl = !baseUrl.trim() && !!row.rawDescription;
   const hasMissingDescription = !!baseUrl.trim() && !row.rawDescription;
   const hasError = hasMissingUrl || hasMissingDescription;
+  const productName = extractCleanTitle(row.rawDescription);
+  const brandDetail = extractBrandDetail(row.rawDescription);
   const resolvedUrl =
     !hasError && baseUrl && localParams.descripcion
       ? hydrateUrl(baseUrl, localParams)
       : "";
+  const collectionCode = extractCollectionCode(resolvedUrl);
+  const clipboardBlock = buildWebClipboardBlock({
+    productName,
+    brandDetail,
+    finalUrl: resolvedUrl,
+    collectionCode,
+  });
 
   useEffect(() => {
     onResolvedChange(rowId, resolvedUrl);
@@ -857,16 +867,25 @@ const BulkEditableRow = ({
             <p className="min-w-0 flex-1 break-all font-mono text-xs text-foreground">
               {resolvedUrl || "Link no disponible"}
             </p>
-            <button
-              onClick={() =>
-                onCopy(resolvedUrl, "Link copiado", `Se copio el link de la fila ${row.index + 1}.`)
-              }
-              disabled={!resolvedUrl}
-              className="inline-flex h-9 shrink-0 items-center gap-2 rounded-xl bg-accent px-3 text-xs font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <Copy size={14} />
-              Copiar
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() =>
+                    onCopy(
+                      clipboardBlock,
+                      "Bloque copiado",
+                      `Se copio el bloque de la fila ${row.index + 1}.`,
+                    )
+                  }
+                  disabled={!clipboardBlock}
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[#EA7120] transition-colors hover:bg-[#FCE6D5] hover:text-[#EA7120] disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label={`Copiar bloque de la fila ${row.index + 1}`}
+                >
+                  <Copy size={14} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Copiar en el portapapeles</TooltipContent>
+            </Tooltip>
           </div>
         </TableCell>
       </TableRow>
@@ -1106,7 +1125,7 @@ const URLBuilder = () => {
           productName: extractCleanTitle(row.rawDescription),
           brandDetail: extractBrandDetail(row.rawDescription),
           finalUrl: bulkResolvedLinks[`row-${row.index}`] || "",
-          collectionCode: extractCollectionCode(row.baseUrl),
+          collectionCode: extractCollectionCode(bulkResolvedLinks[`row-${row.index}`] || ""),
         })),
       ),
     [batchRows, bulkResolvedLinks],
@@ -2015,22 +2034,29 @@ const URLBuilder = () => {
                                             />
                                           </div>
                                         </TableCell>
-                                        <TableCell className="w-[112px] px-2 py-4 text-right align-middle">
+                                        <TableCell className="w-[72px] px-2 py-4 text-right align-middle">
                                           <div className="flex min-h-[92px] items-center justify-end">
-                                            <button
-                                              onClick={() =>
-                                                copyValue(
-                                                  rowCopyValue,
-                                                  "Fila copiada",
-                                                  `Se copio la fila ${row.index + 1}.`,
-                                                )
-                                              }
-                                              disabled={!rowCopyValue}
-                                              className="inline-flex h-9 w-[96px] shrink-0 items-center justify-center gap-2 rounded-xl bg-accent px-3 text-xs font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-                                            >
-                                              <Copy size={14} />
-                                              Copiar
-                                            </button>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <button
+                                                  onClick={() =>
+                                                    copyValue(
+                                                      rowCopyValue,
+                                                      "Fila copiada",
+                                                      `Se copio la fila ${row.index + 1}.`,
+                                                    )
+                                                  }
+                                                  disabled={!rowCopyValue}
+                                                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[#EA7120] transition-colors hover:bg-[#FCE6D5] hover:text-[#EA7120] disabled:cursor-not-allowed disabled:opacity-40"
+                                                  aria-label={`Copiar fila ${row.index + 1}`}
+                                                >
+                                                  <Copy size={14} />
+                                                </button>
+                                              </TooltipTrigger>
+                                              <TooltipContent side="top">
+                                                Copiar en el portapapeles
+                                              </TooltipContent>
+                                            </Tooltip>
                                           </div>
                                         </TableCell>
                                       </TableRow>
