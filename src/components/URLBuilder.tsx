@@ -12,6 +12,7 @@ import {
   Plus,
   RotateCcw,
   Rows3,
+  X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -1489,13 +1490,25 @@ const URLBuilder = () => {
                                   <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
                                     URL Base
                                   </label>
-                                  <input
-                                    type="text"
-                                    value={singleBaseUrl}
-                                    onChange={(event) => setSingleBaseUrl(event.target.value)}
-                                    placeholder="https://www.santaisabel.cl/santas-ofertas"
-                                    className="h-12 rounded-2xl border border-border bg-secondary px-4 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
-                                  />
+                                  <div className="relative">
+                                    <input
+                                      type="text"
+                                      value={singleBaseUrl}
+                                      onChange={(event) => setSingleBaseUrl(event.target.value)}
+                                      placeholder="https://www.santaisabel.cl/santas-ofertas"
+                                      className="h-12 w-full rounded-2xl border border-border bg-secondary px-4 pr-12 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
+                                    />
+                                    {singleBaseUrl && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setSingleBaseUrl("")}
+                                        className="absolute inset-y-0 right-3 inline-flex h-12 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+                                        aria-label="Limpiar URL base"
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
 
                                 <div className="rounded-[24px] border border-border bg-secondary/70 p-4 md:p-5">
@@ -1509,13 +1522,25 @@ const URLBuilder = () => {
                                       </span>
                                     </div>
 
-                                    <textarea
-                                      value={singleDescription}
-                                      onChange={(event) => setSingleDescription(event.target.value)}
-                                      placeholder='Pega un texto como: "Prensa/TV - TRUTRO ENTERO $2.790"'
-                                      rows={4}
-                                      className="min-h-[112px] rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
-                                    />
+                                    <div className="relative">
+                                      <textarea
+                                        value={singleDescription}
+                                        onChange={(event) => setSingleDescription(event.target.value)}
+                                        placeholder='Pega un texto como: "Prensa/TV - TRUTRO ENTERO $2.790"'
+                                        rows={4}
+                                        className="min-h-[112px] w-full rounded-2xl border border-border bg-background px-4 py-3 pr-12 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
+                                      />
+                                      {singleDescription && (
+                                        <button
+                                          type="button"
+                                          onClick={() => setSingleDescription("")}
+                                          className="absolute right-3 top-3 inline-flex items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+                                          aria-label="Limpiar descripcion"
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </button>
+                                      )}
+                                    </div>
 
                                     <span className="w-fit rounded-full bg-primary/10 px-3 py-1 font-mono text-xs text-primary">
                                       {singleSlug || "trutro-entero"}
