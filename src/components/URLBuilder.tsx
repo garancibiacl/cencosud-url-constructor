@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ClipboardEvent as ReactClipboardEvent } from "react";
 import { format, isValid, parse } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -46,6 +46,8 @@ import {
   extractBrandDetail,
   extractCleanTitle,
   extractCollectionCode,
+  parseBulkAppSpreadsheetPaste,
+  parseBulkWebSpreadsheetPaste,
 } from "@/lib/title-url-app";
 import {
   buildWeekOptions,
@@ -573,6 +575,7 @@ interface NumberedTextareaProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  onPaste?: (event: ReactClipboardEvent<HTMLTextAreaElement>) => void;
   rows?: number;
   placeholder?: string;
 }
@@ -581,6 +584,7 @@ const NumberedTextarea = ({
   label,
   value,
   onChange,
+  onPaste,
   rows = 10,
   placeholder,
 }: NumberedTextareaProps) => {
@@ -608,6 +612,7 @@ const NumberedTextarea = ({
         <textarea
           value={value}
           onChange={(event) => onChange(event.target.value)}
+          onPaste={onPaste}
           onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
           rows={rows}
           placeholder={placeholder}
@@ -1240,6 +1245,32 @@ const URLBuilder = () => {
     }
   };
 
+  const handleBulkWebStructuredPaste = (event: ReactClipboardEvent<HTMLTextAreaElement>) => {
+    const pastedText = event.clipboardData.getData("text");
+    const parsedContent = parseBulkWebSpreadsheetPaste(pastedText);
+
+    if (!parsedContent) {
+      return;
+    }
+
+    event.preventDefault();
+    setBulkDescriptions(parsedContent.descriptionsText);
+    setBulkBaseUrls(parsedContent.baseUrlsText);
+  };
+
+  const handleBulkAppStructuredPaste = (event: ReactClipboardEvent<HTMLTextAreaElement>) => {
+    const pastedText = event.clipboardData.getData("text");
+    const parsedContent = parseBulkAppSpreadsheetPaste(pastedText);
+
+    if (!parsedContent) {
+      return;
+    }
+
+    event.preventDefault();
+    setBulkAppTitles(parsedContent.descriptionsText);
+    setBulkAppUrls(parsedContent.baseUrlsText);
+  };
+
   useEffect(() => {
     if (!isBulkAppCopySuccess) {
       return;
@@ -1585,6 +1616,7 @@ const URLBuilder = () => {
                               <textarea
                                 value={bulkDescriptions}
                                 onChange={(event) => setBulkDescriptions(event.target.value)}
+                                onPaste={handleBulkWebStructuredPaste}
                                 rows={10}
                                 placeholder={"Prensa/TV - TRUTRO ENTERO $2.790\nCiclos - TODAS LAS OFERTAS CICLO 1"}
                                 className="min-h-[240px] rounded-2xl border border-border bg-secondary px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
@@ -1595,6 +1627,7 @@ const URLBuilder = () => {
                               label="Lista de URLs Base"
                               value={bulkBaseUrls}
                               onChange={setBulkBaseUrls}
+                              onPaste={handleBulkWebStructuredPaste}
                               rows={10}
                               placeholder={"/busca?fq=H%3A27791\n/santas-ofertas"}
                             />
@@ -1925,6 +1958,7 @@ const URLBuilder = () => {
                             label="Titulos Sucios"
                             value={bulkAppTitles}
                             onChange={setBulkAppTitles}
+                            onPaste={handleBulkAppStructuredPaste}
                             rows={10}
                             placeholder={"Prensa/TV - Santa Yapa-PACK NECTAR WATT'S VARIEDADES 6X200CC 3X2\nCatalogo - PACK ARROZ TUCAPEL 1KG"}
                           />
@@ -1933,6 +1967,7 @@ const URLBuilder = () => {
                             label="URLs Base"
                             value={bulkAppUrls}
                             onChange={setBulkAppUrls}
+                            onPaste={handleBulkAppStructuredPaste}
                             rows={10}
                             placeholder={"https://www.sitio.cl/busca?fq=H%3A10063\n/busca?fq=H%3A27791"}
                           />

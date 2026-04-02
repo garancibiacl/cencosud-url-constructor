@@ -258,6 +258,62 @@ export const buildBulkAppClipboardRows = (
     return [`${cleanTitle}\t${collectionCode}`];
   });
 
+const looksLikeBaseUrlCell = (value: string) => {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return false;
+  }
+
+  return (
+    trimmed.startsWith("/") ||
+    /^https?:\/\//i.test(trimmed) ||
+    /^www\.[^\s]+\.[^\s]+/i.test(trimmed)
+  );
+};
+
+export interface BulkWebSpreadsheetPasteResult {
+  descriptionsText: string;
+  baseUrlsText: string;
+}
+
+export const parseBulkWebSpreadsheetPaste = (
+  pastedText: string,
+): BulkWebSpreadsheetPasteResult | null => {
+  const normalized = pastedText.replace(/\r\n/g, "\n").trim();
+
+  if (!normalized.includes("\t")) {
+    return null;
+  }
+
+  const parsedRows = normalized
+    .split("\n")
+    .map((line) => line.split("\t").map((cell) => cell.trim()))
+    .map((cells) => {
+      const description = cells.find((cell) => cell.length > 0) ?? "";
+      const baseUrl = cells.find(looksLikeBaseUrlCell) ?? "";
+      return { description, baseUrl };
+    })
+    .filter((row) => row.description || row.baseUrl);
+
+  if (parsedRows.length === 0) {
+    return null;
+  }
+
+  const detectedPairs = parsedRows.filter((row) => row.description && row.baseUrl);
+
+  if (detectedPairs.length === 0) {
+    return null;
+  }
+
+  return {
+    descriptionsText: parsedRows.map((row) => row.description).join("\n"),
+    baseUrlsText: parsedRows.map((row) => row.baseUrl).join("\n"),
+  };
+};
+
+export const parseBulkAppSpreadsheetPaste = parseBulkWebSpreadsheetPaste;
+
 export interface WebClipboardRow {
   productName?: string;
   brandDetail?: string;

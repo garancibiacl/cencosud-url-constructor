@@ -7,6 +7,8 @@ import {
   extractBrandDetail,
   extractCleanTitle,
   extractCollectionCode,
+  parseBulkAppSpreadsheetPaste,
+  parseBulkWebSpreadsheetPaste,
   splitProductDescription,
 } from "@/lib/title-url-app";
 
@@ -144,5 +146,46 @@ describe("title-url-app helpers", () => {
       "Nombre: Leche Entera Cuisine & Co 1L\nUrl: /busca?fq=H%3A10113&nombre_promo=home-banner-leche-s14\nCodigo: 10113",
       "Nombre: Aceite Vegetal\nUrl: /busca?fq=H%3A10102&nombre_promo=home-banner-aceite-s14\nCodigo: 10102",
     ]);
+  });
+
+  it("parses spreadsheet paste rows for cms web bulk inputs", () => {
+    expect(
+      parseBulkWebSpreadsheetPaste(
+        [
+          "Bombazo exclusivo ecomm - LECHE EN POLVO NIDO BUEN DÍA 700G 35% - 06/04/2026 al 08/04/2026\t0\thttps://www.santaisabel.cl/busca?fq=H%3A10280",
+          "Bombazo exclusivo ecomm - TODO GALLETAS COSTA 3X2 - 06/04/2026 al 08/04/2026\t0\thttps://www.santaisabel.cl/busca?fq=H%3A10281",
+        ].join("\n"),
+      ),
+    ).toEqual({
+      descriptionsText:
+        "Bombazo exclusivo ecomm - LECHE EN POLVO NIDO BUEN DÍA 700G 35% - 06/04/2026 al 08/04/2026\n" +
+        "Bombazo exclusivo ecomm - TODO GALLETAS COSTA 3X2 - 06/04/2026 al 08/04/2026",
+      baseUrlsText:
+        "https://www.santaisabel.cl/busca?fq=H%3A10280\nhttps://www.santaisabel.cl/busca?fq=H%3A10281",
+    });
+  });
+
+  it("ignores regular single-column paste in cms web bulk parser", () => {
+    expect(
+      parseBulkWebSpreadsheetPaste(
+        "Bombazo exclusivo ecomm - LECHE EN POLVO NIDO BUEN DÍA 700G 35% - 06/04/2026 al 08/04/2026",
+      ),
+    ).toBeNull();
+  });
+
+  it("parses spreadsheet paste rows for cms app bulk inputs", () => {
+    expect(
+      parseBulkAppSpreadsheetPaste(
+        [
+          "Prensa/TV - Santa Yapa-PACK NECTAR WATT'S VARIEDADES 6X200CC 3X2\t0\thttps://www.sitio.cl/busca?fq=H%3A10063",
+          "Catalogo - PACK ARROZ TUCAPEL 1KG $2.990\t0\t/busca?fq=H%3A27791",
+        ].join("\n"),
+      ),
+    ).toEqual({
+      descriptionsText:
+        "Prensa/TV - Santa Yapa-PACK NECTAR WATT'S VARIEDADES 6X200CC 3X2\n" +
+        "Catalogo - PACK ARROZ TUCAPEL 1KG $2.990",
+      baseUrlsText: "https://www.sitio.cl/busca?fq=H%3A10063\n/busca?fq=H%3A27791",
+    });
   });
 });
