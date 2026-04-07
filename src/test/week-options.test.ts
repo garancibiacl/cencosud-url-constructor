@@ -15,10 +15,20 @@ describe("week-options helpers", () => {
     expect(options).toHaveLength(53);
     expect(options[11]).toMatchObject({
       value: "s12",
-      label: "W12 (16 - 22 Mar)",
+      label: "W12 (17 al 23 de marzo)",
       customLabel: "KV SANTA YAPA",
       monthLabel: "Marzo",
     });
+  });
+
+  it("builds the requested business week mapping from tuesday to monday", () => {
+    expect(options[14].label).toBe("W15 (7 al 13 de abril)");
+    expect(options[15].label).toBe("W16 (14 al 20 de abril)");
+    expect(options[16].label).toBe("W17 (21 al 27 de abril)");
+  });
+
+  it("formats weeks that span two different months", () => {
+    expect(options[17].label).toBe("W18 (28 de abril al 4 de mayo)");
   });
 
   it("returns the ISO week and ISO year for a date", () => {

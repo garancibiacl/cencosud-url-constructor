@@ -49,6 +49,7 @@ import {
   extractCollectionCode,
   parseBulkAppSpreadsheetPaste,
   parseBulkWebSpreadsheetPaste,
+  parseSingleWebSpreadsheetPaste,
 } from "@/lib/title-url-app";
 import {
   buildWeekOptions,
@@ -1272,6 +1273,36 @@ const URLBuilder = () => {
     setBulkAppUrls(parsedContent.baseUrlsText);
   };
 
+  const handleSingleWebStructuredPaste = (
+    event: ReactClipboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    const pastedText = event.clipboardData.getData("text");
+    const parsedContent = parseSingleWebSpreadsheetPaste(pastedText);
+
+    if (!parsedContent) {
+      return;
+    }
+
+    event.preventDefault();
+    setSingleDescription(parsedContent.description);
+    setSingleBaseUrl(parsedContent.baseUrl);
+  };
+
+  const handleSingleAppStructuredPaste = (
+    event: ReactClipboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    const pastedText = event.clipboardData.getData("text");
+    const parsedContent = parseSingleWebSpreadsheetPaste(pastedText);
+
+    if (!parsedContent) {
+      return;
+    }
+
+    event.preventDefault();
+    setSingleAppDirtyTitle(parsedContent.description);
+    setSingleAppUrl(parsedContent.baseUrl);
+  };
+
   useEffect(() => {
     if (!isBulkAppCopySuccess) {
       return;
@@ -1486,31 +1517,6 @@ const URLBuilder = () => {
                           <div className="grid gap-8 xl:grid-cols-[minmax(0,1.25fr)_minmax(340px,0.9fr)]">
                             <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
                               <div className="space-y-6">
-                                <div className="flex flex-col gap-2">
-                                  <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                                    URL Base
-                                  </label>
-                                  <div className="relative">
-                                    <input
-                                      type="text"
-                                      value={singleBaseUrl}
-                                      onChange={(event) => setSingleBaseUrl(event.target.value)}
-                                      placeholder="https://www.santaisabel.cl/santas-ofertas"
-                                      className="h-12 w-full rounded-2xl border border-border bg-secondary px-4 pr-12 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
-                                    />
-                                    {singleBaseUrl && (
-                                      <button
-                                        type="button"
-                                        onClick={() => setSingleBaseUrl("")}
-                                        className="absolute inset-y-0 right-3 inline-flex h-12 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
-                                        aria-label="Limpiar URL base"
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-
                                 <div className="rounded-[24px] border border-border bg-secondary/70 p-4 md:p-5">
                                   <div className="flex flex-col gap-3">
                                     <div className="flex items-center justify-between gap-3">
@@ -1526,6 +1532,7 @@ const URLBuilder = () => {
                                       <textarea
                                         value={singleDescription}
                                         onChange={(event) => setSingleDescription(event.target.value)}
+                                        onPaste={handleSingleWebStructuredPaste}
                                         placeholder='Pega un texto como: "Prensa/TV - TRUTRO ENTERO $2.790"'
                                         rows={4}
                                         className="min-h-[112px] w-full rounded-2xl border border-border bg-background px-4 py-3 pr-12 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
@@ -1545,6 +1552,32 @@ const URLBuilder = () => {
                                     <span className="w-fit rounded-full bg-primary/10 px-3 py-1 font-mono text-xs text-primary">
                                       {singleSlug || "trutro-entero"}
                                     </span>
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-col gap-2">
+                                  <label className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                                    URL Base
+                                  </label>
+                                  <div className="relative">
+                                    <input
+                                      type="text"
+                                      value={singleBaseUrl}
+                                      onChange={(event) => setSingleBaseUrl(event.target.value)}
+                                      onPaste={handleSingleWebStructuredPaste}
+                                      placeholder="https://www.santaisabel.cl/santas-ofertas"
+                                      className="h-12 w-full rounded-2xl border border-border bg-secondary px-4 pr-12 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
+                                    />
+                                    {singleBaseUrl && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setSingleBaseUrl("")}
+                                        className="absolute inset-y-0 right-3 inline-flex h-12 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+                                        aria-label="Limpiar URL base"
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -1790,6 +1823,7 @@ const URLBuilder = () => {
                               <textarea
                                 value={singleAppDirtyTitle}
                                 onChange={(event) => setSingleAppDirtyTitle(event.target.value)}
+                                onPaste={handleSingleAppStructuredPaste}
                                 placeholder="Prensa/TV - Santa Yapa-PACK NECTAR WATT'S VARIEDADES 6X200CC 3X2"
                                 rows={5}
                                 className="min-h-[132px] rounded-2xl border border-border bg-secondary px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
@@ -1804,6 +1838,7 @@ const URLBuilder = () => {
                                 type="text"
                                 value={singleAppUrl}
                                 onChange={(event) => setSingleAppUrl(event.target.value)}
+                                onPaste={handleSingleAppStructuredPaste}
                                 placeholder="https://www.sitio.cl/busca?fq=H%3A10063"
                                 className="h-12 rounded-2xl border border-border bg-secondary px-4 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15"
                               />

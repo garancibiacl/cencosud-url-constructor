@@ -9,6 +9,7 @@ import {
   extractCollectionCode,
   parseBulkAppSpreadsheetPaste,
   parseBulkWebSpreadsheetPaste,
+  parseSingleWebSpreadsheetPaste,
   splitProductDescription,
 } from "@/lib/title-url-app";
 
@@ -165,6 +166,35 @@ describe("title-url-app helpers", () => {
     });
   });
 
+  it("extracts the first complete description and url pair for cms web individual paste", () => {
+    expect(
+      parseSingleWebSpreadsheetPaste(
+        [
+          "\tBombazo exclusivo ecomm - LECHE EN POLVO NIDO BUEN DÍA 700G 35% - 06/04/2026 al 08/04/2026\t\thttps://www.santaisabel.cl/busca?fq=H%3A10280\t",
+          "Fila incompleta\t\t\t",
+        ].join("\n"),
+      ),
+    ).toEqual({
+      description:
+        "Bombazo exclusivo ecomm - LECHE EN POLVO NIDO BUEN DÍA 700G 35% - 06/04/2026 al 08/04/2026",
+      baseUrl: "https://www.santaisabel.cl/busca?fq=H%3A10280",
+    });
+  });
+
+  it("extracts the first complete description and url pair for cms app individual paste", () => {
+    expect(
+      parseSingleWebSpreadsheetPaste(
+        [
+          "Prensa/TV - Santa Yapa-PACK NECTAR WATT'S VARIEDADES 6X200CC 3X2\t\t/busca?fq=H%3A10063",
+          "\t\t",
+        ].join("\n"),
+      ),
+    ).toEqual({
+      description: "Prensa/TV - Santa Yapa-PACK NECTAR WATT'S VARIEDADES 6X200CC 3X2",
+      baseUrl: "/busca?fq=H%3A10063",
+    });
+  });
+
   it("ignores regular single-column paste in cms web bulk parser", () => {
     expect(
       parseBulkWebSpreadsheetPaste(
@@ -187,5 +217,10 @@ describe("title-url-app helpers", () => {
         "Catalogo - PACK ARROZ TUCAPEL 1KG $2.990",
       baseUrlsText: "https://www.sitio.cl/busca?fq=H%3A10063\n/busca?fq=H%3A27791",
     });
+  });
+
+  it("returns null for cms web individual paste when there is no complete pair", () => {
+    expect(parseSingleWebSpreadsheetPaste("Solo descripcion sin tabs")).toBeNull();
+    expect(parseSingleWebSpreadsheetPaste("Descripcion\t\t")).toBeNull();
   });
 });

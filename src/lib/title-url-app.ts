@@ -277,9 +277,12 @@ export interface BulkWebSpreadsheetPasteResult {
   baseUrlsText: string;
 }
 
-export const parseBulkWebSpreadsheetPaste = (
-  pastedText: string,
-): BulkWebSpreadsheetPasteResult | null => {
+export interface SingleWebSpreadsheetPasteResult {
+  description: string;
+  baseUrl: string;
+}
+
+const parseSpreadsheetRows = (pastedText: string) => {
   const normalized = pastedText.replace(/\r\n/g, "\n").trim();
 
   if (!normalized.includes("\t")) {
@@ -300,6 +303,18 @@ export const parseBulkWebSpreadsheetPaste = (
     return null;
   }
 
+  return parsedRows;
+};
+
+export const parseBulkWebSpreadsheetPaste = (
+  pastedText: string,
+): BulkWebSpreadsheetPasteResult | null => {
+  const parsedRows = parseSpreadsheetRows(pastedText);
+
+  if (!parsedRows) {
+    return null;
+  }
+
   const detectedPairs = parsedRows.filter((row) => row.description && row.baseUrl);
 
   if (detectedPairs.length === 0) {
@@ -309,6 +324,27 @@ export const parseBulkWebSpreadsheetPaste = (
   return {
     descriptionsText: parsedRows.map((row) => row.description).join("\n"),
     baseUrlsText: parsedRows.map((row) => row.baseUrl).join("\n"),
+  };
+};
+
+export const parseSingleWebSpreadsheetPaste = (
+  pastedText: string,
+): SingleWebSpreadsheetPasteResult | null => {
+  const parsedRows = parseSpreadsheetRows(pastedText);
+
+  if (!parsedRows) {
+    return null;
+  }
+
+  const firstDetectedPair = parsedRows.find((row) => row.description && row.baseUrl);
+
+  if (!firstDetectedPair) {
+    return null;
+  }
+
+  return {
+    description: firstDetectedPair.description,
+    baseUrl: firstDetectedPair.baseUrl,
   };
 };
 

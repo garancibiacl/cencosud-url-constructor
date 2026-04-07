@@ -1,13 +1,12 @@
 import {
   addWeeks,
-  endOfISOWeek,
+  endOfWeek,
   format,
-  getISOWeek,
-  getISOWeekYear,
-  getISOWeeksInYear,
+  getWeek,
+  getWeekYear,
   isValid,
   parse,
-  startOfISOWeek,
+  startOfWeek,
 } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -24,41 +23,47 @@ export interface WeekOption {
 }
 
 const DATE_INPUT_FORMATS = ["dd/MM/yyyy", "dd-MM-yyyy", "yyyy-MM-dd", "ddMMyyyy"];
+const BUSINESS_WEEK_OPTIONS = { weekStartsOn: 2 as const, firstWeekContainsDate: 1 as const };
 
 const formatWeekValue = (weekNumber: number) => `s${String(weekNumber).padStart(2, "0")}`;
 
 const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
 const formatWeekRange = (startDate: Date, endDate: Date) => {
-  const startDay = format(startDate, "dd");
-  const endDay = format(endDate, "dd");
-  const startMonth = capitalize(format(startDate, "MMM", { locale: es }));
-  const endMonth = capitalize(format(endDate, "MMM", { locale: es }));
+  const startDay = format(startDate, "d");
+  const endDay = format(endDate, "d");
+  const startMonth = format(startDate, "MMMM", { locale: es });
+  const endMonth = format(endDate, "MMMM", { locale: es });
 
   if (startMonth === endMonth) {
-    return `${startDay} - ${endDay} ${endMonth}`;
+    return `${startDay} al ${endDay} de ${endMonth}`;
   }
 
-  return `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
+  return `${startDay} de ${startMonth} al ${endDay} de ${endMonth}`;
 };
 
 export const buildWeekOptions = (
   year: number,
   customLabels: Record<string, string> = {},
 ): WeekOption[] => {
-  const firstWeekStart = startOfISOWeek(new Date(year, 0, 4));
-  const totalWeeks = getISOWeeksInYear(new Date(year, 0, 4));
+  const firstWeekStart = startOfWeek(new Date(year, 0, 1), BUSINESS_WEEK_OPTIONS);
+  const options: WeekOption[] = [];
 
-  return Array.from({ length: totalWeeks }, (_, index) => {
+  for (let index = 0; ; index += 1) {
     const weekNumber = index + 1;
     const startDate = addWeeks(firstWeekStart, index);
-    const endDate = endOfISOWeek(startDate);
+
+    if (startDate.getFullYear() > year) {
+      break;
+    }
+
+    const endDate = endOfWeek(startDate, BUSINESS_WEEK_OPTIONS);
     const value = formatWeekValue(weekNumber);
     const customLabel = customLabels[value];
     const monthLabel = capitalize(format(startDate, "MMMM", { locale: es }));
     const label = `W${weekNumber} (${formatWeekRange(startDate, endDate)})`;
 
-    return {
+    options.push({
       value,
       label,
       weekNumber,
@@ -78,14 +83,17 @@ export const buildWeekOptions = (
       ]
         .join(" ")
         .toLowerCase(),
-    };
-  });
+    });
+  }
+
+  return options;
 };
 
 export const getCurrentISOWeekValue = (date = new Date()) =>
-  formatWeekValue(getISOWeek(date));
+  formatWeekValue(getWeek(date, BUSINESS_WEEK_OPTIONS));
 
-export const getCurrentISOWeekYear = (date = new Date()) => getISOWeekYear(date);
+export const getCurrentISOWeekYear = (date = new Date()) =>
+  getWeekYear(date, BUSINESS_WEEK_OPTIONS);
 
 export const findWeekOption = (options: WeekOption[], value: string) =>
   options.find((option) => option.value === value);
@@ -112,11 +120,11 @@ export const parseWeekSelectionInput = (
       continue;
     }
 
-    if (getISOWeekYear(parsedDate) !== isoYear) {
+    if (getWeekYear(parsedDate, BUSINESS_WEEK_OPTIONS) !== isoYear) {
       return undefined;
     }
 
-    return options.find((option) => option.weekNumber === getISOWeek(parsedDate));
+    return options.find((option) => option.weekNumber === getWeek(parsedDate, BUSINESS_WEEK_OPTIONS));
   }
 
   return undefined;
