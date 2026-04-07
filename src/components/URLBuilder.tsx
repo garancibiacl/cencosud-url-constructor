@@ -306,20 +306,50 @@ const WeekSelectorField = ({
   const selectedWeek = findWeekOption(options, value);
   const currentWeek = findWeekOption(options, currentWeekValue);
   const suggestedWeek = parseWeekSelectionInput(search, options, getCurrentISOWeekYear());
+  const currentMonthKey = currentWeek?.monthKey ?? "";
   const monthGroups = useMemo(() => {
-    const groups = new Map<string, { heading: string; options: WeekOption[] }>();
+    const groups = new Map<string, { heading: string; monthKey: string; options: WeekOption[] }>();
 
     for (const option of options) {
       const group = groups.get(option.monthKey);
       if (group) {
         group.options.push(option);
       } else {
-        groups.set(option.monthKey, { heading: option.monthLabel, options: [option] });
+        groups.set(option.monthKey, {
+          heading: option.monthLabel,
+          monthKey: option.monthKey,
+          options: [option],
+        });
       }
     }
 
-    return Array.from(groups.values());
-  }, [options]);
+    return Array.from(groups.values()).sort((left, right) => {
+      const getBucket = (monthKey: string) => {
+        if (monthKey === currentMonthKey) {
+          return 0;
+        }
+
+        if (monthKey > currentMonthKey) {
+          return 1;
+        }
+
+        return 2;
+      };
+
+      const leftBucket = getBucket(left.monthKey);
+      const rightBucket = getBucket(right.monthKey);
+
+      if (leftBucket !== rightBucket) {
+        return leftBucket - rightBucket;
+      }
+
+      if (leftBucket === 2) {
+        return right.monthKey.localeCompare(left.monthKey);
+      }
+
+      return left.monthKey.localeCompare(right.monthKey);
+    });
+  }, [currentMonthKey, options]);
 
   const selectWeek = (weekValue: string) => {
     onChange(weekValue);
@@ -411,22 +441,36 @@ const WeekSelectorField = ({
                 }
 
                 return (
-                  <CommandGroup key={group.heading} heading={group.heading}>
-                    {visibleOptions.map((option) => (
-                      <CommandItem
-                        key={option.value}
-                        value={option.searchValue}
-                        onSelect={() => selectWeek(option.value)}
-                      >
-                        <Check
-                          className={`mr-2 h-4 w-4 ${value === option.value ? "opacity-100" : "opacity-0"}`}
-                        />
-                        <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
-                          <span className="truncate">{option.label}</span>
-                        </div>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
+                  <div key={group.monthKey} className="pb-1">
+                    <div className="sticky top-0 z-10 bg-popover/95 px-3 pt-3 pb-1 backdrop-blur supports-[backdrop-filter]:bg-popover/80">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold uppercase tracking-[0.24em] text-primary">
+                          {group.heading}
+                        </span>
+                        {group.monthKey === currentWeek?.monthKey && (
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                            Mes actual
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <CommandGroup>
+                      {visibleOptions.map((option) => (
+                        <CommandItem
+                          key={option.value}
+                          value={option.searchValue}
+                          onSelect={() => selectWeek(option.value)}
+                        >
+                          <Check
+                            className={`mr-2 h-4 w-4 ${value === option.value ? "opacity-100" : "opacity-0"}`}
+                          />
+                          <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                            <span className="truncate">{option.label}</span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </div>
                 );
               })}
             </CommandList>
