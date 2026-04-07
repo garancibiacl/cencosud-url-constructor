@@ -1067,6 +1067,8 @@ const URLBuilder = () => {
   const singleAppCodeInputRef = useRef<HTMLInputElement>(null);
 
   const singleSlug = cleanTextToSlug(singleDescription);
+  const singleProductName = extractCleanTitle(singleDescription);
+  const singleBrandDetail = extractBrandDetail(singleDescription);
   const singleAppCleanTitle = extractCleanTitle(singleAppDirtyTitle);
   const singleAppCollectionCode = extractCollectionCode(singleAppUrl);
   const singleFinalUrl = hydrateUrl(singleBaseUrl, {
@@ -1408,6 +1410,13 @@ const URLBuilder = () => {
   };
 
   const displayedSingleFinalUrl = singleFinalUrlDraft || singleFinalUrl;
+  const singleCollectionCode = extractCollectionCode(displayedSingleFinalUrl);
+  const singleClipboardBlock = buildWebClipboardBlock({
+    productName: singleProductName,
+    brandDetail: singleBrandDetail,
+    finalUrl: displayedSingleFinalUrl,
+    collectionCode: singleCollectionCode,
+  });
   const displayedSingleAppCleanTitle = hasManualSingleAppTitle
     ? singleAppCleanTitleDraft
     : (singleAppCleanTitleDraft || singleAppCleanTitle);
@@ -1646,12 +1655,12 @@ const URLBuilder = () => {
                                 <button
                                   onClick={() =>
                                     copyValue(
-                                      displayedSingleFinalUrl,
-                                      "Link copiado",
-                                      "El link individual fue copiado al portapapeles.",
+                                      singleClipboardBlock,
+                                      "Contenido copiado",
+                                      "Se copiaron Nombre, Url y Codigo del link individual.",
                                     )
                                   }
-                                  disabled={!displayedSingleFinalUrl}
+                                  disabled={!singleClipboardBlock}
                                   className="inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-2xl bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                   <Copy size={16} />
