@@ -53,6 +53,24 @@ const BRAND_MARKERS = [
   /\bpanamel\b/i,
 ];
 
+const EDITABLE_BRAND_WORDS = new Set([
+  "cuisine",
+  "co",
+  "kraft",
+  "maxima",
+  "máxima",
+  "nestle",
+  "nestlé",
+  "panamei",
+  "panamel",
+  "trencito",
+  "tucapel",
+  "watt's",
+  "watt´s",
+  "watt`s",
+  "watt’s",
+]);
+
 const splitMeaningfulWords = (value: string) =>
   value
     .split(/\s+/)
@@ -119,6 +137,36 @@ const formatDisplayLabel = (value: string) =>
       (_, amount: string, unit: string) => `${amount}${unit.toUpperCase()}`,
     ),
   );
+
+export const formatEditableCleanTitleInput = (value: string) => {
+  const normalized = normalizeTitleValue(value)
+    .replace(/\s*-\s*/g, " ")
+    .replace(/[_/|]+/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  if (!normalized) {
+    return "";
+  }
+
+  return normalized
+    .toLocaleLowerCase("es-CL")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word, index) => {
+      const comparableWord = word.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const shouldCapitalize = index === 0 || EDITABLE_BRAND_WORDS.has(word) || EDITABLE_BRAND_WORDS.has(comparableWord);
+
+      if (!shouldCapitalize) {
+        return word;
+      }
+
+      return word.replace(/^\p{L}/u, (char) => char.toLocaleUpperCase("es-CL"));
+    })
+    .join(" ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+};
 
 const getBrandMarkerIndex = (value: string) => {
   let firstIndex = -1;
@@ -230,7 +278,7 @@ export const buildAppBatchRows = (dirtyTitles: string, urls: string): AppBatchRo
   return Array.from({ length: totalRows }, (_, index) => {
     const dirtyTitle = (titleLines[index] ?? "").trim();
     const sourceUrl = (urlLines[index] ?? "").trim();
-    const cleanTitle = extractCleanTitle(dirtyTitle);
+    const cleanTitle = formatEditableCleanTitleInput(extractCleanTitle(dirtyTitle));
     const collectionCode = extractCollectionCode(sourceUrl);
 
     return {

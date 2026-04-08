@@ -47,6 +47,7 @@ import {
   extractBrandDetail,
   extractCleanTitle,
   extractCollectionCode,
+  formatEditableCleanTitleInput,
   parseBulkAppSpreadsheetPaste,
   parseBulkWebSpreadsheetPaste,
   parseSingleWebSpreadsheetPaste,
@@ -1393,6 +1394,10 @@ const URLBuilder = () => {
     );
   };
 
+  const commitEditableAppCleanTitle = (rowIndex: number, value: string) => {
+    updateEditableAppRow(rowIndex, "cleanTitle", formatEditableCleanTitleInput(value));
+  };
+
   const contentVariants = {
     initial: { opacity: 0, y: 10 },
     animate: { opacity: 1, y: 0 },
@@ -1975,12 +1980,23 @@ const URLBuilder = () => {
                                   value={displayedSingleAppCleanTitle || "Nectar Watt's"}
                                   onChange={(event) => {
                                     setSingleAppCleanTitleDraft(
-                                      formatEditableTitleCase(event.target.value),
+                                      formatEditableCleanTitleInput(event.target.value),
+                                    );
+                                    setHasManualSingleAppTitle(true);
+                                  }}
+                                  onPaste={(event) => {
+                                    const pastedText = event.clipboardData.getData("text");
+                                    event.preventDefault();
+                                    setSingleAppCleanTitleDraft(
+                                      formatEditableCleanTitleInput(pastedText),
                                     );
                                     setHasManualSingleAppTitle(true);
                                   }}
                                   onFocus={() => setIsSingleAppTitleEditing(true)}
-                                  onBlur={() => {
+                                  onBlur={(event) => {
+                                    setSingleAppCleanTitleDraft(
+                                      formatEditableCleanTitleInput(event.target.value),
+                                    );
                                     setHasManualSingleAppTitle(true);
                                     setIsSingleAppTitleEditing(false);
                                   }}
@@ -2154,6 +2170,14 @@ const URLBuilder = () => {
                                                   event.target.value,
                                                 )
                                               }
+                                              onBlur={(event) =>
+                                                commitEditableAppCleanTitle(row.index, event.target.value)
+                                              }
+                                              onPaste={(event) => {
+                                                const pastedText = event.clipboardData.getData("text");
+                                                event.preventDefault();
+                                                commitEditableAppCleanTitle(row.index, pastedText);
+                                              }}
                                               placeholder="Sin titulo limpio"
                                               className="h-11 w-full min-w-0 rounded-xl border border-transparent bg-transparent px-2 text-[15px] font-semibold text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-blue-500 focus:bg-white"
                                             />

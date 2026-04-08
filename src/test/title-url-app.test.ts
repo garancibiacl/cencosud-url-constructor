@@ -7,6 +7,7 @@ import {
   extractBrandDetail,
   extractCleanTitle,
   extractCollectionCode,
+  formatEditableCleanTitleInput,
   parseBulkAppSpreadsheetPaste,
   parseBulkWebSpreadsheetPaste,
   parseSingleWebSpreadsheetPaste,
@@ -64,6 +65,18 @@ describe("title-url-app helpers", () => {
     ).toBe("10063");
   });
 
+  it("formats manual app clean title edits with sentence case and keeps brand words capitalized", () => {
+    expect(formatEditableCleanTitleInput("NESTLÉ - TRENCITO GALLETAS")).toBe(
+      "Nestlé Trencito galletas",
+    );
+    expect(formatEditableCleanTitleInput("TODO HAMBURGUESA VACUNO")).toBe(
+      "Todo hamburguesa vacuno",
+    );
+    expect(formatEditableCleanTitleInput("TODO MAYONESAS KRAFT")).toBe(
+      "Todo mayonesas Kraft",
+    );
+  });
+
   it("supports 4 or 5 digits after %3A or plain A at the end of the url", () => {
     expect(extractCollectionCode("https://www.sitio.cl/busca?fq=H%3A9655")).toBe("9655");
     expect(extractCollectionCode("https://www.sitio.cl/busca?fq=H%3A10047")).toBe("10047");
@@ -105,6 +118,15 @@ describe("title-url-app helpers", () => {
         hasError: false,
       },
     ]);
+  });
+
+  it("applies editable clean-title formatting to generated app batch rows", () => {
+    expect(
+      buildAppBatchRows(
+        "Prensa/TV - NESCAFE FINA SELECCIÓN 200GR (PRECIO REF $11.790 PPUM 44950 x KG) $8.990 TMP $2.800 AHORRO - 07/04/2026 al 20/04/2026",
+        "https://www.sitio.cl/busca?fq=H%3A10310",
+      )[0]?.cleanTitle,
+    ).toBe("Nescafe fina selección");
   });
 
   it("builds tab-delimited clipboard rows and ignores incomplete values", () => {
