@@ -69,11 +69,17 @@ describe("title-url-app helpers", () => {
     expect(formatEditableCleanTitleInput("NESTLÉ - TRENCITO GALLETAS")).toBe(
       "Nestlé Trencito galletas",
     );
+    expect(formatEditableCleanTitleInput("TODO MAYONESAS CUISINE & CO")).toBe(
+      "Todo mayonesas Cuisine & Co",
+    );
     expect(formatEditableCleanTitleInput("TODO HAMBURGUESA VACUNO")).toBe(
       "Todo hamburguesa vacuno",
     );
     expect(formatEditableCleanTitleInput("TODO MAYONESAS KRAFT")).toBe(
       "Todo mayonesas Kraft",
+    );
+    expect(formatEditableCleanTitleInput("NECTAR WATT'S VARIEDADES")).toBe(
+      "Nectar Watt's variedades",
     );
   });
 

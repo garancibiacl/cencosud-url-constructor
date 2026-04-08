@@ -1,3 +1,5 @@
+import { applyBrandDictionary } from "@/lib/brand-dictionary";
+
 const normalizeTitleValue = (value: string) =>
   value
     .replace(/[´`’]/g, "'")
@@ -52,24 +54,6 @@ const BRAND_MARKERS = [
   /\bpanamei\b/i,
   /\bpanamel\b/i,
 ];
-
-const EDITABLE_BRAND_WORDS = new Set([
-  "cuisine",
-  "co",
-  "kraft",
-  "maxima",
-  "máxima",
-  "nestle",
-  "nestlé",
-  "panamei",
-  "panamel",
-  "trencito",
-  "tucapel",
-  "watt's",
-  "watt´s",
-  "watt`s",
-  "watt’s",
-]);
 
 const splitMeaningfulWords = (value: string) =>
   value
@@ -149,15 +133,12 @@ export const formatEditableCleanTitleInput = (value: string) => {
     return "";
   }
 
-  return normalized
+  const sentenceCaseValue = normalized
     .toLocaleLowerCase("es-CL")
     .split(/\s+/)
     .filter(Boolean)
     .map((word, index) => {
-      const comparableWord = word.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      const shouldCapitalize = index === 0 || EDITABLE_BRAND_WORDS.has(word) || EDITABLE_BRAND_WORDS.has(comparableWord);
-
-      if (!shouldCapitalize) {
+      if (index !== 0) {
         return word;
       }
 
@@ -166,6 +147,8 @@ export const formatEditableCleanTitleInput = (value: string) => {
     .join(" ")
     .replace(/\s{2,}/g, " ")
     .trim();
+
+  return applyBrandDictionary(sentenceCaseValue);
 };
 
 const getBrandMarkerIndex = (value: string) => {
