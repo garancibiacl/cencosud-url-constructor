@@ -7,7 +7,6 @@ import {
   Check,
   ChevronsUpDown,
   Copy,
-  ExternalLink,
   Layers3,
   Plus,
   RotateCcw,
@@ -1415,6 +1414,7 @@ const URLBuilder = () => {
   };
 
   const displayedSingleFinalUrl = singleFinalUrlDraft || singleFinalUrl;
+  const singleUrlOnlyValue = displayedSingleFinalUrl.trim();
   const singleCollectionCode = extractCollectionCode(displayedSingleFinalUrl);
   const singleClipboardBlock = buildWebClipboardBlock({
     productName: singleProductName,
@@ -1642,35 +1642,48 @@ const URLBuilder = () => {
                             </section>
 
                             <section className="rounded-[28px] border border-primary/10 bg-primary p-6 text-primary-foreground shadow-elevated md:p-8">
-                              <div className="mb-6 flex items-start justify-between gap-4">
-                                <div className="space-y-3">
-                                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-foreground/12">
-                                    <ExternalLink size={20} className="text-primary-foreground" />
-                                  </div>
-                                  <div>
-                                    <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-primary-foreground/72">
-                                      Link Final
-                                    </h3>
-                                    <p className="mt-2 max-w-sm text-sm leading-6 text-primary-foreground/80">
-                                      Preview inmediato con slug inteligente y concatenacion automatica.
-                                    </p>
+                              <div className="mb-6 flex flex-col gap-4">
+                                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                  <h3 className="pt-1 text-xs font-semibold uppercase tracking-[0.16em] text-primary-foreground/72">
+                                    Link Final
+                                  </h3>
+
+                                  <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:min-w-[320px]">
+                                    <button
+                                      onClick={() =>
+                                        copyValue(
+                                          singleUrlOnlyValue,
+                                          "URL copiada",
+                                          "Se copio solo la URL final del link individual.",
+                                        )
+                                      }
+                                      disabled={!singleUrlOnlyValue}
+                                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                      <Copy size={16} />
+                                      Copiar URL
+                                    </button>
+
+                                    <button
+                                      onClick={() =>
+                                        copyValue(
+                                          singleClipboardBlock,
+                                          "Contenido copiado",
+                                          "Se copiaron Nombre, Url y Codigo del link individual.",
+                                        )
+                                      }
+                                      disabled={!singleClipboardBlock}
+                                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-primary-foreground/16 bg-primary-foreground/10 px-4 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary-foreground/16 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                      <Copy size={16} />
+                                      Copiar bloque
+                                    </button>
                                   </div>
                                 </div>
 
-                                <button
-                                  onClick={() =>
-                                    copyValue(
-                                      singleClipboardBlock,
-                                      "Contenido copiado",
-                                      "Se copiaron Nombre, Url y Codigo del link individual.",
-                                    )
-                                  }
-                                  disabled={!singleClipboardBlock}
-                                  className="inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-2xl bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                  <Copy size={16} />
-                                  Copiar Link
-                                </button>
+                                <p className="text-sm leading-6 text-primary-foreground/80">
+                                  Preview inmediato con slug inteligente y concatenacion automatica.
+                                </p>
                               </div>
 
                               <button
