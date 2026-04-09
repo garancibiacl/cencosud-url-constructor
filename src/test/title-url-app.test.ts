@@ -132,7 +132,7 @@ describe("title-url-app helpers", () => {
         "Prensa/TV - NESCAFE FINA SELECCIÓN 200GR (PRECIO REF $11.790 PPUM 44950 x KG) $8.990 TMP $2.800 AHORRO - 07/04/2026 al 20/04/2026",
         "https://www.sitio.cl/busca?fq=H%3A10310",
       )[0]?.cleanTitle,
-    ).toBe("Nescafe fina selección");
+    ).toBe("Nescafé fina selección");
   });
 
   it("builds tab-delimited clipboard rows and ignores incomplete values", () => {
@@ -172,8 +172,23 @@ describe("title-url-app helpers", () => {
         },
       ]),
     ).toEqual([
-      "Nombre: Leche Entera Cuisine & Co 1L\nUrl: /busca?fq=H%3A10113&nombre_promo=home-banner-leche-s14\nCodigo: 10113",
-      "Nombre: Aceite Vegetal\nUrl: /busca?fq=H%3A10102&nombre_promo=home-banner-aceite-s14\nCodigo: 10102",
+      "Nombre: Leche entera Cuisine & Co 1L\nUrl: /busca?fq=H%3A10113&nombre_promo=home-banner-leche-s14\nCodigo: 10113",
+      "Nombre: Aceite vegetal\nUrl: /busca?fq=H%3A10102&nombre_promo=home-banner-aceite-s14\nCodigo: 10102",
+    ]);
+  });
+
+  it("formats cms web clipboard names in sentence case while preserving known brands", () => {
+    expect(
+      buildBulkWebClipboardRows([
+        {
+          productName: "Vitrina Proveedor Softys",
+          brandDetail: "Pañales Babysec",
+          finalUrl: "/busca?fq=H%3A10102&nombre_promo=home-banner-babysec-s14",
+          collectionCode: "10102",
+        },
+      ]),
+    ).toEqual([
+      "Nombre: Vitrina proveedor softys pañales Babysec\nUrl: /busca?fq=H%3A10102&nombre_promo=home-banner-babysec-s14\nCodigo: 10102",
     ]);
   });
 

@@ -122,6 +122,27 @@ const formatDisplayLabel = (value: string) =>
     ),
   );
 
+const formatClipboardDisplayName = (value: string) => {
+  const normalized = normalizeVariantConnector(normalizeLabelValue(value))
+    .replace(/\s*-\s*/g, " ")
+    .replace(/[_/|]+/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  if (!normalized) {
+    return "";
+  }
+
+  const sentenceCaseValue = normalized
+    .toLocaleLowerCase("es-CL")
+    .replace(/^\p{L}/u, (char) => char.toLocaleUpperCase("es-CL"));
+
+  return applyBrandDictionary(sentenceCaseValue).replace(
+    /\b(\d+(?:[.,]\d+)?)(cc|ml|l|g|gr|kg)\b/gi,
+    (_, amount: string, unit: string) => `${amount}${unit.toUpperCase()}`,
+  );
+};
+
 export const formatEditableCleanTitleInput = (value: string) => {
   const normalized = normalizeTitleValue(value)
     .replace(/\s*-\s*/g, " ")
@@ -393,7 +414,9 @@ export const buildWebClipboardBlock = (row: WebClipboardRow) => {
   const brandDetail = String(row.brandDetail ?? "").trim();
   const finalUrl = String(row.finalUrl ?? "").trim();
   const collectionCode = String(row.collectionCode ?? "").trim();
-  const displayName = [productName, brandDetail].filter(Boolean).join(" ").trim();
+  const displayName = formatClipboardDisplayName(
+    [productName, brandDetail].filter(Boolean).join(" ").trim(),
+  );
 
   if (!displayName || !finalUrl || !collectionCode) {
     return "";

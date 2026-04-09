@@ -8,7 +8,9 @@ const normalizeBrandKey = (value: string) =>
     .trim();
 
 export const BRAND_DICTIONARY = {
+  "babysec": "Babysec",
   "ciabatta": "Ciabatta",
+  "confort": "Confort",
   "corona": "Corona",
   "cuisine & co": "Cuisine & Co",
   "heineken": "Heineken",
@@ -17,9 +19,10 @@ export const BRAND_DICTIONARY = {
   "masterdog": "Masterdog",
   "maxima": "Máxima",
   "nescafe": "Nescafé",
+  "nestle la cremeria": "Nestlé La Cremería",
   "nestle": "Nestlé",
+  "nova": "Nova",
   "panamei": "Panamei",
-  "panamel": "Panamel",
   "sol": "Sol",
   "super pollo": "Super Pollo",
   "trencito": "Trencito",
