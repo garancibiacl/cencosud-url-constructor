@@ -4,6 +4,7 @@ import {
   buildBulkWebClipboardRows,
   buildAppBatchRows,
   cleanProductTitle,
+  extractAppCleanTitle,
   extractBrandDetail,
   extractCleanTitle,
   extractCollectionCode,
@@ -133,6 +134,44 @@ describe("title-url-app helpers", () => {
         "https://www.sitio.cl/busca?fq=H%3A10310",
       )[0]?.cleanTitle,
     ).toBe("Nescafé fina selección");
+  });
+
+  it("extracts app titles from provider and special inputs using brand-aware rules", () => {
+    expect(
+      extractAppCleanTitle(
+        "Vitrina proveedor - NESTLÉ - TRENCITO GALLETAS - 14/04/2026 al 20/04/2026",
+      ),
+    ).toBe("Nestlé Trencito galletas");
+
+    expect(
+      extractAppCleanTitle(
+        "Especial - Todos los productos de cuisine &Co - 14/04/2026 al 03/05/2026",
+      ),
+    ).toBe("Cuisine & Co");
+
+    expect(
+      extractAppCleanTitle(
+        "Vitrina proveedor - SOFTYS - Pañales Babysec - 14/04/2026 al 20/04/2026",
+      ),
+    ).toBe("Pañales Babysec");
+
+    expect(
+      extractAppCleanTitle(
+        "Bombazo exclusivo ecomm - Todo San José hasta un 30% de dcto. - 13/04/2026 al 15/04/2026",
+      ),
+    ).toBe("San José hasta un 30% dcto.");
+
+    expect(
+      extractAppCleanTitle(
+        "Bombazo exclusivo ecomm - Todo San José hasta un 30% descto. - 13/04/2026 al 15/04/2026",
+      ),
+    ).toBe("San José hasta un 30% dcto.");
+
+    expect(
+      extractAppCleanTitle(
+        "Ciclos - TODAS LAS OFERTAS DEL CICLO 2 DE SANTA ISABEL: del 7 al 20 de abril 2026 + LPM - 07/04/2026 al 20/04/2026",
+      ),
+    ).toBe("Todas las Ofertas");
   });
 
   it("builds tab-delimited clipboard rows and ignores incomplete values", () => {

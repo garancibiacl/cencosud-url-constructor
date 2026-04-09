@@ -43,6 +43,7 @@ import {
   buildWebClipboardBlock,
   type AppBatchRow,
   buildAppBatchRows,
+  extractAppCleanTitle,
   extractBrandDetail,
   extractCleanTitle,
   extractCollectionCode,
@@ -1069,7 +1070,7 @@ const URLBuilder = () => {
   const singleSlug = cleanTextToSlug(singleDescription);
   const singleProductName = extractCleanTitle(singleDescription);
   const singleBrandDetail = extractBrandDetail(singleDescription);
-  const singleAppCleanTitle = extractCleanTitle(singleAppDirtyTitle);
+  const singleAppCleanTitle = extractAppCleanTitle(singleAppDirtyTitle);
   const singleAppCollectionCode = extractCollectionCode(singleAppUrl);
   const singleFinalUrl = hydrateUrl(singleBaseUrl, {
     ...globalParams,

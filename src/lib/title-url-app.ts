@@ -1,9 +1,11 @@
-import { applyBrandDictionary } from "@/lib/brand-dictionary";
+import { applyBrandDictionary, containsKnownBrand, isKnownBrand } from "@/lib/brand-dictionary";
 
 const normalizeTitleValue = (value: string) =>
   value
     .replace(/[´`’]/g, "'")
-    .replace(/\b&\s*co\b/gi, "& Co")
+    .replace(/\s*&\s*co\b/gi, " & Co")
+    .replace(/\bdescto\.?\b/gi, "dcto.")
+    .replace(/\bdcto\b(?!\.)/gi, "dcto.")
     .replace(/\s*-\s*/g, " - ")
     .replace(/\s+/g, " ")
     .trim();
@@ -45,6 +47,34 @@ const GENERIC_CATEGORY_PATTERNS = [
   /\bprensa\s*\/\s*tv\b/gi,
   /\bsanta\s+yapa\b/gi,
 ];
+
+const APP_SOURCE_SEGMENT_PATTERNS = [
+  /^\s*prensa\s*\/\s*tv\s*$/i,
+  /^\s*santa\s+yapa\s*$/i,
+  /^\s*catalogo\s*$/i,
+  /^\s*bombazo(?:s)?\s*$/i,
+  /^\s*exclusivas?\s*$/i,
+  /^\s*exclusivo\s+ecomm\s*$/i,
+  /^\s*ciclos?\s*$/i,
+  /^\s*especial(?:es)?\s*$/i,
+  /^\s*vitrina\s+proveedor\s*$/i,
+];
+
+const APP_GENERIC_PRODUCT_PREFIX_PATTERNS = [
+  /^\s*bombazo(?:s)?\s+exclusivo\s+ecomm\s*-\s*/i,
+  /^\s*todos?\s+los?\s+productos?\s+de\s+/i,
+  /^\s*todas?\s+las?\s+ofertas?\s+del?\s+/i,
+  /^\s*todas?\s+las?\s+ofertas?\s+de\s+/i,
+  /^\s*exclusivo\s+ecomm\s*-\s*/i,
+  /^\s*todo(?:s|as)?\s+/i,
+];
+
+const APP_PRESERVED_COMMERCIAL_PATTERNS = [
+  /\btodas?\s+las?\s+ofertas?\s+del?\s+ciclo\b/i,
+];
+
+const APP_LEADING_SOURCE_SEQUENCE_PATTERN =
+  /^\s*(?:(?:prensa\s*\/\s*tv|santa\s+yapa|catalogo|bombazo(?:s)?|exclusivas?|exclusivo\s+ecomm|ciclos?|especial(?:es)?|vitrina\s+proveedor)\s*-\s*)+/i;
 
 const BRAND_MARKERS = [
   /\bcuisine\s*&\s*co\b/i,
@@ -122,6 +152,42 @@ const formatDisplayLabel = (value: string) =>
     ),
   );
 
+const normalizeAppSegment = (value: string) => {
+  let normalized = cleanupCommercialDescription(value, { keepTrailingFormat: true });
+
+  for (const pattern of APP_GENERIC_PRODUCT_PREFIX_PATTERNS) {
+    normalized = normalized.replace(pattern, "");
+  }
+
+  return normalized.trim();
+};
+
+const extractAppPromotionalTitle = (value: string) => {
+  let normalized = normalizeTitleValue(value);
+
+  normalized = normalized.replace(DATE_RANGE_PATTERN, " ");
+  normalized = normalized.replace(APP_LEADING_SOURCE_SEQUENCE_PATTERN, "");
+  normalized = normalized.replace(/^\s*-\s*/, "");
+
+  for (const pattern of APP_GENERIC_PRODUCT_PREFIX_PATTERNS) {
+    normalized = normalized.replace(pattern, "");
+  }
+
+  normalized = normalized
+    .replace(/\$\s*\d[\d.,]*/g, " ")
+    .replace(/\bde\s+dcto\.?/gi, " dcto.")
+    .replace(/\s*-\s*/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .replace(/^[^A-Za-zÀ-ÿ0-9]+|[^A-Za-zÀ-ÿ0-9%'.]+$/g, "")
+    .trim();
+
+  return normalized
+    ? formatEditableCleanTitleInput(normalized)
+        .replace(/\bdcto\b\.?/gi, "dcto.")
+        .replace(/\bdcto\.\.+/gi, "dcto.")
+    : "";
+};
+
 const formatClipboardDisplayName = (value: string) => {
   const normalized = normalizeVariantConnector(normalizeLabelValue(value))
     .replace(/\s*-\s*/g, " ")
@@ -170,6 +236,53 @@ export const formatEditableCleanTitleInput = (value: string) => {
     .trim();
 
   return applyBrandDictionary(sentenceCaseValue);
+};
+
+export const extractAppCleanTitle = (dirtyTitle: string) => {
+  const normalized = normalizeTitleValue(dirtyTitle).replace(DATE_RANGE_PATTERN, " ").trim();
+
+  if (!normalized) {
+    return "";
+  }
+
+  if (APP_PRESERVED_COMMERCIAL_PATTERNS.some((pattern) => pattern.test(normalized))) {
+    return "Todas las Ofertas";
+  }
+
+  if (containsKnownBrand(normalized) && /(?:hasta|dcto|\b\d+(?:[.,]\d+)?\s*%)/i.test(normalized)) {
+    const promotionalTitle = extractAppPromotionalTitle(normalized);
+    if (promotionalTitle) {
+      return promotionalTitle;
+    }
+  }
+
+  const segments = normalized
+    .split(/\s+-\s+/)
+    .map((segment) => normalizeAppSegment(segment))
+    .filter(Boolean)
+    .filter((segment) => !APP_SOURCE_SEGMENT_PATTERNS.some((pattern) => pattern.test(segment)));
+
+  if (segments.length === 0) {
+    return "";
+  }
+
+  if (segments.length === 1) {
+    const extractedTitle = formatEditableCleanTitleInput(extractCleanTitle(segments[0]));
+    return extractedTitle || formatEditableCleanTitleInput(segments[0]);
+  }
+
+  const [firstSegment, secondSegment] = segments;
+  const formattedSecondSegment = formatEditableCleanTitleInput(secondSegment);
+
+  if (isKnownBrand(firstSegment) && secondSegment) {
+    return formatEditableCleanTitleInput(`${firstSegment} ${formattedSecondSegment}`);
+  }
+
+  if (!isKnownBrand(firstSegment) && secondSegment && containsKnownBrand(secondSegment)) {
+    return formattedSecondSegment;
+  }
+
+  return formatEditableCleanTitleInput(extractCleanTitle(segments.join(" ")));
 };
 
 const getBrandMarkerIndex = (value: string) => {
@@ -282,7 +395,7 @@ export const buildAppBatchRows = (dirtyTitles: string, urls: string): AppBatchRo
   return Array.from({ length: totalRows }, (_, index) => {
     const dirtyTitle = (titleLines[index] ?? "").trim();
     const sourceUrl = (urlLines[index] ?? "").trim();
-    const cleanTitle = formatEditableCleanTitleInput(extractCleanTitle(dirtyTitle));
+    const cleanTitle = extractAppCleanTitle(dirtyTitle);
     const collectionCode = extractCollectionCode(sourceUrl);
 
     return {

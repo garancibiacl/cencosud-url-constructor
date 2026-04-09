@@ -8,6 +8,7 @@ const normalizeBrandKey = (value: string) =>
     .trim();
 
 export const BRAND_DICTIONARY = {
+  "aceite chef": "Aceite Chef",
   "babysec": "Babysec",
   "ciabatta": "Ciabatta",
   "confort": "Confort",
@@ -15,6 +16,7 @@ export const BRAND_DICTIONARY = {
   "cuisine & co": "Cuisine & Co",
   "heineken": "Heineken",
   "kraft": "Kraft",
+  "lays": "Lays",
   "maggi": "Maggi",
   "masterdog": "Masterdog",
   "maxima": "Máxima",
@@ -22,7 +24,10 @@ export const BRAND_DICTIONARY = {
   "nestle la cremeria": "Nestlé La Cremería",
   "nestle": "Nestlé",
   "nova": "Nova",
+  "palta hass": "Palta Hass",
   "panamei": "Panamei",
+  "receta de abuelo": "Receta de Abuelo",
+  "san jose": "San José",
   "sol": "Sol",
   "super pollo": "Super Pollo",
   "trencito": "Trencito",
@@ -37,6 +42,39 @@ const BRAND_ENTRIES = Object.entries(BRAND_DICTIONARY)
     tokens: normalizeBrandKey(rawKey).split(" "),
   }))
   .sort((left, right) => right.tokens.length - left.tokens.length);
+
+export const isKnownBrand = (value: string) => {
+  const normalizedValue = normalizeBrandKey(value);
+
+  if (!normalizedValue) {
+    return false;
+  }
+
+  return BRAND_ENTRIES.some((entry) => entry.key === normalizedValue);
+};
+
+export const containsKnownBrand = (value: string) => {
+  const normalizedTokens = normalizeBrandKey(value).split(" ").filter(Boolean);
+
+  if (normalizedTokens.length === 0) {
+    return false;
+  }
+
+  return BRAND_ENTRIES.some((entry) => {
+    if (entry.tokens.length > normalizedTokens.length) {
+      return false;
+    }
+
+    for (let index = 0; index <= normalizedTokens.length - entry.tokens.length; index += 1) {
+      const candidate = normalizedTokens.slice(index, index + entry.tokens.length);
+      if (candidate.every((token, tokenIndex) => token === entry.tokens[tokenIndex])) {
+        return true;
+      }
+    }
+
+    return false;
+  });
+};
 
 export const applyBrandDictionary = (value: string) => {
   const rawTokens = value.split(/\s+/).filter(Boolean);
