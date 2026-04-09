@@ -11,7 +11,7 @@ export const BRAND_DICTIONARY = {
   "aceite chef": "Aceite Chef",
   "babysec": "Babysec",
   "ciabatta": "Ciabatta",
-  "coca-cola": "COCA-COLA",
+  "coca-cola": "Coca-Cola",
   "confort": "Confort",
   "corona": "Corona",
   "cuisine & co": "Cuisine & Co",
