@@ -1919,18 +1919,13 @@ const URLBuilder = () => {
 
                         <section className="rounded-[28px] border border-primary/10 bg-card p-6 shadow-card md:p-8">
                           <div className="mb-6 flex items-start justify-between gap-4">
-                            <div className="space-y-3">
-                              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10">
-                                <ExternalLink size={20} className="text-primary" />
-                              </div>
-                              <div>
-                                <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-foreground">
-                                  Previsualizacion
-                                </h3>
-                                <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-                                  Los resultados quedan listos para copiar de forma individual.
-                                </p>
-                              </div>
+                            <div>
+                              <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-foreground">
+                                Previsualizacion
+                              </h3>
+                              <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
+                                Los resultados quedan listos para copiar de forma individual.
+                              </p>
                             </div>
 
                             <button
