@@ -11,7 +11,7 @@ export const PROMPTS_CATALOG: Prompt[] = [
     title: "Producto sobre fondo blanco limpio",
     description: "Ideal para fichas de producto en ecommerce.",
     category: "imagen-producto",
-    brand: "Generico",
+    brand: "Spid",
     tone: "formal",
     tags: ["producto", "ecommerce", "fondo blanco", "ficha"],
     model: "DALL-E 3",
@@ -25,7 +25,7 @@ export const PROMPTS_CATALOG: Prompt[] = [
     title: "Producto en contexto lifestyle",
     description: "Producto integrado en un ambiente cotidiano y aspiracional.",
     category: "imagen-producto",
-    brand: "Generico",
+    brand: "Spid",
     tone: "aspiracional",
     tags: ["lifestyle", "ambiente", "aspiracional"],
     model: "DALL-E 3",
@@ -41,9 +41,9 @@ export const PROMPTS_CATALOG: Prompt[] = [
     title: "Banner oferta Paris — desktop",
     description: "Banner horizontal para campaña de descuentos Paris.",
     category: "banner-campaña",
-    brand: "Paris",
+    brand: "Spid",
     tone: "urgente",
-    tags: ["banner", "descuento", "desktop", "paris"],
+    tags: ["banner", "descuento", "desktop", "spid"],
     model: "DALL-E 3",
     content:
       "Wide promotional banner for Paris department store, bold discount text '{{descuento}}% OFF', " +
@@ -88,7 +88,7 @@ export const PROMPTS_CATALOG: Prompt[] = [
     title: "Expansión: cocina moderna",
     description: "Rellena bordes de un banner con fondo de cocina.",
     category: "relleno-generativo",
-    brand: "Generico",
+    brand: "Spid",
     tone: "aspiracional",
     tags: ["outpainting", "cocina", "expansión", "fondo"],
     model: "DALL-E 2",
@@ -101,7 +101,7 @@ export const PROMPTS_CATALOG: Prompt[] = [
     title: "Expansión: pasillo supermercado",
     description: "Amplía la imagen con un pasillo genérico de super.",
     category: "relleno-generativo",
-    brand: "Generico",
+    brand: "Jumbo",
     tone: "formal",
     tags: ["outpainting", "supermercado", "pasillo"],
     model: "DALL-E 2",
@@ -116,7 +116,7 @@ export const PROMPTS_CATALOG: Prompt[] = [
     title: "Copy de urgencia — oferta por tiempo limitado",
     description: "Texto persuasivo con escasez y tiempo limitado.",
     category: "copy-marketing",
-    brand: "Generico",
+    brand: "Santa Isabel",
     tone: "urgente",
     tags: ["copy", "urgencia", "descuento", "cta"],
     content:
@@ -130,7 +130,7 @@ export const PROMPTS_CATALOG: Prompt[] = [
     title: "Descripción de producto para ecommerce",
     description: "Copy persuasivo para ficha de producto.",
     category: "copy-marketing",
-    brand: "Generico",
+    brand: "Spid",
     tone: "formal",
     tags: ["copy", "descripción", "ecommerce", "seo"],
     content:
@@ -146,9 +146,9 @@ export const PROMPTS_CATALOG: Prompt[] = [
     title: "Post Instagram — Paris moda",
     description: "Caption para publicación de moda en Instagram.",
     category: "social-media",
-    brand: "Paris",
+    brand: "Spid",
     tone: "aspiracional",
-    tags: ["instagram", "moda", "caption", "paris"],
+    tags: ["instagram", "moda", "caption", "spid"],
     content:
       "Escribe un caption para Instagram de Paris tienda, promocionando {{nombre_producto}} de la " +
       "colección {{coleccion}}. Tono aspiracional y elegante, máximo 2 párrafos, 3-5 hashtags " +

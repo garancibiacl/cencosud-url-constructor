@@ -5,7 +5,7 @@ export type PromptCategory =
   | "copy-marketing"
   | "social-media";
 
-export type PromptBrand = "Paris" | "Jumbo" | "Santa Isabel" | "SISA" | "Generico";
+export type PromptBrand = "Jumbo" | "Santa Isabel" | "Spid";
 
 export type PromptTone = "formal" | "casual" | "urgente" | "aspiracional";
 

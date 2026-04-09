@@ -14,11 +14,9 @@ const CATEGORIES: { value: PromptCategory | "todas"; label: string }[] = [
 
 const BRANDS: { value: PromptBrand | "todas"; label: string }[] = [
   { value: "todas", label: "Todas" },
-  { value: "Paris", label: "Paris" },
   { value: "Jumbo", label: "Jumbo" },
   { value: "Santa Isabel", label: "Santa Isabel" },
-  { value: "SISA", label: "SISA" },
-  { value: "Generico", label: "Genérico" },
+  { value: "Spid", label: "Spid" },
 ];
 
 const TONES: { value: PromptTone | "todos"; label: string }[] = [

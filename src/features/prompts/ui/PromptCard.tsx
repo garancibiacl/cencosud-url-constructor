@@ -22,11 +22,9 @@ const TONE_LABELS: Record<Prompt["tone"], string> = {
 };
 
 const BRAND_COLORS: Record<Prompt["brand"], string> = {
-  Paris: "bg-blue-100 text-blue-800 border-blue-200",
   Jumbo: "bg-green-100 text-green-800 border-green-200",
   "Santa Isabel": "bg-orange-100 text-orange-800 border-orange-200",
-  SISA: "bg-purple-100 text-purple-800 border-purple-200",
-  Generico: "bg-secondary text-secondary-foreground border-border",
+  Spid: "bg-violet-100 text-violet-800 border-violet-200",
 };
 
 interface Props {

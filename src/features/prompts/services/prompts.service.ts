@@ -1,11 +1,33 @@
 import { PROMPTS_CATALOG } from "../logic/prompts.data";
 import type { Prompt, PromptFilters } from "../logic/prompts.types";
 
+const STORAGE_KEY = "aguapp_custom_prompts";
+
+// ─── Persistencia de prompts custom (localStorage) ───────────────────────────
+
+export function getCustomPrompts(): Prompt[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Prompt[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveCustomPrompt(data: Omit<Prompt, "id">): Prompt {
+  const prompt: Prompt = { ...data, id: `custom-${Date.now()}` };
+  const existing = getCustomPrompts();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify([...existing, prompt]));
+  return prompt;
+}
+
+// ─── Lectura ──────────────────────────────────────────────────────────────────
+
 /**
- * Devuelve todos los prompts del catálogo.
+ * Devuelve catálogo estático + prompts creados por el usuario.
  */
 export function getAllPrompts(): Prompt[] {
-  return PROMPTS_CATALOG;
+  return [...PROMPTS_CATALOG, ...getCustomPrompts()];
 }
 
 /**
@@ -15,7 +37,7 @@ export function getAllPrompts(): Prompt[] {
 export function filterPrompts(filters: PromptFilters): Prompt[] {
   const search = filters.search.toLowerCase().trim();
 
-  return PROMPTS_CATALOG.filter((prompt) => {
+  return getAllPrompts().filter((prompt) => {
     if (filters.category !== "todas" && prompt.category !== filters.category) return false;
     if (filters.brand !== "todas" && prompt.brand !== filters.brand) return false;
     if (filters.tone !== "todos" && prompt.tone !== filters.tone) return false;
