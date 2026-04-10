@@ -24,6 +24,7 @@ const BannerExpandPage    = lazy(() => import("@/features/banner-expand/ui/Banne
 const HistoryPage         = lazy(() => import("@/features/history/ui/HistoryPage"));
 const SettingsPage        = lazy(() => import("@/features/settings/ui/SettingsPage"));
 const PromptsPage         = lazy(() => import("@/features/prompts/ui/PromptsPage"));
+const ScriptsPage         = lazy(() => import("@/features/scripts/ui/ScriptsPage"));
 
 // ─── Shared loading state ────────────────────────────────────────────────────
 function PageLoader() {
@@ -69,6 +70,10 @@ export default function AppRouter() {
         <Route
           path="/prompts"
           element={<Lazy><PromptsPage /></Lazy>}
+        />
+        <Route
+          path="/scripts"
+          element={<Lazy><ScriptsPage /></Lazy>}
         />
       </Route>
 
