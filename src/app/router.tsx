@@ -12,6 +12,8 @@
  */
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
+import { Hourglass } from "ldrs/react";
+import "ldrs/react/Hourglass.css";
 import AppShell from "./AppShell";
 import NotFound from "@/pages/NotFound";
 
@@ -27,7 +29,7 @@ const PromptsPage         = lazy(() => import("@/features/prompts/ui/PromptsPage
 function PageLoader() {
   return (
     <div className="flex flex-1 items-center justify-center">
-      <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <Hourglass size="40" bgOpacity="0.1" speed="1.75" color="#0052A3" />
     </div>
   );
 }
