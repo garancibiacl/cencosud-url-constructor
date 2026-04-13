@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Moon, Sun, Droplets, PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { motion } from "framer-motion";
+import { Moon, Sun, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { appModules } from "@/modules/appModules";
+import { Logo } from "@/components/Logo";
 
 const SidebarTooltip = ({
   isOpen,
@@ -23,7 +24,8 @@ const SidebarTooltip = ({
       <TooltipTrigger asChild>{children}</TooltipTrigger>
       <TooltipContent
         side="right"
-        className="border-white/10 bg-slate-950 px-3 py-1.5 text-xs font-medium text-white shadow-[0_12px_24px_rgba(0,0,0,0.28)]"
+        sideOffset={8}
+        className="border border-white/15 bg-slate-950/95 px-3 py-2 text-xs font-semibold text-white shadow-xl shadow-black/40 backdrop-blur-sm"
       >
         {label}
       </TooltipContent>
@@ -45,47 +47,59 @@ const DarkModeToggle = ({ isOpen }: { isOpen: boolean }) => {
 
   const toggle = () => setIsDark(!isDark);
 
-  /* Collapsed: solo ícono clicable */
+  /* Collapsed: icon only with tooltip */
   if (!isOpen) {
     return (
       <SidebarTooltip isOpen={false} label={isDark ? "Cambiar a claro" : "Cambiar a oscuro"}>
-        <button
+        <motion.button
           onClick={toggle}
-          className="flex w-full items-center justify-center rounded-2xl py-2.5 text-sky-200 transition-colors hover:bg-white/10 hover:text-white"
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.95 }}
+          className="flex w-full items-center justify-center rounded-lg bg-white/10 py-2.5 text-white/70 transition-all duration-300 hover:bg-white/15 hover:text-white"
         >
-          {isDark ? <Sun size={16} /> : <Moon size={16} />}
-        </button>
+          {isDark ? <Sun size={18} /> : <Moon size={18} />}
+        </motion.button>
       </SidebarTooltip>
     );
   }
 
-  /* Expanded: fila con label + pill switch */
+  /* Expanded: row with label + modern toggle */
   return (
-    <button
+    <motion.button
       onClick={toggle}
-      className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors hover:bg-white/10"
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-300 hover:bg-white/10"
     >
-      {isDark ? (
-        <Sun size={15} className="shrink-0 text-sky-200" />
-      ) : (
-        <Moon size={15} className="shrink-0 text-sky-200" />
-      )}
-      <span className="flex-1 whitespace-nowrap text-left text-sm font-medium text-sky-100/80">
+      <motion.div
+        animate={{ rotate: isDark ? 0 : -30 }}
+        transition={{ duration: 0.3 }}
+      >
+        {isDark ? (
+          <Sun size={18} className="text-orange-400" />
+        ) : (
+          <Moon size={18} className="text-sky-300" />
+        )}
+      </motion.div>
+
+      <span className="flex-1 whitespace-nowrap text-left text-sm font-medium text-white/75 group-hover:text-white">
         {isDark ? "Modo claro" : "Modo oscuro"}
       </span>
-      {/* Pill switch */}
-      <span
-        className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200 ${
-          isDark ? "bg-sky-300" : "bg-white/20"
+
+      {/* Modern toggle switch */}
+      <motion.div
+        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full shadow-sm transition-colors duration-300 ${
+          isDark ? "bg-gradient-to-r from-sky-400 to-sky-500" : "bg-white/15"
         }`}
+        whileHover={{ scale: 1.05 }}
       >
-        <span
-          className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform duration-200 ${
-            isDark ? "translate-x-[18px]" : "translate-x-[3px]"
-          }`}
+        <motion.span
+          className="inline-block h-5 w-5 rounded-full bg-white shadow-md"
+          animate={{ x: isDark ? 20 : 2 }}
+          transition={{ type: "spring", stiffness: 500, damping: 30 }}
         />
-      </span>
-    </button>
+      </motion.div>
+    </motion.button>
   );
 };
 
@@ -104,100 +118,90 @@ const AppSidebar = () => {
       initial={false}
       animate={{ width: isOpen ? 280 : 64 }}
       transition={{ duration: 0.15, ease: [0.25, 0.1, 0.25, 1] }}
-      className="relative z-20 flex h-screen shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground"
+      className="relative z-20 flex h-screen shrink-0 flex-col overflow-hidden border-r border-white/10 bg-[#0048a7] text-white"
     >
-      <div className={`flex items-center pb-4 pt-5 ${isOpen ? "gap-3 px-4" : "flex-col gap-3 px-3"}`}>
-        {/* Logo */}
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/18 bg-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.16)] backdrop-blur-sm">
-          <Droplets size={18} className="text-white" />
-        </div>
+      {/* Header - Logo centrado + toggle */}
+      <div
+        className={`flex items-center border-b border-white/10 py-4 ${
+          isOpen ? "justify-between px-4" : "flex-col gap-2 px-2"
+        }`}
+      >
+        <Logo isOpen={isOpen} />
 
-        {/* Wordmark */}
-        {isOpen && (
-          <div className="min-w-0 flex-1">
-            <motion.span
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="block whitespace-nowrap text-lg font-semibold tracking-[-0.03em] text-white"
-            >
-              aguApp
-            </motion.span>
-            <span className="block whitespace-nowrap text-[10px] uppercase tracking-[0.28em] text-sky-100/60">
-              CENCOSUD URL SUITE
-            </span>
-          </div>
-        )}
-
-        {/* Toggle sidebar */}
+        {/* Toggle */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
+            <motion.button
               onClick={() => setIsOpen(!isOpen)}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-sky-100/60 transition-colors hover:bg-white/10 hover:text-white"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.92 }}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/15 hover:text-white"
             >
-              {isOpen
-                ? <PanelLeftClose size={16} />
-                : <PanelLeftOpen size={16} />
-              }
-            </button>
+              {isOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+            </motion.button>
           </TooltipTrigger>
-          <TooltipContent
-            side="right"
-            className="border-white/10 bg-slate-950 px-3 py-1.5 text-xs font-medium text-white shadow-[0_12px_24px_rgba(0,0,0,0.28)]"
-          >
+          <TooltipContent side="right" className="border-white/10 bg-slate-950/95 text-xs font-medium text-white">
             {isOpen ? "Cerrar barra lateral" : "Abrir barra lateral"}
           </TooltipContent>
         </Tooltip>
       </div>
 
-      <nav className="mt-1 flex-1 space-y-1.5 overflow-y-auto px-3 pb-4">
-        {appModules.map((item) => {
-          const isActive = pathname === item.path;
+      {/* Navigation - Modern styling with UX best practices */}
+      <nav className="flex-1 space-y-1 overflow-y-auto px-2.5 py-4 pb-4">
+        <AnimatePresence>
+          {appModules.map((item, index) => {
+            const isActive = pathname === item.path;
 
-          return (
-            <SidebarTooltip key={item.id} isOpen={isOpen} label={item.label}>
-              <Link
-                to={item.path}
-                className={`group relative flex w-full items-center overflow-hidden rounded-2xl text-left transition-all duration-200 ${
-                  isActive
-                    ? "bg-white text-[#0052A3]"
-                    : "bg-transparent text-white hover:bg-sidebar-accent"
-                } ${
-                  isOpen ? "gap-3 px-4 py-2.5" : "justify-center px-0 py-2.5"
-                }`}
-              >
-                <span
-                  className={`absolute inset-y-2 left-0 w-[3px] rounded-full transition-opacity ${
-                    isActive ? "bg-[#0052A3] opacity-100" : "opacity-0"
-                  }`}
-                />
-                <item.icon
-                  size={18}
-                  strokeWidth={2}
-                  className={`shrink-0 transition-colors ${
-                    isActive ? "text-[#0052A3]" : "text-sky-100/80 group-hover:text-white"
-                  }`}
-                />
-                {isOpen && (
-                  <span
-                    className={`flex-1 whitespace-nowrap text-left text-sm font-medium tracking-[0.01em] transition-colors ${
-                      isActive ? "text-[#0052A3]" : "text-white group-hover:text-white"
-                    }`}
+            return (
+              <SidebarTooltip key={item.id} isOpen={isOpen} label={item.label}>
+                <motion.div
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                >
+                  <Link
+                    to={item.path}
+                    className={`group relative flex w-full items-center overflow-hidden rounded-xl px-3 py-2.5 text-left transition-all duration-200 ${
+                      isActive
+                        ? "bg-white/20 text-white shadow-sm ring-1 ring-white/20"
+                        : "text-white/70 hover:bg-white/10 hover:text-white"
+                    } ${isOpen ? "gap-3" : "justify-center"}`}
                   >
-                    {item.label}
-                  </span>
-                )}
-              </Link>
-            </SidebarTooltip>
-          );
-        })}
+                    {/* Active left accent */}
+                    {isActive && (
+                      <motion.span
+                        layoutId="activeBar"
+                        className="absolute inset-y-2 left-0 w-[3px] rounded-r-full bg-white"
+                      />
+                    )}
+
+                    <item.icon
+                      size={19}
+                      strokeWidth={isActive ? 2.5 : 1.8}
+                      className={`shrink-0 transition-all duration-200 ${
+                        isActive ? "text-white" : "text-white/60 group-hover:text-white"
+                      }`}
+                    />
+
+                    {isOpen && (
+                      <span
+                        className={`flex-1 whitespace-nowrap text-sm tracking-[0.01em] transition-colors duration-200 ${
+                          isActive ? "font-semibold text-white" : "font-medium text-white/80 group-hover:text-white"
+                        }`}
+                      >
+                        {item.label}
+                      </span>
+                    )}
+                  </Link>
+                </motion.div>
+              </SidebarTooltip>
+            );
+          })}
+        </AnimatePresence>
       </nav>
 
-      <div className="sticky bottom-0 z-10 mt-auto bg-[#0052A3] px-3 pb-4 pt-2">
-        {/* Separador */}
-        <div className="mb-2 h-px bg-white/10" />
-
-        {/* Dark mode toggle */}
+      {/* Footer */}
+      <div className="sticky bottom-0 z-10 mt-auto border-t border-white/10 bg-[#003d9a] px-2.5 pb-4 pt-3">
         <DarkModeToggle isOpen={isOpen} />
       </div>
     </motion.aside>

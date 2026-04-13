@@ -1644,12 +1644,12 @@ const URLBuilder = () => {
 
                             <section className="rounded-[28px] border border-primary/10 bg-primary p-6 text-primary-foreground shadow-elevated md:p-8">
                               <div className="mb-6 flex flex-col gap-4">
-                                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                                   <h3 className="pt-1 text-xs font-semibold uppercase tracking-[0.16em] text-primary-foreground/72">
                                     Link Final
                                   </h3>
 
-                                  <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:min-w-[320px]">
+                                  <div className="grid w-full grid-cols-2 gap-2 lg:w-auto lg:min-w-[300px]">
                                     <button
                                       onClick={() =>
                                         copyValue(
@@ -1659,10 +1659,10 @@ const URLBuilder = () => {
                                         )
                                       }
                                       disabled={!singleUrlOnlyValue}
-                                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                                      className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-accent px-3 text-sm font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                                     >
-                                      <Copy size={16} />
-                                      Copiar URL
+                                      <Copy size={15} />
+                                      <span className="truncate">Copiar URL</span>
                                     </button>
 
                                     <button
@@ -1674,10 +1674,10 @@ const URLBuilder = () => {
                                         )
                                       }
                                       disabled={!singleClipboardBlock}
-                                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-primary-foreground/16 bg-primary-foreground/10 px-4 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary-foreground/16 disabled:cursor-not-allowed disabled:opacity-50"
+                                      className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-primary-foreground/16 bg-primary-foreground/10 px-3 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary-foreground/16 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
-                                      <Copy size={16} />
-                                      Copiar bloque
+                                      <Copy size={15} />
+                                      <span className="truncate">Copiar bloque</span>
                                     </button>
                                   </div>
                                 </div>
