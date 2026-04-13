@@ -9,7 +9,7 @@ export const Logo = ({ isOpen = true }: LogoProps) => {
   return (
     <Link
       to="/"
-      className="flex items-center justify-center rounded-xl transition-opacity duration-200 hover:opacity-80"
+      className="flex items-center justify-center rounded-xl"
       aria-label="aguApp inicio"
     >
       <motion.img

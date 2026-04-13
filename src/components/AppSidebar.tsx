@@ -118,33 +118,54 @@ const AppSidebar = () => {
       initial={false}
       animate={{ width: isOpen ? 280 : 64 }}
       transition={{ duration: 0.15, ease: [0.25, 0.1, 0.25, 1] }}
-      className="relative z-20 flex h-screen shrink-0 flex-col overflow-hidden border-r border-white/10 bg-[#0048a7] text-white"
+      className="relative z-20 flex h-screen shrink-0 flex-col overflow-hidden border-r border-white/10 bg-[#0341a5] text-white"
     >
-      {/* Header - Logo centrado + toggle */}
-      <div
-        className={`flex items-center border-b border-white/10 py-4 ${
-          isOpen ? "justify-between px-4" : "flex-col gap-2 px-2"
-        }`}
-      >
-        <Logo isOpen={isOpen} />
-
-        {/* Toggle */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <motion.button
-              onClick={() => setIsOpen(!isOpen)}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.92 }}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/15 hover:text-white"
-            >
-              {isOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
-            </motion.button>
-          </TooltipTrigger>
-          <TooltipContent side="right" className="border-white/10 bg-slate-950/95 text-xs font-medium text-white">
-            {isOpen ? "Cerrar barra lateral" : "Abrir barra lateral"}
-          </TooltipContent>
-        </Tooltip>
-      </div>
+      {/* Header - Logo + toggle */}
+      {isOpen ? (
+        /* Expanded: logo left, toggle right — single row */
+        <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
+          <Logo isOpen={isOpen} />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <motion.button
+                onClick={() => setIsOpen(!isOpen)}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.92 }}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/15 hover:text-white"
+              >
+                <PanelLeftClose size={16} />
+              </motion.button>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="border-white/10 bg-slate-950/95 text-xs font-medium text-white">
+              Cerrar barra lateral
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      ) : (
+        /* Collapsed: toggle on top row, logo on second row */
+        <div className="flex flex-col border-b border-white/10">
+          <div className="flex justify-end px-2 pt-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <motion.button
+                  onClick={() => setIsOpen(!isOpen)}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.92 }}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/15 hover:text-white"
+                >
+                  <PanelLeftOpen size={16} />
+                </motion.button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="border-white/10 bg-slate-950/95 text-xs font-medium text-white">
+                Abrir barra lateral
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <div className="flex justify-center pb-4">
+            <Logo isOpen={false} />
+          </div>
+        </div>
+      )}
 
       {/* Navigation - Modern styling with UX best practices */}
       <nav className="flex-1 space-y-1 overflow-y-auto px-2.5 py-4 pb-4">
@@ -201,7 +222,7 @@ const AppSidebar = () => {
       </nav>
 
       {/* Footer */}
-      <div className="sticky bottom-0 z-10 mt-auto border-t border-white/10 bg-[#003d9a] px-2.5 pb-4 pt-3">
+      <div className="sticky bottom-0 z-10 mt-auto border-t border-white/10 bg-[#0341a5] px-2.5 pb-4 pt-3">
         <DarkModeToggle isOpen={isOpen} />
       </div>
     </motion.aside>
