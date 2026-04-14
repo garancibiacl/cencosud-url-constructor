@@ -93,6 +93,7 @@ export default function LoginPage() {
 
         {/* Top — Logo */}
         <motion.div
+          className="relative z-10"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
@@ -101,7 +102,7 @@ export default function LoginPage() {
         </motion.div>
 
         {/* Center — Headline + Feature Grid */}
-        <div className="flex flex-1 flex-col items-center justify-center gap-10">
+        <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-10">
           <div className="max-w-lg text-center animate-fade-in">
             <h1 className="text-4xl font-bold leading-tight tracking-tight text-white">
               Soluciones digitales para{" "}
