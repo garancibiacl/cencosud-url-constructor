@@ -44,6 +44,8 @@ export default function AppRouter() {
       {/* Public routes */}
       <Route path="/login" element={<Lazy><LoginPage /></Lazy>} />
       <Route path="/reset-password" element={<Lazy><ResetPasswordPage /></Lazy>} />
+      <Route path="/cambio-pass" element={<Lazy><ForceChangePassword /></Lazy>} />
+      <Route path="/reset-password" element={<Lazy><ResetPasswordPage /></Lazy>} />
 
       {/* Protected routes inside AppShell */}
       <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
