@@ -10,13 +10,14 @@ import { Loader2, Lock, Mail } from "lucide-react";
 import { Logo } from "@/components/Logo";
 
 export default function LoginPage() {
-  const { user, loading, login, resetPassword } = useAuth();
+  const { user, loading, mustChangePassword, login, resetPassword } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [mode, setMode] = useState<"login" | "forgot">("login");
 
   if (loading) return null;
+  if (user && mustChangePassword) return <Navigate to="/cambio-pass" replace />;
   if (user) return <Navigate to="/" replace />;
 
   const handleLogin = async (e: React.FormEvent) => {

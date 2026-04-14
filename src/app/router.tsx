@@ -12,8 +12,9 @@ import NotFound from "@/pages/NotFound";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 // ─── Lazy feature imports ────────────────────────────────────────────────────
-const LoginPage           = lazy(() => import("@/pages/LoginPage"));
-const ResetPasswordPage   = lazy(() => import("@/pages/ResetPasswordPage"));
+const LoginPage              = lazy(() => import("@/pages/LoginPage"));
+const ResetPasswordPage      = lazy(() => import("@/pages/ResetPasswordPage"));
+const ForceChangePassword    = lazy(() => import("@/pages/ForceChangePassword"));
 const ConstructorUrlPage  = lazy(() => import("@/features/constructor-url/ui/ConstructorUrlPage"));
 const ImageOptimizerPage  = lazy(() => import("@/features/image-optimizer/ui/ImageOptimizerPage"));
 const BannerExpandPage    = lazy(() => import("@/features/banner-expand/ui/BannerExpandPage"));
@@ -42,6 +43,8 @@ export default function AppRouter() {
     <Routes>
       {/* Public routes */}
       <Route path="/login" element={<Lazy><LoginPage /></Lazy>} />
+      <Route path="/reset-password" element={<Lazy><ResetPasswordPage /></Lazy>} />
+      <Route path="/cambio-pass" element={<Lazy><ForceChangePassword /></Lazy>} />
       <Route path="/reset-password" element={<Lazy><ResetPasswordPage /></Lazy>} />
 
       {/* Protected routes inside AppShell */}
