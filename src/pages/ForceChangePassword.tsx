@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader2, ShieldAlert, Eye, EyeOff, Check, X } from "lucide-react";
-import FullPageLoader from "@/components/FullPageLoader";
+
 
 const MIN_LENGTH = 6;
 
@@ -43,7 +43,7 @@ export default function ForceChangePassword() {
     else if (!mustChangePassword) navigate("/constructor-url", { replace: true });
   }, [loading, user, mustChangePassword, navigate]);
 
-  if (loading) return <FullPageLoader label="Validando cambio obligatorio" dark />;
+  if (loading) return null;
 
   if (!user || !mustChangePassword) return null;
 
