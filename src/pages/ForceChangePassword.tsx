@@ -36,13 +36,14 @@ export default function ForceChangePassword() {
   const passwordsMatch = password.length > 0 && password === confirm;
   const canSubmit = hasMinLength && passwordsMatch && !submitting;
 
-  // Guard: if not logged in or doesn't need to change password, redirect
-  if (!loading && (!user || !mustChangePassword)) {
-    navigate(user ? "/constructor-url" : "/login", { replace: true });
-    return null;
-  }
+  // Redirect if not logged in or doesn't need password change
+  useEffect(() => {
+    if (loading) return;
+    if (!user) navigate("/login", { replace: true });
+    else if (!mustChangePassword) navigate("/constructor-url", { replace: true });
+  }, [loading, user, mustChangePassword, navigate]);
 
-  if (loading) return null;
+  if (loading || !user || !mustChangePassword) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
