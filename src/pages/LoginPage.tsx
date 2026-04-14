@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
-  Loader2, Lock, Mail, ArrowRight,
+  Loader2, Lock, Mail, ArrowRight, X, Eye, EyeOff,
   Link2, Image, Wand2, BarChart3, Code2, Sparkles,
 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -34,6 +34,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [mode, setMode] = useState<"login" | "forgot">("login");
 
   if (loading) return null;
@@ -196,8 +197,18 @@ export default function LoginPage() {
                   required
                   autoComplete="email"
                   placeholder="tu@email.com"
-                  className="h-11 pl-10 text-sm"
+                  className="h-11 pl-10 pr-10 text-sm"
                 />
+                {email.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setEmail("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-primary hover:text-primary/80 transition-colors"
+                    aria-label="Limpiar correo"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -210,14 +221,22 @@ export default function LoginPage() {
                   <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     autoComplete="current-password"
                     placeholder="••••••••"
-                    className="h-11 pl-10 text-sm"
+                    className="h-11 pl-10 pr-10 text-sm"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-foreground transition-colors"
+                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
             )}
