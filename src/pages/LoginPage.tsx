@@ -259,7 +259,8 @@ export default function LoginPage() {
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}
-            </Button>
+              </Button>
+            </motion.div>
 
             <button
               type="button"
