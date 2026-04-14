@@ -181,6 +181,7 @@ const UserInfo = ({ isOpen }: { isOpen: boolean }) => {
 const AppSidebar = () => {
   const [isOpen, setIsOpen] = useState(true);
   const { pathname } = useLocation();
+  const { role } = useAuth();
 
   return (
     <motion.aside
