@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Moon, Sun, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Moon, Sun, PanelLeftClose, PanelLeftOpen, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { appModules } from "@/modules/appModules";
 import { Logo } from "@/components/Logo";
+import { useAuth } from "@/hooks/useAuth";
 
 const SidebarTooltip = ({
   isOpen,
@@ -222,7 +223,8 @@ const AppSidebar = () => {
       </nav>
 
       {/* Footer */}
-      <div className="sticky bottom-0 z-10 mt-auto border-t border-white/10 bg-[#0341a5] px-2.5 pb-4 pt-3">
+      <div className="sticky bottom-0 z-10 mt-auto border-t border-white/10 bg-[#0341a5] px-2.5 pb-4 pt-3 space-y-2">
+        <UserInfo isOpen={isOpen} />
         <DarkModeToggle isOpen={isOpen} />
       </div>
     </motion.aside>
