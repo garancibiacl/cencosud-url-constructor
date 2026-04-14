@@ -19,18 +19,21 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          must_change_password: boolean
           role: Database["public"]["Enums"]["app_role"]
         }
         Insert: {
           created_at?: string
           email: string
           id: string
+          must_change_password?: boolean
           role?: Database["public"]["Enums"]["app_role"]
         }
         Update: {
           created_at?: string
           email?: string
           id?: string
+          must_change_password?: boolean
           role?: Database["public"]["Enums"]["app_role"]
         }
         Relationships: []

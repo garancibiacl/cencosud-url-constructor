@@ -8,6 +8,7 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   role: AppRole | null;
+  mustChangePassword: boolean;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ error: string | null }>;
   logout: () => Promise<void>;
@@ -21,39 +22,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const fetchRole = async (userId: string) => {
+  const fetchProfile = async (userId: string) => {
     const { data } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, must_change_password")
       .eq("id", userId)
       .maybeSingle();
     setRole((data?.role as AppRole) ?? null);
+    setMustChangePassword(data?.must_change_password ?? false);
   };
 
   useEffect(() => {
-    // Set up listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          // defer to avoid deadlock
-          setTimeout(() => fetchRole(session.user.id), 0);
+          setTimeout(() => fetchProfile(session.user.id), 0);
         } else {
           setRole(null);
+          setMustChangePassword(false);
         }
         setLoading(false);
       }
     );
 
-    // THEN get current session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchRole(session.user.id);
+        fetchProfile(session.user.id);
       }
       setLoading(false);
     });
@@ -77,13 +78,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   };
 
-  const updatePassword = async (password: string) => {
-    const { error } = await supabase.auth.updateUser({ password });
+  const updatePassword = async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (!error && user) {
+      await supabase.from("profiles").update({ must_change_password: false }).eq("id", user.id);
+      setMustChangePassword(false);
+    }
     return { error: error?.message ?? null };
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, role, loading, login, logout, resetPassword, updatePassword }}>
+    <AuthContext.Provider value={{ session, user, role, mustChangePassword, loading, login, logout, resetPassword, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );
