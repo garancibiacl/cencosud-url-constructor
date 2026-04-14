@@ -73,4 +73,11 @@ export const appModules: AppModuleDefinition[] = [
     icon: Settings,
     path: "/configuracion",
   },
+  {
+    id: "admin",
+    label: "Administración",
+    icon: Shield,
+    path: "/admin",
+    adminOnly: true,
+  },
 ];
