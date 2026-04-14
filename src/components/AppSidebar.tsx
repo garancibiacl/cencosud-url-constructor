@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Moon, Sun, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Moon, Sun, PanelLeftClose, PanelLeftOpen, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { appModules } from "@/modules/appModules";
 import { Logo } from "@/components/Logo";
+import { useAuth } from "@/hooks/useAuth";
 
 const SidebarTooltip = ({
   isOpen,
@@ -102,6 +103,74 @@ const DarkModeToggle = ({ isOpen }: { isOpen: boolean }) => {
     </motion.button>
   );
 };
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: "Administrador",
+  disenador: "Diseñador",
+  programador: "Programador",
+  director: "Director",
+};
+
+const ROLE_COLORS: Record<string, string> = {
+  admin: "bg-red-500/20 text-red-300",
+  disenador: "bg-sky-500/20 text-sky-300",
+  programador: "bg-emerald-500/20 text-emerald-300",
+  director: "bg-amber-500/20 text-amber-300",
+};
+
+const UserInfo = ({ isOpen }: { isOpen: boolean }) => {
+  const { user, role, logout } = useAuth();
+  if (!user) return null;
+
+  const badge = (
+    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${ROLE_COLORS[role ?? "disenador"]}`}>
+      {ROLE_LABELS[role ?? "disenador"]}
+    </span>
+  );
+
+  if (!isOpen) {
+    return (
+      <SidebarTooltip isOpen={false} label={user.email ?? ""}>
+        <motion.button
+          onClick={logout}
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.95 }}
+          className="flex w-full items-center justify-center rounded-lg bg-white/10 py-2.5 text-white/70 transition-all hover:bg-red-500/20 hover:text-red-300"
+        >
+          <LogOut size={18} />
+        </motion.button>
+      </SidebarTooltip>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2.5">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15 text-xs font-bold text-white uppercase">
+        {(user.email ?? "U")[0]}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="truncate text-xs font-medium text-white/80">{user.email}</p>
+        {badge}
+      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <motion.button
+            onClick={logout}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.92 }}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white/40 hover:bg-red-500/20 hover:text-red-300 transition-colors"
+          >
+            <LogOut size={14} />
+          </motion.button>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="border-white/10 bg-slate-950/95 text-xs font-medium text-white">
+          Cerrar sesión
+        </TooltipContent>
+      </Tooltip>
+    </div>
+  );
+};
+
 
 /**
  * AppSidebar
@@ -222,7 +291,8 @@ const AppSidebar = () => {
       </nav>
 
       {/* Footer */}
-      <div className="sticky bottom-0 z-10 mt-auto border-t border-white/10 bg-[#0341a5] px-2.5 pb-4 pt-3">
+      <div className="sticky bottom-0 z-10 mt-auto border-t border-white/10 bg-[#0341a5] px-2.5 pb-4 pt-3 space-y-2">
+        <UserInfo isOpen={isOpen} />
         <DarkModeToggle isOpen={isOpen} />
       </div>
     </motion.aside>
