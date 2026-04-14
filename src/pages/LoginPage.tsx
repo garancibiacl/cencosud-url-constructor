@@ -225,7 +225,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={!canSubmit || submitting}
-              className="h-11 w-full gap-2 text-sm font-semibold"
+              className="h-11 w-full gap-2 text-sm font-semibold bg-[#0641A5] hover:bg-[#053487] text-white"
             >
               {submitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
