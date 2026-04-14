@@ -5,10 +5,10 @@
  */
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
-import { Loader2 } from "lucide-react";
 import AppShell from "./AppShell";
 import NotFound from "@/pages/NotFound";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import LdrsLoader from "@/components/LdrsLoader";
 
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"));
@@ -24,11 +24,8 @@ const AdminPage = lazy(() => import("@/pages/AdminPage"));
 
 function PageLoader() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="inline-flex items-center gap-3 rounded-full border border-border bg-card px-5 py-3 text-sm text-muted-foreground shadow-card">
-        <Loader2 className="h-4 w-4 animate-spin text-primary" />
-        Cargando módulo
-      </div>
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <LdrsLoader size={32} label="Cargando módulo" />
     </div>
   );
 }

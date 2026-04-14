@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import { Loader2, KeyRound, Shield, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import AuthLoadingScreen from "@/components/AuthLoadingScreen";
+import FullPageLoader from "@/components/FullPageLoader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,14 +55,7 @@ export default function AdminPage() {
     if (role === "admin") void fetchUsers();
   }, [role]);
 
-  if (authLoading) {
-    return (
-      <AuthLoadingScreen
-        title="Validando administrador"
-        description="Comprobando permisos para abrir el panel de usuarios."
-      />
-    );
-  }
+  if (authLoading) return <FullPageLoader label="Validando administrador" />;
 
   if (role !== "admin") return <Navigate to="/" replace />;
 
