@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,8 @@ function PasswordRule({ met, label }: { met: boolean; label: string }) {
 }
 
 export default function ForceChangePassword() {
-  const { updatePassword } = useAuth();
+  const { updatePassword, user, loading, mustChangePassword } = useAuth();
+  const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -33,6 +35,14 @@ export default function ForceChangePassword() {
   const hasMinLength = password.length >= MIN_LENGTH;
   const passwordsMatch = password.length > 0 && password === confirm;
   const canSubmit = hasMinLength && passwordsMatch && !submitting;
+
+  // Guard: if not logged in or doesn't need to change password, redirect
+  if (!loading && (!user || !mustChangePassword)) {
+    navigate(user ? "/constructor-url" : "/login", { replace: true });
+    return null;
+  }
+
+  if (loading) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,6 +56,7 @@ export default function ForceChangePassword() {
       toast.error(error);
     } else {
       toast.success("Contraseña actualizada correctamente");
+      navigate("/constructor-url", { replace: true });
     }
   };
 
@@ -64,7 +75,6 @@ export default function ForceChangePassword() {
 
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* New password */}
             <div className="space-y-2">
               <Label htmlFor="new-pw" className="text-white/80">Nueva contraseña</Label>
               <div className="relative">
@@ -90,7 +100,6 @@ export default function ForceChangePassword() {
               </div>
             </div>
 
-            {/* Confirm password */}
             <div className="space-y-2">
               <Label htmlFor="confirm-pw" className="text-white/80">Confirmar contraseña</Label>
               <div className="relative">
@@ -115,7 +124,6 @@ export default function ForceChangePassword() {
               </div>
             </div>
 
-            {/* Validation rules */}
             <div className="space-y-1.5 rounded-lg bg-white/5 p-3">
               <PasswordRule met={hasMinLength} label={`Mínimo ${MIN_LENGTH} caracteres`} />
               <PasswordRule met={passwordsMatch} label="Las contraseñas coinciden" />

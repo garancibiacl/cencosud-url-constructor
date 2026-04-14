@@ -12,8 +12,9 @@ import NotFound from "@/pages/NotFound";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 // ─── Lazy feature imports ────────────────────────────────────────────────────
-const LoginPage           = lazy(() => import("@/pages/LoginPage"));
-const ResetPasswordPage   = lazy(() => import("@/pages/ResetPasswordPage"));
+const LoginPage              = lazy(() => import("@/pages/LoginPage"));
+const ResetPasswordPage      = lazy(() => import("@/pages/ResetPasswordPage"));
+const ForceChangePassword    = lazy(() => import("@/pages/ForceChangePassword"));
 const ConstructorUrlPage  = lazy(() => import("@/features/constructor-url/ui/ConstructorUrlPage"));
 const ImageOptimizerPage  = lazy(() => import("@/features/image-optimizer/ui/ImageOptimizerPage"));
 const BannerExpandPage    = lazy(() => import("@/features/banner-expand/ui/BannerExpandPage"));
