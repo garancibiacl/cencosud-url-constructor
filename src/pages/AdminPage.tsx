@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
+import { Navigate } from "react-router-dom";
+import { Loader2, KeyRound, Shield, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Navigate } from "react-router-dom";
+import AuthLoadingScreen from "@/components/AuthLoadingScreen";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Loader2, KeyRound, Shield, Users } from "lucide-react";
 
 type Profile = {
   id: string;
@@ -28,10 +29,10 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const ROLE_COLORS: Record<string, string> = {
-  admin: "bg-red-500/15 text-red-600 border-red-500/30",
-  disenador: "bg-sky-500/15 text-sky-600 border-sky-500/30",
-  programador: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30",
-  director: "bg-amber-500/15 text-amber-600 border-amber-500/30",
+  admin: "border-destructive/30 bg-destructive/10 text-destructive",
+  disenador: "border-primary/30 bg-primary/10 text-primary",
+  programador: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600",
+  director: "border-warning/30 bg-warning/10 text-warning-foreground",
 };
 
 export default function AdminPage() {
@@ -51,40 +52,52 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    if (role === "admin") fetchUsers();
+    if (role === "admin") void fetchUsers();
   }, [role]);
 
-  if (authLoading) return null;
+  if (authLoading) {
+    return (
+      <AuthLoadingScreen
+        title="Validando administrador"
+        description="Comprobando permisos para abrir el panel de usuarios."
+      />
+    );
+  }
+
   if (role !== "admin") return <Navigate to="/" replace />;
 
   const handleRoleChange = async (userId: string, newRole: string) => {
-    setActionLoading(userId + "_role");
+    setActionLoading(`${userId}_role`);
     const { data, error } = await supabase.functions.invoke("admin-manage", {
       body: { userId, action: "update_role", role: newRole },
     });
     setActionLoading(null);
+
     if (error || data?.error) {
       toast.error(data?.error ?? "Error al cambiar rol");
-    } else {
-      toast.success("Rol actualizado");
-      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
+      return;
     }
+
+    toast.success("Rol actualizado");
+    setUsers((prev) => prev.map((profile) => (profile.id === userId ? { ...profile, role: newRole } : profile)));
   };
 
   const handleResetPassword = async (userId: string, email: string) => {
-    setActionLoading(userId + "_pw");
+    setActionLoading(`${userId}_pw`);
     const { data, error } = await supabase.functions.invoke("admin-manage", {
       body: { userId, action: "reset_password" },
     });
     setActionLoading(null);
+
     if (error || data?.error) {
       toast.error(data?.error ?? "Error al resetear contraseña");
-    } else {
-      toast.success(`Contraseña de ${email} reseteada a Agua2026!`);
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, must_change_password: true } : u))
-      );
+      return;
     }
+
+    toast.success(`Contraseña de ${email} reseteada a Agua2026!`);
+    setUsers((prev) => prev.map((profile) => (
+      profile.id === userId ? { ...profile, must_change_password: true } : profile
+    )));
   };
 
   return (
@@ -122,34 +135,33 @@ export default function AdminPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((u) => {
-                    const isMe = u.id === user?.id;
+                  {users.map((profile) => {
+                    const isMe = profile.id === user?.id;
+
                     return (
-                      <TableRow key={u.id}>
+                      <TableRow key={profile.id}>
                         <TableCell className="font-medium">
-                          {u.email}
-                          {isMe && (
-                            <span className="ml-2 text-xs text-muted-foreground">(tú)</span>
-                          )}
+                          {profile.email}
+                          {isMe && <span className="ml-2 text-xs text-muted-foreground">(tú)</span>}
                         </TableCell>
                         <TableCell>
                           {isMe ? (
-                            <Badge variant="outline" className={ROLE_COLORS[u.role]}>
-                              {ROLE_LABELS[u.role]}
+                            <Badge variant="outline" className={ROLE_COLORS[profile.role]}>
+                              {ROLE_LABELS[profile.role]}
                             </Badge>
                           ) : (
                             <Select
-                              value={u.role}
-                              onValueChange={(val) => handleRoleChange(u.id, val)}
-                              disabled={actionLoading === u.id + "_role"}
+                              value={profile.role}
+                              onValueChange={(value) => handleRoleChange(profile.id, value)}
+                              disabled={actionLoading === `${profile.id}_role`}
                             >
                               <SelectTrigger className="h-8 w-[150px]">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {ROLES.map((r) => (
-                                  <SelectItem key={r} value={r}>
-                                    {ROLE_LABELS[r]}
+                                {ROLES.map((roleOption) => (
+                                  <SelectItem key={roleOption} value={roleOption}>
+                                    {ROLE_LABELS[roleOption]}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -157,8 +169,8 @@ export default function AdminPage() {
                           )}
                         </TableCell>
                         <TableCell>
-                          {u.must_change_password ? (
-                            <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-600">
+                          {profile.must_change_password ? (
+                            <Badge variant="outline" className="border-warning/30 bg-warning/10 text-warning-foreground">
                               Cambio pendiente
                             </Badge>
                           ) : (
@@ -167,18 +179,18 @@ export default function AdminPage() {
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {new Date(u.created_at).toLocaleDateString("es-CL")}
+                        <TableCell className="text-sm text-muted-foreground">
+                          {new Date(profile.created_at).toLocaleDateString("es-CL")}
                         </TableCell>
                         <TableCell className="text-right">
                           {!isMe && (
                             <Button
                               variant="outline"
                               size="sm"
-                              disabled={actionLoading === u.id + "_pw"}
-                              onClick={() => handleResetPassword(u.id, u.email)}
+                              disabled={actionLoading === `${profile.id}_pw`}
+                              onClick={() => handleResetPassword(profile.id, profile.email)}
                             >
-                              {actionLoading === u.id + "_pw" ? (
+                              {actionLoading === `${profile.id}_pw` ? (
                                 <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                               ) : (
                                 <KeyRound className="mr-1.5 h-3.5 w-3.5" />

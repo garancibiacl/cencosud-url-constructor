@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useState, useRef, useCallback, ReactNode } from "react";
-import { Session, User } from "@supabase/supabase-js";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
 type AppRole = "admin" | "disenador" | "programador" | "director";
@@ -23,65 +23,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [mustChangePassword, setMustChangePassword] = useState(false);
-  const [ready, setReady] = useState(false);
-  const processingRef = useRef(false);
+  const [authReady, setAuthReady] = useState(false);
+  const [profileReady, setProfileReady] = useState(false);
+  const mountedRef = useRef(true);
+  const syncVersionRef = useRef(0);
 
-  const fetchProfile = useCallback(async (userId: string) => {
+  const resetProfileState = useCallback(() => {
+    setRole(null);
+    setMustChangePassword(false);
+  }, []);
+
+  const syncProfile = useCallback(async (nextSession: Session | null) => {
+    const syncVersion = ++syncVersionRef.current;
+
+    setSession(nextSession);
+    setUser(nextSession?.user ?? null);
+
+    if (!nextSession?.user) {
+      resetProfileState();
+      if (mountedRef.current && syncVersion === syncVersionRef.current) {
+        setProfileReady(true);
+      }
+      return;
+    }
+
+    setProfileReady(false);
+
     const { data } = await supabase
       .from("profiles")
       .select("role, must_change_password")
-      .eq("id", userId)
+      .eq("id", nextSession.user.id)
       .maybeSingle();
-    return {
-      role: (data?.role as AppRole) ?? null,
-      mustChange: data?.must_change_password ?? false,
-    };
-  }, []);
 
-  // Apply session + profile atomically: set ALL state before marking ready
-  const applySession = useCallback(async (s: Session | null) => {
-    if (s?.user) {
-      const profile = await fetchProfile(s.user.id);
-      // Batch all state updates together so React renders once with complete data
-      setSession(s);
-      setUser(s.user);
-      setRole(profile.role);
-      setMustChangePassword(profile.mustChange);
-    } else {
-      setSession(null);
-      setUser(null);
-      setRole(null);
-      setMustChangePassword(false);
-    }
-  }, [fetchProfile]);
+    if (!mountedRef.current || syncVersion !== syncVersionRef.current) return;
+
+    setRole((data?.role as AppRole) ?? null);
+    setMustChangePassword(data?.must_change_password ?? false);
+    setProfileReady(true);
+  }, [resetProfileState]);
 
   useEffect(() => {
-    // 1. Restore session from storage — single source of truth for init
-    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
-      await applySession(s);
-      setReady(true);
+    mountedRef.current = true;
+
+    const initializeAuth = async () => {
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      if (!mountedRef.current) return;
+      await syncProfile(initialSession);
+      if (!mountedRef.current) return;
+      setAuthReady(true);
+    };
+
+    void initializeAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === "INITIAL_SESSION") return;
+      if (!mountedRef.current) return;
+      setAuthReady(true);
+      void syncProfile(nextSession);
     });
 
-    // 2. Listen for SUBSEQUENT auth changes (login, logout, token refresh)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, s) => {
-        if (event === "INITIAL_SESSION") return;
+    return () => {
+      mountedRef.current = false;
+      subscription.unsubscribe();
+    };
+  }, [syncProfile]);
 
-        // Prevent concurrent processing
-        if (processingRef.current) return;
-        processingRef.current = true;
-
-        // Go back to loading so no protected content flashes
-        setReady(false);
-        await applySession(s);
-        setReady(true);
-
-        processingRef.current = false;
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, [applySession]);
+  const loading = !authReady || !profileReady;
 
   const login = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -100,19 +107,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updatePassword = useCallback(async (newPassword: string) => {
+    const currentUser = user;
     const { error } = await supabase.auth.updateUser({ password: newPassword });
-    if (!error && user) {
-      await supabase.from("profiles").update({ must_change_password: false }).eq("id", user.id);
+
+    if (!error && currentUser) {
+      await supabase.from("profiles").update({ must_change_password: false }).eq("id", currentUser.id);
       setMustChangePassword(false);
     }
+
     return { error: error?.message ?? null };
   }, [user]);
 
-  return (
-    <AuthContext.Provider value={{ session, user, role, mustChangePassword, loading: !ready, login, logout, resetPassword, updatePassword }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = useMemo<AuthContextType>(() => ({
+    session,
+    user,
+    role,
+    mustChangePassword,
+    loading,
+    login,
+    logout,
+    resetPassword,
+    updatePassword,
+  }), [session, user, role, mustChangePassword, loading, login, logout, resetPassword, updatePassword]);
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
