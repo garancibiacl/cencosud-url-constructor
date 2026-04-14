@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader2, Lock, Mail } from "lucide-react";
-import AuthLoadingScreen from "@/components/AuthLoadingScreen";
+import FullPageLoader from "@/components/FullPageLoader";
 
 export default function LoginPage() {
   const { user, loading, mustChangePassword, login, resetPassword } = useAuth();
@@ -16,14 +16,7 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [mode, setMode] = useState<"login" | "forgot">("login");
 
-  if (loading) {
-    return (
-      <AuthLoadingScreen
-        title="Preparando acceso"
-        description="Estamos comprobando tu sesión para llevarte a la pantalla correcta."
-      />
-    );
-  }
+  if (loading) return <FullPageLoader label="Preparando acceso" dark />;
 
   if (user && mustChangePassword) return <Navigate to="/cambio-pass" replace />;
   if (user) return <Navigate to="/" replace />;
