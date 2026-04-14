@@ -24,8 +24,7 @@ export default function LdrsLoader({
 
   return (
     <div className="flex flex-col items-center gap-3">
-      {/* @ts-expect-error - ldrs web component */}
-      <l-hourglass size={String(size)} color={color} speed={String(speed)} bg-opacity="0.1" />
+      <div dangerouslySetInnerHTML={{ __html: `<l-hourglass size="${size}" color="${color}" speed="${speed}" bg-opacity="0.1"></l-hourglass>` }} />
       {label && <span className="text-sm text-muted-foreground">{label}</span>}
     </div>
   );
