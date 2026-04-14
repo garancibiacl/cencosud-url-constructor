@@ -110,9 +110,13 @@ export default function LoginPage() {
           >
             <h1 className="text-4xl font-bold leading-tight tracking-tight text-white">
               Soluciones digitales para{" "}
-              <span className="bg-gradient-to-r from-[#4fc3f7] to-[#81d4fa] bg-clip-text text-transparent">
+              <motion.span
+                className="inline-block bg-gradient-to-r from-[#4fc3f7] to-[#81d4fa] bg-clip-text text-transparent"
+                whileHover={{ scale: 1.05 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
                 Cencosud
-              </span>
+              </motion.span>
             </h1>
             <p className="mt-3 text-base leading-relaxed text-white/60">
               Accede a tu plataforma y gestiona todo en un solo lugar
