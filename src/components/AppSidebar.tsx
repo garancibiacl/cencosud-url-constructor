@@ -239,7 +239,9 @@ const AppSidebar = () => {
       {/* Navigation - Modern styling with UX best practices */}
       <nav className="flex-1 space-y-1 overflow-y-auto px-2.5 py-4 pb-4">
         <AnimatePresence>
-          {appModules.map((item, index) => {
+          {appModules
+            .filter((item) => !item.adminOnly || role === "admin")
+            .map((item, index) => {
             const isActive = pathname === item.path;
 
             return (
