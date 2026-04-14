@@ -147,7 +147,7 @@ export default function LoginPage() {
 
         {/* Bottom — Tagline */}
         <motion.p
-          className="text-xs text-white/30"
+          className="relative z-10 text-xs text-white/30"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
