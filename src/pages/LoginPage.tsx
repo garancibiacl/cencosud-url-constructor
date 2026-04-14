@@ -66,7 +66,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen w-full">
       {/* ─── Left — Branding Panel ─── */}
-      <div className="relative hidden w-[55%] flex-col justify-between overflow-hidden lg:flex">
+      <div className="relative hidden w-[55%] flex-col justify-between overflow-hidden p-10 lg:flex">
         {/* Solid brand color behind logo */}
         <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, #0341a5 0%, #0341a5 18%, #0256c4 40%, #0568d6 65%, #1e90ff 100%)" }} />
         {/* Animated decorative shapes */}
