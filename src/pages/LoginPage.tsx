@@ -102,12 +102,7 @@ export default function LoginPage() {
 
         {/* Center — Headline + Feature Grid */}
         <div className="flex flex-1 flex-col items-center justify-center gap-10">
-          <motion.div
-            className="max-w-lg text-center"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
+          <div className="max-w-lg text-center animate-fade-in">
             <h1 className="text-4xl font-bold leading-tight tracking-tight text-white">
               Soluciones digitales para{" "}
               <motion.span
@@ -121,7 +116,7 @@ export default function LoginPage() {
             <p className="mt-3 text-base leading-relaxed text-white/60">
               Accede a tu plataforma y gestiona todo en un solo lugar
             </p>
-          </motion.div>
+          </div>
 
           {/* Feature cards grid */}
           <motion.div
