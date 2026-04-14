@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader2, Lock, Mail } from "lucide-react";
-import { Logo } from "@/components/Logo";
+import AuthLoadingScreen from "@/components/AuthLoadingScreen";
 
 export default function LoginPage() {
   const { user, loading, mustChangePassword, login, resetPassword } = useAuth();
@@ -16,7 +16,15 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [mode, setMode] = useState<"login" | "forgot">("login");
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <AuthLoadingScreen
+        title="Preparando acceso"
+        description="Estamos comprobando tu sesión para llevarte a la pantalla correcta."
+      />
+    );
+  }
+
   if (user && mustChangePassword) return <Navigate to="/cambio-pass" replace />;
   if (user) return <Navigate to="/" replace />;
 
@@ -42,10 +50,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#0341a5] to-[#022b6e] px-4">
-      <Card className="w-full max-w-md border-white/10 bg-white/5 shadow-2xl backdrop-blur-xl">
+    <div className="flex min-h-screen items-center justify-center bg-sidebar px-4 text-sidebar-foreground">
+      <Card className="w-full max-w-md border-white/10 bg-white/10 shadow-elevated backdrop-blur-xl">
         <CardHeader className="items-center space-y-4 pb-2">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/15">
             <Lock className="h-7 w-7 text-white" />
           </div>
           <CardTitle className="text-2xl font-bold text-white">
@@ -91,7 +99,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={submitting}
-              className="w-full bg-white text-[#0341a5] hover:bg-white/90 font-semibold"
+              className="w-full bg-white font-semibold text-primary hover:bg-white/90"
             >
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {mode === "login" ? "Entrar" : "Enviar enlace"}
@@ -100,7 +108,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => setMode(mode === "login" ? "forgot" : "login")}
-              className="block w-full text-center text-sm text-white/60 hover:text-white transition-colors"
+              className="block w-full text-center text-sm text-white/60 transition-colors hover:text-white"
             >
               {mode === "login" ? "¿Olvidaste tu contraseña?" : "Volver al inicio de sesión"}
             </button>
