@@ -92,14 +92,15 @@ export default function LoginPage() {
         />
 
         {/* Top — Logo */}
-        <motion.div
-          className="relative z-10"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-        >
-          <img src="/logo.png" alt="Cencosud" className="h-12 w-auto" />
-        </motion.div>
+        <div className="relative z-10 flex w-full justify-center">
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            <img src="/logo.png" alt="Cencosud" className="h-12 w-auto" />
+          </motion.div>
+        </div>
 
         {/* Center — Headline + Feature Grid */}
         <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-10">
@@ -134,7 +135,7 @@ export default function LoginPage() {
                 className="group flex gap-3 rounded-xl border border-white/[0.08] bg-white/[0.06] p-3.5 backdrop-blur-sm transition-colors hover:border-white/15 hover:bg-white/[0.1]"
               >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 transition-colors group-hover:bg-white/15">
-                  <Icon className="h-4.5 w-4.5 text-[#4fc3f7]" />
+                  <Icon className="h-4.5 w-4.5 text-[#f68712]" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold leading-tight text-white">{title}</p>
