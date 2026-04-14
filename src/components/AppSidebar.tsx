@@ -172,6 +172,8 @@ const UserInfo = ({ isOpen }: { isOpen: boolean }) => {
 };
 
 
+/**
+ * AppSidebar
  *
  * Reads active route from React Router — no props required.
  * Navigation is driven by <Link> so the URL stays in sync at all times.
