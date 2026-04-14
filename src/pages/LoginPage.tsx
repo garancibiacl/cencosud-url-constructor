@@ -241,11 +241,16 @@ export default function LoginPage() {
               </div>
             )}
 
-            <Button
-              type="submit"
-              disabled={!canSubmit || submitting}
-              className="h-11 w-full gap-2 text-sm font-semibold bg-[#0641A5] hover:bg-[#053487] text-white"
+            <motion.div
+              whileHover={{ y: -2 }}
+              whileTap={{ y: 0, scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 400, damping: 17 }}
             >
+              <Button
+                type="submit"
+                disabled={!canSubmit || submitting}
+                className="h-12 w-full gap-2 text-sm font-semibold bg-[#0641A5] hover:bg-[#053487] text-white rounded-xl shadow-[0_4px_14px_0_rgba(6,65,165,0.4)] hover:shadow-[0_6px_20px_0_rgba(6,65,165,0.55)] transition-shadow duration-300"
+              >
               {submitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -254,7 +259,8 @@ export default function LoginPage() {
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}
-            </Button>
+              </Button>
+            </motion.div>
 
             <button
               type="button"
