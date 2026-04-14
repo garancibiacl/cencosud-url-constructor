@@ -153,7 +153,7 @@ export default function LoginPage() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
         >
-          Plataforma interna — Agencia Agua × Cencosud
+          Automatiza · Optimiza · Acelera — by Agencia Agua
         </motion.p>
       </div>
 
