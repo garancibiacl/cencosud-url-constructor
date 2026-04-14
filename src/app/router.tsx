@@ -24,8 +24,8 @@ const AdminPage = lazy(() => import("@/pages/AdminPage"));
 
 function PageLoader() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <LdrsLoader size={32} label="Cargando módulo" />
+    <div className="flex h-full min-h-[200px] items-center justify-center">
+      <LdrsLoader size={28} />
     </div>
   );
 }
