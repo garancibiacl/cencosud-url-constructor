@@ -9,7 +9,7 @@
  *  Add an entry to `appModules` with the same path used in router.tsx.
  */
 import type { LucideIcon } from "lucide-react";
-import { Code2, History, Image, Link, Settings, Sparkles, Wand2 } from "lucide-react";
+import { Code2, History, Image, Link, Settings, Shield, Sparkles, Wand2 } from "lucide-react";
 
 export type AppModuleId =
   | "constructor-url"
@@ -18,14 +18,16 @@ export type AppModuleId =
   | "history"
   | "settings"
   | "prompts"
-  | "scripts";
+  | "scripts"
+  | "admin";
 
 export interface AppModuleDefinition {
   id: AppModuleId;
   label: string;
   icon: LucideIcon;
-  /** Must match the path registered in src/app/router.tsx */
   path: string;
+  /** If set, only users with this role see the module */
+  adminOnly?: boolean;
 }
 
 export const appModules: AppModuleDefinition[] = [

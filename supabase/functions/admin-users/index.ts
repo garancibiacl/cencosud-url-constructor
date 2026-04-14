@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
   // ── 4. Fetch all profiles (admin authorized) ────────────
   const { data: users, error } = await adminClient
     .from("profiles")
-    .select("id, email, role, created_at")
+    .select("id, email, role, must_change_password, created_at")
     .order("created_at", { ascending: false });
 
   if (error) {
