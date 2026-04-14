@@ -65,7 +65,24 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="relative flex min-h-screen w-full">
+      {/* ─── Mobile/tablet gradient background (hidden on lg+) ─── */}
+      <div
+        className="pointer-events-none absolute inset-0 lg:hidden"
+        style={{ background: "linear-gradient(180deg, #0341a5 0%, #0341a5 18%, #0256c4 40%, #0568d6 65%, #1e90ff 100%)" }}
+      />
+      {/* Mobile decorative blobs */}
+      <motion.div
+        className="pointer-events-none absolute -left-20 -top-20 h-72 w-72 rounded-full bg-white/[0.05] blur-3xl lg:hidden"
+        animate={{ scale: [1, 1.15, 1], opacity: [0.05, 0.1, 0.05] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="pointer-events-none absolute -bottom-10 -right-10 h-96 w-96 rounded-full bg-[#1e90ff]/15 blur-3xl lg:hidden"
+        animate={{ scale: [1, 1.1, 1], opacity: [0.1, 0.2, 0.1] }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+      />
+
       {/* ─── Left — Branding Panel ─── */}
       <div className="relative hidden w-[55%] flex-col justify-between overflow-hidden p-10 lg:flex">
         {/* Solid brand color behind logo */}
@@ -159,23 +176,24 @@ export default function LoginPage() {
       </div>
 
       {/* ─── Right — Form Panel ─── */}
-      <div className="flex w-full flex-col items-center justify-center bg-background px-6 py-10 lg:w-[45%]">
-        {/* Mobile logo */}
-        <div className="mb-8 lg:hidden">
-          <img src="/logo.png" alt="aguApp" className="h-10 w-auto" />
+      <div className="relative flex w-full flex-col items-center justify-center px-6 py-10 lg:w-[45%] lg:bg-background">
+        {/* Mobile logo + tagline */}
+        <div className="mb-8 flex flex-col items-center gap-2 lg:hidden">
+          <img src="/logo.png" alt="aguApp" className="h-12 w-auto drop-shadow-lg" />
+          <p className="text-xs text-white/50">Automatiza · Optimiza · Acelera</p>
         </div>
 
         <motion.div
-          className="w-full max-w-sm"
-          initial={{ opacity: 0, x: 10 }}
-          animate={{ opacity: 1, x: 0 }}
+          className="w-full max-w-sm rounded-2xl bg-white/95 p-8 shadow-2xl shadow-black/20 backdrop-blur-sm lg:rounded-none lg:bg-transparent lg:p-0 lg:shadow-none lg:backdrop-blur-none"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.15 }}
         >
           <div className="mb-8">
-            <h2 className="text-2xl font-bold tracking-tight text-foreground">
+            <h2 className="text-2xl font-bold tracking-tight text-gray-900 lg:text-foreground">
               {mode === "login" ? "Iniciar sesión" : "Recuperar contraseña"}
             </h2>
-            <p className="mt-1.5 text-sm text-muted-foreground">
+            <p className="mt-1.5 text-sm text-gray-500 lg:text-muted-foreground">
               {mode === "login"
                 ? "Ingresa tus credenciales para acceder a la plataforma"
                 : "Te enviaremos un enlace para restablecer tu contraseña"}
@@ -242,23 +260,37 @@ export default function LoginPage() {
             )}
 
             <motion.div
-              whileHover={{ y: -2 }}
-              whileTap={{ y: 0, scale: 0.98 }}
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.97 }}
               transition={{ type: "spring", stiffness: 400, damping: 17 }}
             >
               <Button
                 type="submit"
                 disabled={!canSubmit || submitting}
-                className="h-12 w-full gap-2 text-sm font-semibold bg-[#0641A5] hover:bg-[#053487] text-white rounded-xl shadow-[0_4px_14px_0_rgba(6,65,165,0.4)] hover:shadow-[0_6px_20px_0_rgba(6,65,165,0.55)] transition-shadow duration-300"
+                className="h-12 w-full gap-2 rounded-xl text-sm font-semibold text-white disabled:opacity-40 transition-shadow duration-300"
+                style={{
+                  background: "linear-gradient(135deg, #0341a5 0%, #0568d6 100%)",
+                  boxShadow: canSubmit && !submitting
+                    ? "0 4px 16px rgba(3,65,165,0.35)"
+                    : undefined,
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                    "0 6px 20px rgba(3,65,165,0.55)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                    "0 4px 16px rgba(3,65,165,0.35)";
+                }}
               >
-              {submitting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <>
-                  {mode === "login" ? "Ingresar" : "Enviar enlace"}
-                  <ArrowRight className="h-4 w-4" />
-                </>
-              )}
+                {submitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    {mode === "login" ? "Ingresar" : "Enviar enlace"}
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
               </Button>
             </motion.div>
 
@@ -272,7 +304,7 @@ export default function LoginPage() {
           </form>
         </motion.div>
 
-        <p className="mt-12 text-center text-xs text-muted-foreground/60">
+        <p className="mt-10 text-center text-xs text-white/40 lg:text-muted-foreground/60">
           © {new Date().getFullYear()} aguApp — Todos los derechos reservados
         </p>
       </div>

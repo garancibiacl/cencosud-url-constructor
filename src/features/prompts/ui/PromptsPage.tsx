@@ -43,7 +43,7 @@ export default function PromptsPage() {
             </p>
           </div>
 
-          <Button onClick={() => setModalOpen(true)} className="gap-2 shrink-0">
+          <Button variant="brand" onClick={() => setModalOpen(true)} className="h-10 rounded-xl px-4 gap-2 shrink-0">
             <Plus className="h-4 w-4" />
             Nuevo prompt
           </Button>

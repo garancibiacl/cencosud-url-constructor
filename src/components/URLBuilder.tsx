@@ -23,6 +23,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -1495,14 +1496,15 @@ const URLBuilder = () => {
               </div>
             </div>
 
-            <button
+            <Button
+              variant="brand"
               onClick={clearAll}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-primary bg-white px-5 text-sm font-semibold text-primary shadow-sm transition-all hover:-translate-y-0.5 hover:bg-primary hover:text-primary-foreground hover:shadow-card focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
               aria-label="Limpiar todos los campos"
+              className="h-11 rounded-2xl px-5 gap-2"
             >
               <RotateCcw className="h-4 w-4" />
               Limpiar todo
-            </button>
+            </Button>
           </div>
         </header>
 
@@ -1524,14 +1526,15 @@ const URLBuilder = () => {
             </TabsList>
 
             {activeTab === "cms-app" && appMode === "masivo" && (
-              <button
+              <Button
+                variant="brand"
                 onClick={handleBulkAppCopy}
                 disabled={!bulkAppCopyValue}
-                className="inline-flex h-11 items-center gap-2 rounded-2xl bg-[#EA7120] px-4 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#d96517] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-11 rounded-2xl px-4 gap-2"
               >
                 {isBulkAppCopySuccess ? <Check size={16} /> : <Copy size={16} />}
                 {isBulkAppCopySuccess ? "Copiado al portapapeles" : "Copiar Todo"}
-              </button>
+              </Button>
             )}
           </div>
 
@@ -1835,14 +1838,15 @@ const URLBuilder = () => {
                             <p className="text-sm text-muted-foreground">
                               El boton copia cada fila como bloque `Nombre`, `Url` y `Codigo`, separado por una linea en blanco.
                             </p>
-                            <button
+                            <Button
+                              variant="brand"
                               onClick={handleBulkWebCopy}
                               disabled={!bulkWebCopyValue}
-                              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#EA7120] px-5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#d96517] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                              className="h-11 rounded-2xl px-5 gap-2"
                             >
                               {isBulkWebCopySuccess ? <Check size={16} /> : <Copy size={16} />}
                               {isBulkWebCopySuccess ? "Copiado al portapapeles" : "Copiar Todo"}
-                            </button>
+                            </Button>
                           </div>
                         </section>
                       </>
@@ -1929,7 +1933,8 @@ const URLBuilder = () => {
                               </p>
                             </div>
 
-                            <button
+                            <Button
+                              variant="brand"
                               onClick={() =>
                                 copyValue(
                                   `${displayedSingleAppCleanTitle} --> ${displayedSingleAppCollectionCode}`,
@@ -1938,11 +1943,11 @@ const URLBuilder = () => {
                                 )
                               }
                               disabled={!displayedSingleAppCleanTitle || !displayedSingleAppCollectionCode}
-                              className="inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-2xl bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                              className="h-11 whitespace-nowrap rounded-2xl px-4 gap-2"
                             >
                               <Copy size={16} />
                               Copiar todo
-                            </button>
+                            </Button>
                           </div>
 
                           <div className="space-y-4">

@@ -14,6 +14,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   updatePassword: (password: string) => Promise<{ error: string | null }>;
+  updateProfile: (data: { first_name?: string; last_name?: string }) => Promise<{ error: string | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -118,6 +119,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   }, [user]);
 
+  const updateProfile = useCallback(async (data: { first_name?: string; last_name?: string }) => {
+    const { error } = await supabase.auth.updateUser({ data });
+    if (!error) {
+      const { data: { user: refreshed } } = await supabase.auth.getUser();
+      if (mountedRef.current && refreshed) setUser(refreshed);
+    }
+    return { error: error?.message ?? null };
+  }, []);
+
   const value = useMemo<AuthContextType>(() => ({
     session,
     user,
@@ -128,7 +138,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
     resetPassword,
     updatePassword,
-  }), [session, user, role, mustChangePassword, loading, login, logout, resetPassword, updatePassword]);
+    updateProfile,
+  }), [session, user, role, mustChangePassword, loading, login, logout, resetPassword, updatePassword, updateProfile]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
