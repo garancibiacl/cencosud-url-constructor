@@ -5,9 +5,29 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, Lock, Mail, ArrowRight, Shield, Zap, BarChart3 } from "lucide-react";
+import {
+  Loader2, Lock, Mail, ArrowRight,
+  Link2, Image, Wand2, BarChart3, Code2, Sparkles,
+} from "lucide-react";
 import { motion } from "framer-motion";
-import loginHero from "@/assets/login-hero.jpg";
+
+const features = [
+  { icon: Link2, title: "Constructor de URLs", desc: "Genera URLs promocionales en segundos" },
+  { icon: Image, title: "Optimizador de Imágenes", desc: "Adapta banners a cada formato y peso" },
+  { icon: Wand2, title: "Relleno Generativo IA", desc: "Expande banners con inteligencia artificial" },
+  { icon: Sparkles, title: "Biblioteca de Prompts", desc: "Prompts listos para campañas digitales" },
+  { icon: Code2, title: "Scripts Illustrator", desc: "Automatiza tareas en Adobe Illustrator" },
+  { icon: BarChart3, title: "Historial de Campañas", desc: "Registro y trazabilidad de cada acción" },
+];
+
+const containerVariants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.3 } },
+};
+const itemVariants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" as const } },
+};
 
 export default function LoginPage() {
   const { user, loading, mustChangePassword, login, resetPassword } = useAuth();
@@ -45,12 +65,31 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen w-full">
-      {/* Left — Branding Panel */}
-      <div className="relative hidden w-[55%] flex-col justify-between overflow-hidden bg-gradient-to-br from-[hsl(210,100%,22%)] via-[hsl(210,100%,32%)] to-[hsl(193,100%,40%)] p-10 lg:flex">
-        {/* Decorative shapes */}
-        <div className="pointer-events-none absolute -left-20 -top-20 h-72 w-72 rounded-full bg-white/5 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-10 right-10 h-96 w-96 rounded-full bg-[hsl(193,100%,66%)]/10 blur-3xl" />
-        <div className="pointer-events-none absolute right-1/3 top-1/4 h-40 w-40 rotate-45 rounded-3xl border border-white/10" />
+      {/* ─── Left — Branding Panel ─── */}
+      <div className="relative hidden w-[55%] flex-col justify-between overflow-hidden p-10 lg:flex"
+        style={{ background: "linear-gradient(135deg, #021b4a 0%, #0341a5 40%, #0568d6 70%, #1e90ff 100%)" }}
+      >
+        {/* Animated decorative shapes */}
+        <motion.div
+          className="pointer-events-none absolute -left-24 -top-24 h-80 w-80 rounded-full bg-white/[0.04] blur-3xl"
+          animate={{ scale: [1, 1.15, 1], opacity: [0.04, 0.08, 0.04] }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="pointer-events-none absolute -bottom-10 -right-10 h-[28rem] w-[28rem] rounded-full bg-[#1e90ff]/10 blur-3xl"
+          animate={{ scale: [1, 1.1, 1], opacity: [0.1, 0.18, 0.1] }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+        />
+        <motion.div
+          className="pointer-events-none absolute right-1/4 top-1/3 h-44 w-44 rotate-45 rounded-3xl border border-white/[0.07]"
+          animate={{ rotate: [45, 55, 45], opacity: [0.07, 0.12, 0.07] }}
+          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="pointer-events-none absolute left-1/3 bottom-1/4 h-24 w-24 rounded-full border border-white/[0.06]"
+          animate={{ scale: [1, 1.3, 1] }}
+          transition={{ duration: 9, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+        />
 
         {/* Top — Logo */}
         <motion.div
@@ -58,61 +97,70 @@ export default function LoginPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <img src="/logo.png" alt="SECOSUR" className="h-12 w-auto" />
+          <img src="/logo.png" alt="Cencosud" className="h-12 w-auto" />
         </motion.div>
 
-        {/* Center — Hero */}
-        <motion.div
-          className="flex flex-1 flex-col items-center justify-center gap-8"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-        >
-          <img
-            src={loginHero}
-            alt="Soluciones digitales"
-            className="w-full max-w-md drop-shadow-2xl"
-            width={960}
-            height={1080}
-          />
-          <div className="max-w-md text-center">
-            <h1 className="text-3xl font-bold leading-tight tracking-tight text-white">
+        {/* Center — Headline + Feature Grid */}
+        <div className="flex flex-1 flex-col items-center justify-center gap-10">
+          <motion.div
+            className="max-w-lg text-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            <h1 className="text-4xl font-bold leading-tight tracking-tight text-white">
               Soluciones digitales para{" "}
-              <span className="text-[hsl(193,100%,66%)]">SECOSUR</span>
+              <span className="bg-gradient-to-r from-[#4fc3f7] to-[#81d4fa] bg-clip-text text-transparent">
+                Cencosud
+              </span>
             </h1>
-            <p className="mt-3 text-base leading-relaxed text-white/70">
+            <p className="mt-3 text-base leading-relaxed text-white/60">
               Accede a tu plataforma y gestiona todo en un solo lugar
             </p>
-          </div>
-        </motion.div>
+          </motion.div>
 
-        {/* Bottom — Features */}
-        <motion.div
-          className="flex gap-6"
+          {/* Feature cards grid */}
+          <motion.div
+            className="grid w-full max-w-lg grid-cols-2 gap-3"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {features.map(({ icon: Icon, title, desc }) => (
+              <motion.div
+                key={title}
+                variants={itemVariants}
+                whileHover={{ scale: 1.03, y: -2 }}
+                className="group flex gap-3 rounded-xl border border-white/[0.08] bg-white/[0.06] p-3.5 backdrop-blur-sm transition-colors hover:border-white/15 hover:bg-white/[0.1]"
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 transition-colors group-hover:bg-white/15">
+                  <Icon className="h-4.5 w-4.5 text-[#4fc3f7]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold leading-tight text-white">{title}</p>
+                  <p className="mt-0.5 text-xs leading-snug text-white/50">{desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+
+        {/* Bottom — Tagline */}
+        <motion.p
+          className="text-xs text-white/30"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.3 }}
+          transition={{ delay: 0.8 }}
         >
-          {[
-            { icon: Shield, text: "Seguro" },
-            { icon: Zap, text: "Rápido" },
-            { icon: BarChart3, text: "Inteligente" },
-          ].map(({ icon: Icon, text }) => (
-            <div key={text} className="flex items-center gap-2 text-sm text-white/60">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10">
-                <Icon className="h-3.5 w-3.5 text-[hsl(193,100%,66%)]" />
-              </div>
-              {text}
-            </div>
-          ))}
-        </motion.div>
+          Plataforma interna — Agencia Agua × Cencosud
+        </motion.p>
       </div>
 
-      {/* Right — Form Panel */}
+      {/* ─── Right — Form Panel ─── */}
       <div className="flex w-full flex-col items-center justify-center bg-background px-6 py-10 lg:w-[45%]">
         {/* Mobile logo */}
         <div className="mb-8 lg:hidden">
-          <img src="/logo.png" alt="SECOSUR" className="h-10 w-auto" />
+          <img src="/logo.png" alt="aguApp" className="h-10 w-auto" />
         </div>
 
         <motion.div
@@ -121,7 +169,6 @@ export default function LoginPage() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4, delay: 0.15 }}
         >
-          {/* Header */}
           <div className="mb-8">
             <h2 className="text-2xl font-bold tracking-tight text-foreground">
               {mode === "login" ? "Iniciar sesión" : "Recuperar contraseña"}
@@ -133,11 +180,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Form */}
-          <form
-            onSubmit={mode === "login" ? handleLogin : handleForgot}
-            className="space-y-5"
-          >
+          <form onSubmit={mode === "login" ? handleLogin : handleForgot} className="space-y-5">
             <div className="space-y-1.5">
               <Label htmlFor="email" className="text-sm font-medium text-foreground">
                 Correo electrónico
@@ -159,11 +202,9 @@ export default function LoginPage() {
 
             {mode === "login" && (
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-sm font-medium text-foreground">
-                    Contraseña
-                  </Label>
-                </div>
+                <Label htmlFor="password" className="text-sm font-medium text-foreground">
+                  Contraseña
+                </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
                   <Input
@@ -205,9 +246,8 @@ export default function LoginPage() {
           </form>
         </motion.div>
 
-        {/* Footer */}
         <p className="mt-12 text-center text-xs text-muted-foreground/60">
-          © {new Date().getFullYear()} SECOSUR — Todos los derechos reservados
+          © {new Date().getFullYear()} aguApp — Todos los derechos reservados
         </p>
       </div>
     </div>
