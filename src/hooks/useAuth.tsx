@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -23,8 +23,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [mustChangePassword, setMustChangePassword] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+  const [profileReady, setProfileReady] = useState(false);
+  const mountedRef = useRef(true);
 
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
@@ -32,38 +33,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .select("role, must_change_password")
       .eq("id", userId)
       .maybeSingle();
+    if (!mountedRef.current) return;
     setRole((data?.role as AppRole) ?? null);
     setMustChangePassword(data?.must_change_password ?? false);
-    setProfileLoaded(true);
+    setProfileReady(true);
   };
 
   useEffect(() => {
+    mountedRef.current = true;
+
+    // 1. Load initial session + profile BEFORE marking as initialized
+    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
+      if (!mountedRef.current) return;
+      setSession(s);
+      setUser(s?.user ?? null);
+      if (s?.user) {
+        await fetchProfile(s.user.id);
+      } else {
+        setProfileReady(true);
+      }
+      setInitialized(true);
+    });
+
+    // 2. Listen for subsequent auth changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await fetchProfile(session.user.id);
+      async (_event, s) => {
+        if (!mountedRef.current) return;
+        setSession(s);
+        setUser(s?.user ?? null);
+
+        if (s?.user) {
+          // Reset profileReady so downstream sees loading while we fetch
+          setProfileReady(false);
+          await fetchProfile(s.user.id);
         } else {
           setRole(null);
           setMustChangePassword(false);
-          setProfileLoaded(false);
+          setProfileReady(true);
         }
-        setLoading(false);
+        setInitialized(true);
       }
     );
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchProfile(session.user.id);
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mountedRef.current = false;
+      subscription.unsubscribe();
+    };
   }, []);
+
+  // loading = true until BOTH session check AND profile fetch are done
+  const loading = !initialized || (!!user && !profileReady);
 
   const login = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
