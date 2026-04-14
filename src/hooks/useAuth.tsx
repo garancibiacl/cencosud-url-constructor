@@ -23,9 +23,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [mustChangePassword, setMustChangePassword] = useState(false);
-  const [initialized, setInitialized] = useState(false);
-  const [profileReady, setProfileReady] = useState(false);
-  const mountedRef = useRef(true);
+  const [ready, setReady] = useState(false);
+  const initializedRef = useRef(false);
 
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
@@ -33,56 +32,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .select("role, must_change_password")
       .eq("id", userId)
       .maybeSingle();
-    if (!mountedRef.current) return;
     setRole((data?.role as AppRole) ?? null);
     setMustChangePassword(data?.must_change_password ?? false);
-    setProfileReady(true);
+  };
+
+  const applySession = async (s: Session | null) => {
+    setSession(s);
+    setUser(s?.user ?? null);
+    if (s?.user) {
+      await fetchProfile(s.user.id);
+    } else {
+      setRole(null);
+      setMustChangePassword(false);
+    }
   };
 
   useEffect(() => {
-    mountedRef.current = true;
-
-    // 1. Load initial session + profile BEFORE marking as initialized
+    // 1. Restore session from storage first — this is the single source of truth for init
     supabase.auth.getSession().then(async ({ data: { session: s } }) => {
-      if (!mountedRef.current) return;
-      setSession(s);
-      setUser(s?.user ?? null);
-      if (s?.user) {
-        await fetchProfile(s.user.id);
-      } else {
-        setProfileReady(true);
-      }
-      setInitialized(true);
+      await applySession(s);
+      initializedRef.current = true;
+      setReady(true);
     });
 
-    // 2. Listen for subsequent auth changes (login, logout, token refresh)
+    // 2. Listen for SUBSEQUENT auth changes (login, logout, token refresh)
+    //    Skip the INITIAL_SESSION event to avoid double-processing & race conditions
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, s) => {
-        if (!mountedRef.current) return;
-        setSession(s);
-        setUser(s?.user ?? null);
-
-        if (s?.user) {
-          // Reset profileReady so downstream sees loading while we fetch
-          setProfileReady(false);
-          await fetchProfile(s.user.id);
-        } else {
-          setRole(null);
-          setMustChangePassword(false);
-          setProfileReady(true);
-        }
-        setInitialized(true);
+      async (event, s) => {
+        if (event === "INITIAL_SESSION") return; // handled by getSession above
+        await applySession(s);
       }
     );
 
-    return () => {
-      mountedRef.current = false;
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
-
-  // loading = true until BOTH session check AND profile fetch are done
-  const loading = !initialized || (!!user && !profileReady);
 
   const login = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -110,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, role, mustChangePassword, loading, login, logout, resetPassword, updatePassword }}>
+    <AuthContext.Provider value={{ session, user, role, mustChangePassword, loading: !ready, login, logout, resetPassword, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );
