@@ -84,7 +84,11 @@ export function PromptCard({ prompt, canDelete = false, canEdit = false, onDelet
     if (result.isConfirmed) {
       await deletePrompt(prompt.id, user?.id ?? "");
 
-      await Swal.fire({
+      // Eliminación optimista: el card desaparece de inmediato
+      onDelete?.(prompt.id);
+
+      // El Swal de éxito se muestra mientras la lista ya está actualizada
+      Swal.fire({
         title: "¡Eliminado!",
         text: "El prompt fue eliminado correctamente.",
         icon: "success",
@@ -95,8 +99,6 @@ export function PromptCard({ prompt, canDelete = false, canEdit = false, onDelet
           title: "swal-brand-title",
         },
       });
-
-      onDelete?.(prompt.id);
     }
   }
 

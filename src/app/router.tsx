@@ -14,9 +14,7 @@ const LoginPage = lazy(() => import("@/pages/LoginPage"));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"));
 const ForceChangePassword = lazy(() => import("@/pages/ForceChangePassword"));
 const ConstructorUrlPage = lazy(() => import("@/features/constructor-url/ui/ConstructorUrlPage"));
-const ImageOptimizerPage = lazy(() => import("@/features/image-optimizer/ui/ImageOptimizerPage"));
 const BannerExpandPage = lazy(() => import("@/features/banner-expand/ui/BannerExpandPage"));
-const HistoryPage = lazy(() => import("@/features/history/ui/HistoryPage"));
 const SettingsPage = lazy(() => import("@/features/settings/ui/SettingsPage"));
 const PromptsPage = lazy(() => import("@/features/prompts/ui/PromptsPage"));
 const ScriptsPage = lazy(() => import("@/features/scripts/ui/ScriptsPage"));
@@ -44,9 +42,7 @@ export default function AppRouter() {
       <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
         <Route index element={<Navigate to="/constructor-url" replace />} />
         <Route path="/constructor-url" element={<Lazy><ConstructorUrlPage /></Lazy>} />
-        <Route path="/optimizador" element={<Lazy><ImageOptimizerPage /></Lazy>} />
         <Route path="/banner-expand" element={<Lazy><BannerExpandPage /></Lazy>} />
-        <Route path="/historial" element={<Lazy><HistoryPage /></Lazy>} />
         <Route path="/configuracion" element={<Lazy><SettingsPage /></Lazy>} />
         <Route path="/prompts" element={<Lazy><PromptsPage /></Lazy>} />
         <Route path="/scripts" element={<Lazy><ScriptsPage /></Lazy>} />

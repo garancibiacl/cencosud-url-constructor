@@ -9,13 +9,11 @@
  *  Add an entry to `appModules` with the same path used in router.tsx.
  */
 import type { LucideIcon } from "lucide-react";
-import { Code2, History, Image, Link, Settings, Shield, Sparkles, Wand2 } from "lucide-react";
+import { Code2, Link, Settings, Shield, Sparkles, Wand2 } from "lucide-react";
 
 export type AppModuleId =
   | "constructor-url"
-  | "image-optimizer"
   | "banner-expand"
-  | "history"
   | "settings"
   | "prompts"
   | "scripts"
@@ -50,22 +48,10 @@ export const appModules: AppModuleDefinition[] = [
     path: "/scripts",
   },
   {
-    id: "image-optimizer",
-    label: "Optimizador de Imágenes",
-    icon: Image,
-    path: "/optimizador",
-  },
-  {
     id: "banner-expand",
     label: "Relleno Generativo IA",
     icon: Wand2,
     path: "/banner-expand",
-  },
-  {
-    id: "history",
-    label: "Historial de Campañas",
-    icon: History,
-    path: "/historial",
   },
   {
     id: "settings",

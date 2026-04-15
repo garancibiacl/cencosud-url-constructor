@@ -24,7 +24,7 @@ const DEFAULT_FILTERS: PromptFiltersType = {
 
 export default function PromptsPage() {
   const { role } = useAuth();
-  const { prompts, loading, refresh } = usePrompts();
+  const { prompts, loading, refresh, removeOptimistic } = usePrompts();
   const [filters,    setFilters]    = useState<PromptFiltersType>(DEFAULT_FILTERS);
   const [modalOpen,  setModalOpen]  = useState(false);
 
@@ -88,8 +88,8 @@ export default function PromptsPage() {
                   prompt={prompt}
                   canDelete={canDelete}
                   canEdit={true}
-                  onDelete={refresh}
-                  onUpdate={refresh}
+                  onDelete={(id) => { removeOptimistic(id); void refresh(true); }}
+                  onUpdate={() => void refresh(true)}
                 />
               ))}
             </div>
