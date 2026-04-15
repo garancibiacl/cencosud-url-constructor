@@ -84,7 +84,7 @@ export default function PromptsPage() {
                   key={prompt.id}
                   prompt={prompt}
                   canDelete={canDelete}
-                  canEdit={canDelete}
+                  canEdit={true}
                   onDelete={() => setRefreshKey((k) => k + 1)}
                   onUpdate={() => setRefreshKey((k) => k + 1)}
                 />
