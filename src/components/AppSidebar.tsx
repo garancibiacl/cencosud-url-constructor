@@ -37,11 +37,7 @@ const SidebarTooltip = ({
 };
 
 const DarkModeToggle = ({ isOpen }: { isOpen: boolean }) => {
-  const [isDark, setIsDark] = useState(() => {
-    const saved = localStorage.getItem("theme");
-    if (saved) return saved === "dark";
-    return window.matchMedia("(prefers-color-scheme: dark)").matches;
-  });
+  const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
@@ -296,7 +292,9 @@ const UserInfo = ({ isOpen }: { isOpen: boolean }) => {
 const AppSidebar = () => {
   const [isOpen, setIsOpen] = useState(true);
   const { pathname } = useLocation();
-  const { role } = useAuth();
+  const { role, loading } = useAuth();
+
+  if (loading) return null;
 
   return (
     <motion.aside
