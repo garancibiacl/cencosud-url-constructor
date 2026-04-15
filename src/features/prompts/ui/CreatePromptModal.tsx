@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus, Sparkles } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import Swal from "sweetalert2";
 import {
   Dialog,
@@ -84,8 +85,16 @@ interface Props {
 }
 
 export function CreatePromptModal({ open, onClose, onCreated }: Props) {
+  const { user } = useAuth();
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+
+  const creatorName = (() => {
+    const meta = user?.user_metadata ?? {};
+    const first = (meta.first_name as string | undefined) ?? "";
+    const last  = (meta.last_name  as string | undefined) ?? "";
+    return first || last ? `${first} ${last}`.trim() : (user?.email ?? "Desconocido");
+  })();
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -118,6 +127,7 @@ export function CreatePromptModal({ open, onClose, onCreated }: Props) {
       tags: [],
       model: form.model.trim() || undefined,
       variables: variables.length > 0 ? variables : undefined,
+      createdBy: creatorName,
     });
 
     setForm(EMPTY);
@@ -126,35 +136,19 @@ export function CreatePromptModal({ open, onClose, onCreated }: Props) {
     onClose();
 
     Swal.fire({
-      position: "center",
-      background: "#ffffff",
-      color: "#111827",
+      title: "¡Prompt creado!",
+      html: `<span style="color:#64748b;font-size:14px">
+               <strong style="color:#0f172a">"${form.title.trim()}"</strong>
+               fue agregado a tu biblioteca.
+             </span>`,
+      icon: "success",
+      timer: 2000,
       showConfirmButton: false,
-      timer: 2600,
-      timerProgressBar: false,
-      allowOutsideClick: true,
       customClass: {
-        popup: "swal-prompt-center",
+        popup: "swal-brand-popup",
+        title: "swal-brand-title",
+        icon:  "swal-brand-icon",
       },
-      html: `
-        <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:8px 0 4px">
-          <div style="
-            width:64px;height:64px;border-radius:20px;
-            background:linear-gradient(135deg,#fef3c7,#fde68a);
-            display:flex;align-items:center;justify-content:center;
-            font-size:30px;
-          ">✨</div>
-          <div style="text-align:center">
-            <p style="font-size:18px;font-weight:700;color:#111827;margin:0 0 6px">
-              ¡Prompt creado!
-            </p>
-            <p style="font-size:13px;color:#6b7280;margin:0;line-height:1.5">
-              <strong style="color:#111827">${form.title.trim()}</strong><br>
-              fue agregado a tu biblioteca.
-            </p>
-          </div>
-        </div>
-      `,
     });
   }
 

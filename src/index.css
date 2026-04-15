@@ -151,3 +151,59 @@
     letter-spacing: -0.02em;
   }
 }
+
+/* ── SweetAlert2 — Brand styles ─────────────────────────────────────────────── */
+.swal-brand-popup {
+  border-radius: 20px !important;
+  padding: 2rem 1.75rem !important;
+  box-shadow: 0 20px 60px rgba(3, 65, 165, 0.15), 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+  font-family: inherit !important;
+}
+
+.swal-brand-title {
+  font-size: 1.2rem !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.02em !important;
+}
+
+.swal-brand-icon.swal2-warning {
+  border-color: #f97316 !important;
+  color: #f97316 !important;
+}
+
+.swal-brand-icon.swal2-success {
+  border-color: #22c55e !important;
+  color: #22c55e !important;
+}
+
+.swal-brand-confirm {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  border-radius: 10px !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  padding: 0.625rem 1.5rem !important;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4) !important;
+  transition: box-shadow 0.2s, filter 0.2s !important;
+}
+
+.swal-brand-confirm:hover {
+  filter: brightness(1.08) !important;
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.55) !important;
+}
+
+.swal-brand-cancel {
+  background: transparent !important;
+  border: 1.5px solid rgba(3, 65, 165, 0.25) !important;
+  color: #0341a5 !important;
+  border-radius: 10px !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  padding: 0.625rem 1.5rem !important;
+  transition: background 0.2s, color 0.2s !important;
+}
+
+.swal-brand-cancel:hover {
+  background: #0341a5 !important;
+  color: #fff !important;
+}

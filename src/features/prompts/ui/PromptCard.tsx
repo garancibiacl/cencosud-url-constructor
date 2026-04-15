@@ -1,10 +1,18 @@
 import { useState } from "react";
-import { Check, Copy, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, Copy, ChevronDown, ChevronUp, Trash2, UserRound, Pencil, Clock } from "lucide-react";
+import Swal from "sweetalert2";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { copyPromptToClipboard } from "../services/prompts.service";
+import { copyPromptToClipboard, deletePrompt } from "../services/prompts.service";
+import { EditPromptModal } from "./EditPromptModal";
 import type { Prompt } from "../logic/prompts.types";
+
+function formatDate(iso: string): string {
+  return new Intl.DateTimeFormat("es-CL", {
+    day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+  }).format(new Date(iso));
+}
 
 const CATEGORY_LABELS: Record<Prompt["category"], string> = {
   "imagen-producto": "Imagen producto",
@@ -29,17 +37,64 @@ const BRAND_COLORS: Record<Prompt["brand"], string> = {
 
 interface Props {
   prompt: Prompt;
+  canDelete?: boolean;
+  canEdit?: boolean;
+  onDelete?: (id: string) => void;
+  onUpdate?: () => void;
 }
 
-export function PromptCard({ prompt }: Props) {
-  const [expanded, setExpanded] = useState(false);
-  const [copied, setCopied] = useState(false);
+export function PromptCard({ prompt, canDelete = false, canEdit = false, onDelete, onUpdate }: Props) {
+  const [expanded,   setExpanded]   = useState(false);
+  const [copied,     setCopied]     = useState(false);
+  const [editOpen,   setEditOpen]   = useState(false);
+  const isCustom = prompt.id.startsWith("custom-");
 
   async function handleCopy() {
     const ok = await copyPromptToClipboard(prompt.content);
     if (ok) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
+  async function handleDelete() {
+    const result = await Swal.fire({
+      title: "¿Eliminar este prompt?",
+      html: `<span style="color:#64748b;font-size:14px">
+               <strong style="color:#0f172a">"${prompt.title}"</strong>
+               se eliminará permanentemente.<br/>Esta acción no se puede deshacer.
+             </span>`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
+      reverseButtons: true,
+      focusCancel: true,
+      customClass: {
+        popup:         "swal-brand-popup",
+        title:         "swal-brand-title",
+        confirmButton: "swal-brand-confirm",
+        cancelButton:  "swal-brand-cancel",
+        icon:          "swal-brand-icon",
+      },
+    });
+
+    if (result.isConfirmed) {
+      deletePrompt(prompt.id);
+
+      await Swal.fire({
+        title: "¡Eliminado!",
+        text: "El prompt fue eliminado correctamente.",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+        customClass: {
+          popup: "swal-brand-popup",
+          title: "swal-brand-title",
+        },
+      });
+
+      onDelete?.(prompt.id);
     }
   }
 
@@ -51,19 +106,30 @@ export function PromptCard({ prompt }: Props) {
             <p className="truncate font-semibold text-foreground">{prompt.title}</p>
             <p className="mt-0.5 text-sm text-muted-foreground">{prompt.description}</p>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-            onClick={handleCopy}
-            title="Copiar prompt"
-          >
-            {copied ? (
-              <Check className="h-4 w-4 text-green-500" />
-            ) : (
-              <Copy className="h-4 w-4" />
+          <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+            {canEdit && isCustom && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:bg-blue-50 hover:text-[#0341a5]"
+                title="Editar prompt"
+                onClick={() => setEditOpen(true)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
             )}
-          </Button>
+            {canDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:bg-red-50 hover:text-red-500"
+                title="Eliminar prompt"
+                onClick={handleDelete}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Badges */}
@@ -125,6 +191,36 @@ export function PromptCard({ prompt }: Props) {
           ))}
         </div>
 
+        {/* Creator / last update */}
+        {(prompt.createdBy || prompt.updatedBy) && (
+          <div className="space-y-1">
+            {prompt.createdBy && (
+              <div className="flex items-center gap-1.5">
+                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-muted">
+                  <UserRound className="h-3 w-3 text-muted-foreground/60" />
+                </div>
+                <span className="text-[11px] text-muted-foreground/60">
+                  Creado por{" "}
+                  <span className="font-medium text-muted-foreground">{prompt.createdBy}</span>
+                </span>
+              </div>
+            )}
+            {prompt.updatedBy && prompt.updatedAt && (
+              <div className="flex items-center gap-1.5">
+                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-muted">
+                  <Clock className="h-3 w-3 text-muted-foreground/60" />
+                </div>
+                <span className="text-[11px] text-muted-foreground/60">
+                  Editado por{" "}
+                  <span className="font-medium text-muted-foreground">{prompt.updatedBy}</span>
+                  {" · "}
+                  <span className="text-muted-foreground/50">{formatDate(prompt.updatedAt)}</span>
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Actions row */}
         <div className="flex items-center justify-between border-t border-border pt-2">
           <button
@@ -164,6 +260,13 @@ export function PromptCard({ prompt }: Props) {
           </Button>
         </div>
       </CardContent>
+
+      <EditPromptModal
+        prompt={editOpen ? prompt : null}
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        onUpdated={() => { setEditOpen(false); onUpdate?.(); }}
+      />
     </Card>
   );
 }

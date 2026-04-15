@@ -122,6 +122,18 @@ const UserInfo = ({ isOpen }: { isOpen: boolean }) => {
   const { user, role, logout } = useAuth();
   if (!user) return null;
 
+  const meta = user.user_metadata ?? {};
+  const firstName = (meta.first_name as string | undefined) ?? "";
+  const lastName  = (meta.last_name  as string | undefined) ?? "";
+
+  const initials = firstName || lastName
+    ? `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
+    : (user.email ?? "U").charAt(0).toUpperCase();
+
+  const displayName = firstName || lastName
+    ? `${firstName} ${lastName}`.trim()
+    : (user.email ?? "");
+
   const badge = (
     <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${ROLE_COLORS[role ?? "disenador"]}`}>
       {ROLE_LABELS[role ?? "disenador"]}
@@ -130,7 +142,7 @@ const UserInfo = ({ isOpen }: { isOpen: boolean }) => {
 
   if (!isOpen) {
     return (
-      <SidebarTooltip isOpen={false} label={user.email ?? ""}>
+      <SidebarTooltip isOpen={false} label={displayName || (user.email ?? "")}>
         <motion.button
           onClick={logout}
           whileHover={{ scale: 1.08 }}
@@ -145,11 +157,14 @@ const UserInfo = ({ isOpen }: { isOpen: boolean }) => {
 
   return (
     <div className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2.5">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15 text-xs font-bold text-white uppercase">
-        {(user.email ?? "U")[0]}
+      {/* Avatar con iniciales */}
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white uppercase"
+        style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1))", border: "1px solid rgba(255,255,255,0.2)" }}
+      >
+        {initials}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="truncate text-xs font-medium text-white/80">{user.email}</p>
+        <p className="truncate text-xs font-semibold text-white/90">{displayName}</p>
         {badge}
       </div>
       <Tooltip>
@@ -296,7 +311,10 @@ const AppSidebar = () => {
       {/* Footer */}
       <div className="sticky bottom-0 z-10 mt-auto border-t border-white/10 bg-[#0341a5] px-2.5 pb-4 pt-3 space-y-2">
         <UserInfo isOpen={isOpen} />
-        <DarkModeToggle isOpen={isOpen} />
+        {/* TODO: dark mode — oculto hasta integración futura */}
+        <div className="hidden">
+          <DarkModeToggle isOpen={isOpen} />
+        </div>
       </div>
     </motion.aside>
   );

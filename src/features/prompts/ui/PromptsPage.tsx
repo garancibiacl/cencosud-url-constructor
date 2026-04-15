@@ -1,11 +1,18 @@
 import { useState, useMemo } from "react";
 import { Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 import { filterPrompts } from "../services/prompts.service";
 import { PromptFilters } from "./PromptFilters";
 import { PromptCard } from "./PromptCard";
 import { CreatePromptModal } from "./CreatePromptModal";
 import type { PromptFilters as PromptFiltersType } from "../logic/prompts.types";
+
+// ── Roles con permiso para eliminar prompts ──────────────────
+// Para habilitar más roles en el futuro, agrégalos aquí:
+// const CAN_DELETE_ROLES = ["admin", "director", "disenador"] as const;
+const CAN_DELETE_ROLES = ["admin"] as const;
+type DeletableRole = (typeof CAN_DELETE_ROLES)[number];
 
 const DEFAULT_FILTERS: PromptFiltersType = {
   search: "",
@@ -15,10 +22,12 @@ const DEFAULT_FILTERS: PromptFiltersType = {
 };
 
 export default function PromptsPage() {
+  const { role } = useAuth();
   const [filters, setFilters] = useState<PromptFiltersType>(DEFAULT_FILTERS);
   const [modalOpen, setModalOpen] = useState(false);
-  // Incrementar fuerza re-cálculo del useMemo cuando se crea un prompt
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const canDelete = CAN_DELETE_ROLES.includes(role as DeletableRole);
 
   const results = useMemo(
     () => filterPrompts(filters),
@@ -71,7 +80,14 @@ export default function PromptsPage() {
           ) : (
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
               {results.map((prompt) => (
-                <PromptCard key={prompt.id} prompt={prompt} />
+                <PromptCard
+                  key={prompt.id}
+                  prompt={prompt}
+                  canDelete={canDelete}
+                  canEdit={canDelete}
+                  onDelete={() => setRefreshKey((k) => k + 1)}
+                  onUpdate={() => setRefreshKey((k) => k + 1)}
+                />
               ))}
             </div>
           )}
