@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
-import { appModules } from "@/modules/appModules";
+import { appModules, canAccessModule } from "@/modules/appModules";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -356,7 +356,7 @@ const AppSidebar = () => {
       <nav className="flex-1 space-y-1 overflow-y-auto px-2.5 py-4 pb-4">
         <AnimatePresence>
           {appModules
-            .filter((item) => !item.adminOnly || role === "admin")
+            .filter((item) => canAccessModule(item, role))
             .map((item, index) => {
             const isActive = pathname === item.path;
 
