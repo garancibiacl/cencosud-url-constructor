@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import { Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -25,7 +26,7 @@ const DEFAULT_FILTERS: PromptFiltersType = {
 export default function PromptsPage() {
   const { role } = useAuth();
   const { prompts, loading, refresh, removeOptimistic } = usePrompts();
-  const [filters,    setFilters]    = useState<PromptFiltersType>(DEFAULT_FILTERS);
+  const [filters,    setFilters]    = usePersistedState<PromptFiltersType>("prompts:filters", DEFAULT_FILTERS);
   const [modalOpen,  setModalOpen]  = useState(false);
 
   const canDelete = CAN_DELETE_ROLES.includes(role as DeletableRole);

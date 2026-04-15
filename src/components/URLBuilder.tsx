@@ -1036,29 +1036,29 @@ const URLBuilder = () => {
   const [activeTab, setActiveTab] = usePersistedState("url-builder:activeTab", "cms-web");
   const [webMode, setWebMode] = usePersistedState("url-builder:webMode", "individual");
   const [appMode, setAppMode] = usePersistedState("url-builder:appMode", "individual");
-  const [globalParams, setGlobalParams] = useState<Omit<URLParams, "descripcion">>({
+  const [globalParams, setGlobalParams] = usePersistedState<Omit<URLParams, "descripcion">>("url-builder:globalParams", {
     ubicacion: "",
     componente: "",
     campana: "",
     semana: currentWeekValue,
     fecha: "",
   });
-  const [singleBaseUrl, setSingleBaseUrl] = useState("");
-  const [singleDescription, setSingleDescription] = useState("");
+  const [singleBaseUrl, setSingleBaseUrl] = usePersistedState("url-builder:singleBaseUrl", "");
+  const [singleDescription, setSingleDescription] = usePersistedState("url-builder:singleDescription", "");
   const [singleFinalUrlDraft, setSingleFinalUrlDraft] = useState("");
   const [isSingleFinalUrlEditing, setIsSingleFinalUrlEditing] = useState(false);
-  const [singleAppDirtyTitle, setSingleAppDirtyTitle] = useState("");
-  const [singleAppUrl, setSingleAppUrl] = useState("");
+  const [singleAppDirtyTitle, setSingleAppDirtyTitle] = usePersistedState("url-builder:singleAppDirtyTitle", "");
+  const [singleAppUrl, setSingleAppUrl] = usePersistedState("url-builder:singleAppUrl", "");
   const [singleAppCleanTitleDraft, setSingleAppCleanTitleDraft] = useState("");
   const [singleAppCollectionCodeDraft, setSingleAppCollectionCodeDraft] = useState("");
   const [isSingleAppTitleEditing, setIsSingleAppTitleEditing] = useState(false);
   const [isSingleAppCodeEditing, setIsSingleAppCodeEditing] = useState(false);
   const [hasManualSingleAppTitle, setHasManualSingleAppTitle] = useState(false);
   const [hasManualSingleAppCode, setHasManualSingleAppCode] = useState(false);
-  const [bulkDescriptions, setBulkDescriptions] = useState("");
-  const [bulkBaseUrls, setBulkBaseUrls] = useState("");
-  const [bulkAppTitles, setBulkAppTitles] = useState("");
-  const [bulkAppUrls, setBulkAppUrls] = useState("");
+  const [bulkDescriptions, setBulkDescriptions] = usePersistedState("url-builder:bulkDescriptions", "");
+  const [bulkBaseUrls, setBulkBaseUrls] = usePersistedState("url-builder:bulkBaseUrls", "");
+  const [bulkAppTitles, setBulkAppTitles] = usePersistedState("url-builder:bulkAppTitles", "");
+  const [bulkAppUrls, setBulkAppUrls] = usePersistedState("url-builder:bulkAppUrls", "");
   const [editableAppRows, setEditableAppRows] = useState<AppBatchRow[]>([]);
   const [bulkResolvedLinks, setBulkResolvedLinks] = useState<Record<string, string>>({});
   const [isBulkWebCopySuccess, setIsBulkWebCopySuccess] = useState(false);

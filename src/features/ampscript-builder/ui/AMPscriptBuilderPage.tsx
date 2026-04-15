@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import { Zap, Copy, Check, AlertCircle, ChevronRight, RefreshCw, ClipboardPaste, ChevronsUpDown, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,10 +138,10 @@ function CampaignComboField({
 }
 
 export default function AMPscriptBuilderPage() {
-  const [description, setDescription] = useState("");
-  const [url, setUrl] = useState("");
-  const [brandId, setBrandId] = useState<BrandId>("sisa");
-  const [campaign, setCampaign] = useState("");
+  const [description, setDescription] = usePersistedState("ampscript:description", "");
+  const [url, setUrl] = usePersistedState("ampscript:url", "");
+  const [brandId, setBrandId] = usePersistedState<BrandId>("ampscript:brandId", "sisa");
+  const [campaign, setCampaign] = usePersistedState("ampscript:campaign", "");
   const [ampOverride, setAmpOverride] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [pasteFlash, setPasteFlash] = useState(false);
@@ -172,6 +173,7 @@ export default function AMPscriptBuilderPage() {
     setUrl("");
     setBrandId("sisa");
     setCampaign("");
+    setAmpOverride(null);
   }
 
   /** Detecta pegado desde Excel (celdas separadas por tab) y rellena ambos campos. */
