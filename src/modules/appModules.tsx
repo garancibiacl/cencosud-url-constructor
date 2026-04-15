@@ -10,6 +10,9 @@ import { Code2, Link, Shield, Sparkles, Wand2, Zap } from "lucide-react";
 
 type AppRole = "admin" | "disenador" | "programador" | "director" | "cencosud" | "emailing";
 
+const STANDARD_MODULE_ROLES: AppRole[] = ["disenador", "programador", "director", "cencosud"];
+const AMPSCRIPT_MODULE_ROLES: AppRole[] = ["programador", "emailing"];
+
 export type AppModuleId =
   | "constructor-url"
   | "banner-expand"
@@ -45,31 +48,35 @@ export const appModules: AppModuleDefinition[] = [
     label: "Constructor de URLs",
     icon: Link,
     path: "/constructor-url",
+    allowedRoles: STANDARD_MODULE_ROLES,
   },
   {
     id: "prompts",
     label: "Biblioteca de Prompts",
     icon: Sparkles,
     path: "/prompts",
+    allowedRoles: STANDARD_MODULE_ROLES,
   },
   {
     id: "scripts",
     label: "Scripts Illustrator",
     icon: Code2,
     path: "/scripts",
+    allowedRoles: STANDARD_MODULE_ROLES,
   },
   {
     id: "ampscript-builder",
     label: "AMPscript Builder",
     icon: Zap,
     path: "/ampscript-builder",
-    allowedRoles: ["programador", "emailing"],
+    allowedRoles: AMPSCRIPT_MODULE_ROLES,
   },
   {
     id: "banner-expand",
     label: "Relleno Generativo IA",
     icon: Wand2,
     path: "/banner-expand",
+    allowedRoles: STANDARD_MODULE_ROLES,
   },
   {
     id: "admin",

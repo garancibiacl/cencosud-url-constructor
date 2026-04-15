@@ -43,7 +43,10 @@ function Guarded({ path, children }: { path: string; children: React.ReactNode }
 
 /** Redirects to the first module the current user's role can access */
 function DefaultRedirect() {
-  const { role } = useAuth();
+  const { role, loading } = useAuth();
+
+  if (loading) return null;
+
   const first = appModules.find((m) => canAccessModule(m, role));
   return <Navigate to={first?.path ?? "/login"} replace />;
 }

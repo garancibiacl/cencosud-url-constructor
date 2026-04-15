@@ -8,8 +8,10 @@ import { appModules, canAccessModule } from "@/modules/appModules";
  * Falls back to the first allowed module's path.
  */
 export default function RoleGuard({ path, children }: { path: string; children: React.ReactNode }) {
-  const { role } = useAuth();
+  const { role, loading } = useAuth();
   const mod = appModules.find((m) => m.path === path);
+
+  if (loading) return null;
 
   if (mod && !canAccessModule(mod, role)) {
     const firstAllowed = appModules.find((m) => canAccessModule(m, role));
