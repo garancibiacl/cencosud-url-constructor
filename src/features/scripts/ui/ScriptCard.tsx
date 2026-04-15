@@ -1,19 +1,34 @@
 import { useState } from "react";
-import { Check, Copy, Download, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, Copy, Download, ChevronDown, ChevronUp, Pencil, Trash2, UserRound, Clock } from "lucide-react";
+import Swal from "sweetalert2";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { copyScriptCode, downloadScript } from "../services/scripts.service";
+import { copyScriptCode, downloadScript, deleteUploadedScript } from "../services/scripts.service";
+import { EditScriptModal } from "./EditScriptModal";
 import type { IllustratorScript } from "../logic/scripts.types";
 
-interface Props {
-  script: IllustratorScript;
+function formatDate(iso: string): string {
+  return new Intl.DateTimeFormat("es-CL", {
+    day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+  }).format(new Date(iso));
 }
 
-export function ScriptCard({ script }: Props) {
-  const [codeOpen, setCodeOpen] = useState(false);
+interface Props {
+  script:    IllustratorScript;
+  canDelete?: boolean;
+  canEdit?:   boolean;
+  onDelete?:  () => void;
+  onUpdate?:  () => void;
+}
+
+export function ScriptCard({ script, canDelete = false, canEdit = false, onDelete, onUpdate }: Props) {
+  const [codeOpen,   setCodeOpen]   = useState(false);
   const [promptOpen, setPromptOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copied,     setCopied]     = useState(false);
+  const [editOpen,   setEditOpen]   = useState(false);
+
+  const isUploaded = script.id.startsWith("upload-");
 
   async function handleCopy() {
     const ok = await copyScriptCode(script.code);
@@ -23,8 +38,51 @@ export function ScriptCard({ script }: Props) {
     }
   }
 
+  async function handleDelete() {
+    const result = await Swal.fire({
+      title: "¿Eliminar este script?",
+      html: `<span style="color:#64748b;font-size:14px">
+               <strong style="color:#0f172a">"${script.title}"</strong>
+               se eliminará permanentemente.<br/>Esta acción no se puede deshacer.
+             </span>`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
+      reverseButtons: true,
+      focusCancel: true,
+      customClass: {
+        popup:         "swal-brand-popup",
+        title:         "swal-brand-title",
+        confirmButton: "swal-brand-confirm",
+        cancelButton:  "swal-brand-cancel",
+        icon:          "swal-brand-icon",
+      },
+    });
+
+    if (result.isConfirmed) {
+      const ok = await deleteUploadedScript(script.id);
+      if (!ok) return;
+
+      onDelete?.();
+
+      Swal.fire({
+        title: "¡Eliminado!",
+        text: "El script fue eliminado correctamente.",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+        customClass: {
+          popup: "swal-brand-popup",
+          title: "swal-brand-title",
+        },
+      });
+    }
+  }
+
   return (
-    <Card className="card-interactive flex flex-col">
+    <>
+    <Card className="card-interactive group flex flex-col">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
@@ -37,6 +95,32 @@ export function ScriptCard({ script }: Props) {
             </div>
             <p className="mt-1.5 font-semibold text-foreground">{script.title}</p>
             <p className="mt-0.5 text-sm text-muted-foreground">{script.description}</p>
+          </div>
+
+          {/* Acciones hover */}
+          <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+            {canEdit && isUploaded && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:bg-blue-50 hover:text-[#0341a5]"
+                title="Editar script"
+                onClick={() => setEditOpen(true)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
+            {canDelete && isUploaded && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:bg-red-50 hover:text-red-500"
+                title="Eliminar script"
+                onClick={handleDelete}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
 
@@ -90,6 +174,38 @@ export function ScriptCard({ script }: Props) {
           )}
         </div>
 
+        {/* Subido por / Editado por */}
+        {(script.uploadedBy || script.updatedBy) && (
+          <div className="space-y-1">
+            {script.uploadedBy && script.uploadedAt && (
+              <div className="flex items-center gap-1.5">
+                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-muted">
+                  <UserRound className="h-3 w-3 text-muted-foreground/60" />
+                </div>
+                <span className="text-[11px] text-muted-foreground/60">
+                  Subido por{" "}
+                  <span className="font-medium text-muted-foreground">{script.uploadedBy}</span>
+                  {" · "}
+                  <span className="text-muted-foreground/50">{formatDate(script.uploadedAt)}</span>
+                </span>
+              </div>
+            )}
+            {script.updatedBy && script.updatedAt && (
+              <div className="flex items-center gap-1.5">
+                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-muted">
+                  <Clock className="h-3 w-3 text-muted-foreground/60" />
+                </div>
+                <span className="text-[11px] text-muted-foreground/60">
+                  Editado por{" "}
+                  <span className="font-medium text-muted-foreground">{script.updatedBy}</span>
+                  {" · "}
+                  <span className="text-muted-foreground/50">{formatDate(script.updatedAt)}</span>
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Acciones */}
         <div className="flex items-center gap-2 border-t border-border pt-2">
           <Button
@@ -115,5 +231,13 @@ export function ScriptCard({ script }: Props) {
         </div>
       </CardContent>
     </Card>
+
+    <EditScriptModal
+      script={editOpen ? script : null}
+      open={editOpen}
+      onClose={() => setEditOpen(false)}
+      onUpdated={() => { setEditOpen(false); onUpdate?.(); }}
+    />
+    </>
   );
 }

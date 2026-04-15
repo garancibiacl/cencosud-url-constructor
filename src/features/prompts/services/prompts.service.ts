@@ -1,27 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import { PROMPTS_CATALOG } from "../logic/prompts.data";
 import type { Prompt, PromptFilters } from "../logic/prompts.types";
 
-// ─── Row type from Supabase ───────────────────────────────────────────────────
+// ─── Row type from generated Supabase types ───────────────────────────────────
 
-interface PromptRow {
-  id:            string;
-  title:         string;
-  description:   string;
-  category:      string;
-  brand:         string;
-  tone:          string;
-  tags:          string[];
-  content:       string;
-  variables:     string[] | null;
-  model:         string | null;
-  created_by:    string | null;
-  created_by_id: string | null;
-  created_at:    string;
-  updated_by:    string | null;
-  updated_by_id: string | null;
-  updated_at:    string | null;
-}
+type PromptRow = Tables<"prompts">;
 
 function rowToPrompt(row: PromptRow): Prompt {
   return {
