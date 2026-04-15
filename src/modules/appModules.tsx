@@ -1,15 +1,14 @@
 /**
  * appModules — central module registry
  *
- * Single source of truth for sidebar navigation.
+ * Single source of truth for sidebar navigation and role-based access.
  * The router (src/app/router.tsx) owns component mapping.
- * This file owns label, icon, and path for each module.
- *
- * HOW TO REGISTER A NEW MODULE (step 3 of 3):
- *  Add an entry to `appModules` with the same path used in router.tsx.
+ * This file owns label, icon, path, and role visibility for each module.
  */
 import type { LucideIcon } from "lucide-react";
 import { Code2, Link, Shield, Sparkles, Wand2, Zap } from "lucide-react";
+
+type AppRole = "admin" | "disenador" | "programador" | "director" | "cencosud" | "emailing";
 
 export type AppModuleId =
   | "constructor-url"
@@ -64,6 +63,7 @@ export const appModules: AppModuleDefinition[] = [
     label: "AMPscript Builder",
     icon: Zap,
     path: "/ampscript-builder",
+    allowedRoles: ["programador", "emailing"],
   },
   {
     id: "banner-expand",
@@ -76,6 +76,6 @@ export const appModules: AppModuleDefinition[] = [
     label: "Administración",
     icon: Shield,
     path: "/admin",
-    adminOnly: true,
+    allowedRoles: [], // empty = all roles, but canAccessModule gives admin automatic access
   },
 ];
