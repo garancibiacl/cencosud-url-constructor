@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      hidden_catalog_prompts: {
+        Row: {
+          catalog_id: string
+          hidden_at: string
+          hidden_by: string | null
+        }
+        Insert: {
+          catalog_id: string
+          hidden_at?: string
+          hidden_by?: string | null
+        }
+        Update: {
+          catalog_id?: string
+          hidden_at?: string
+          hidden_by?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -35,6 +53,63 @@ export type Database = {
           id?: string
           must_change_password?: boolean
           role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: []
+      }
+      prompts: {
+        Row: {
+          brand: string
+          category: string
+          content: string
+          created_at: string
+          created_by: string | null
+          created_by_id: string | null
+          description: string
+          id: string
+          model: string | null
+          tags: string[]
+          title: string
+          tone: string
+          updated_at: string | null
+          updated_by: string | null
+          updated_by_id: string | null
+          variables: string[] | null
+        }
+        Insert: {
+          brand: string
+          category: string
+          content: string
+          created_at?: string
+          created_by?: string | null
+          created_by_id?: string | null
+          description?: string
+          id: string
+          model?: string | null
+          tags?: string[]
+          title: string
+          tone: string
+          updated_at?: string | null
+          updated_by?: string | null
+          updated_by_id?: string | null
+          variables?: string[] | null
+        }
+        Update: {
+          brand?: string
+          category?: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_id?: string | null
+          description?: string
+          id?: string
+          model?: string | null
+          tags?: string[]
+          title?: string
+          tone?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          updated_by_id?: string | null
+          variables?: string[] | null
         }
         Relationships: []
       }
