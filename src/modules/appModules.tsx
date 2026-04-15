@@ -9,13 +9,14 @@
  *  Add an entry to `appModules` with the same path used in router.tsx.
  */
 import type { LucideIcon } from "lucide-react";
-import { Code2, Link, Shield, Sparkles, Wand2 } from "lucide-react";
+import { Code2, Link, Shield, Sparkles, Wand2, Zap } from "lucide-react";
 
 export type AppModuleId =
   | "constructor-url"
   | "banner-expand"
   | "prompts"
   | "scripts"
+  | "ampscript-builder"
   | "admin";
 
 export interface AppModuleDefinition {
@@ -45,6 +46,12 @@ export const appModules: AppModuleDefinition[] = [
     label: "Scripts Illustrator",
     icon: Code2,
     path: "/scripts",
+  },
+  {
+    id: "ampscript-builder",
+    label: "AMPscript Builder",
+    icon: Zap,
+    path: "/ampscript-builder",
   },
   {
     id: "banner-expand",

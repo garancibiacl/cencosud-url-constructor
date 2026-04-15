@@ -18,6 +18,7 @@ const BannerExpandPage = lazy(() => import("@/features/banner-expand/ui/BannerEx
 const SettingsPage = lazy(() => import("@/features/settings/ui/SettingsPage"));
 const PromptsPage = lazy(() => import("@/features/prompts/ui/PromptsPage"));
 const ScriptsPage = lazy(() => import("@/features/scripts/ui/ScriptsPage"));
+const AMPscriptBuilderPage = lazy(() => import("@/features/ampscript-builder/ui/AMPscriptBuilderPage"));
 const AdminPage = lazy(() => import("@/pages/AdminPage"));
 
 function PageLoader() {
@@ -46,6 +47,7 @@ export default function AppRouter() {
         <Route path="/configuracion" element={<Lazy><SettingsPage /></Lazy>} />
         <Route path="/prompts" element={<Lazy><PromptsPage /></Lazy>} />
         <Route path="/scripts" element={<Lazy><ScriptsPage /></Lazy>} />
+        <Route path="/ampscript-builder" element={<Lazy><AMPscriptBuilderPage /></Lazy>} />
         <Route path="/admin" element={<Lazy><AdminPage /></Lazy>} />
       </Route>
 
