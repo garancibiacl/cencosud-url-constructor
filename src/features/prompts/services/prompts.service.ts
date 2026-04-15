@@ -1,138 +1,176 @@
+import { supabase } from "@/integrations/supabase/client";
 import { PROMPTS_CATALOG } from "../logic/prompts.data";
 import type { Prompt, PromptFilters } from "../logic/prompts.types";
 
-const STORAGE_KEY        = "aguapp_custom_prompts";
-const HIDDEN_KEY         = "aguapp_hidden_prompts";
+// ─── Row type from Supabase ───────────────────────────────────────────────────
 
-// ─── Persistencia de prompts custom (localStorage) ───────────────────────────
-
-export function getCustomPrompts(): Prompt[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Prompt[]) : [];
-  } catch {
-    return [];
-  }
+interface PromptRow {
+  id:            string;
+  title:         string;
+  description:   string;
+  category:      string;
+  brand:         string;
+  tone:          string;
+  tags:          string[];
+  content:       string;
+  variables:     string[] | null;
+  model:         string | null;
+  created_by:    string | null;
+  created_by_id: string | null;
+  created_at:    string;
+  updated_by:    string | null;
+  updated_by_id: string | null;
+  updated_at:    string | null;
 }
 
-export function saveCustomPrompt(
-  data: Omit<Prompt, "id" | "createdAt">,
-): Prompt {
-  const prompt: Prompt = {
-    ...data,
-    id: `custom-${Date.now()}`,
-    createdAt: new Date().toISOString(),
+function rowToPrompt(row: PromptRow): Prompt {
+  return {
+    id:          row.id,
+    title:       row.title,
+    description: row.description,
+    category:    row.category as Prompt["category"],
+    brand:       row.brand    as Prompt["brand"],
+    tone:        row.tone     as Prompt["tone"],
+    tags:        row.tags,
+    content:     row.content,
+    variables:   row.variables ?? undefined,
+    model:       row.model    ?? undefined,
+    createdBy:   row.created_by   ?? undefined,
+    createdAt:   row.created_at,
+    updatedBy:   row.updated_by   ?? undefined,
+    updatedAt:   row.updated_at   ?? undefined,
   };
-  const existing = getCustomPrompts();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify([...existing, prompt]));
-  return prompt;
 }
 
-// ─── Prompts ocultos (catálogo estático eliminado por admin) ─────────────────
+// ─── Read ─────────────────────────────────────────────────────────────────────
 
-function getHiddenIds(): string[] {
-  try {
-    const raw = localStorage.getItem(HIDDEN_KEY);
-    return raw ? (JSON.parse(raw) as string[]) : [];
-  } catch {
-    return [];
-  }
+export async function getCustomPrompts(): Promise<Prompt[]> {
+  const { data, error } = await supabase
+    .from("prompts")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) { console.error("getCustomPrompts:", error); return []; }
+  return (data as PromptRow[]).map(rowToPrompt);
 }
 
-/**
- * Actualiza un prompt custom existente.
- * Solo funciona con prompts cuyo id empieza por "custom-".
- */
-export function updateCustomPrompt(
-  id: string,
-  changes: Partial<Omit<Prompt, "id" | "createdBy" | "createdAt">>,
-  updatedBy: string,
-): boolean {
-  if (!id.startsWith("custom-")) return false;
-  const existing = getCustomPrompts();
-  const idx = existing.findIndex((p) => p.id === id);
-  if (idx === -1) return false;
-  existing[idx] = { ...existing[idx], ...changes, updatedBy, updatedAt: new Date().toISOString() };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
-  return true;
+export async function getHiddenCatalogIds(): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from("hidden_catalog_prompts")
+    .select("catalog_id");
+
+  if (error) { console.error("getHiddenCatalogIds:", error); return new Set(); }
+  return new Set((data ?? []).map((r: { catalog_id: string }) => r.catalog_id));
 }
 
 /**
- * Elimina un prompt:
- * - Si es custom-* lo borra de localStorage.
- * - Si es del catálogo estático, lo agrega a la lista de IDs ocultos.
+ * Returns static catalog (minus hidden) + all custom prompts from Supabase.
  */
-export function deletePrompt(id: string): boolean {
-  if (id.startsWith("custom-")) {
-    const existing = getCustomPrompts();
-    const filtered = existing.filter((p) => p.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-  } else {
-    const hidden = getHiddenIds();
-    if (!hidden.includes(id)) {
-      localStorage.setItem(HIDDEN_KEY, JSON.stringify([...hidden, id]));
-    }
-  }
-  return true;
-}
+export async function getAllPrompts(): Promise<Prompt[]> {
+  const [custom, hiddenIds] = await Promise.all([
+    getCustomPrompts(),
+    getHiddenCatalogIds(),
+  ]);
 
-// ─── Lectura ──────────────────────────────────────────────────────────────────
-
-/**
- * Devuelve catálogo estático + prompts creados por el usuario.
- */
-export function getAllPrompts(): Prompt[] {
-  return [...PROMPTS_CATALOG, ...getCustomPrompts()];
+  const catalog = PROMPTS_CATALOG.filter((p) => !hiddenIds.has(p.id));
+  return [...catalog, ...custom];
 }
 
 /**
- * Filtra prompts aplicando búsqueda de texto + filtros de categoría/marca/tono.
- * Todos los criterios son aditivos (AND).
+ * Filters an already-fetched list of prompts. Synchronous — no DB call.
  */
-export function filterPrompts(filters: PromptFilters): Prompt[] {
-  const search    = filters.search.toLowerCase().trim();
-  const hiddenIds = new Set(getHiddenIds());
+export function applyFilters(prompts: Prompt[], filters: PromptFilters): Prompt[] {
+  const search = filters.search.toLowerCase().trim();
 
-  return getAllPrompts().filter((prompt) => {
-    if (hiddenIds.has(prompt.id)) return false;
-    if (filters.category !== "todas" && prompt.category !== filters.category) return false;
-    if (filters.brand !== "todas" && prompt.brand !== filters.brand) return false;
-    if (filters.tone !== "todos" && prompt.tone !== filters.tone) return false;
+  return prompts.filter((p) => {
+    if (filters.category !== "todas" && p.category !== filters.category) return false;
+    if (filters.brand    !== "todas" && p.brand    !== filters.brand)    return false;
+    if (filters.tone     !== "todos" && p.tone     !== filters.tone)     return false;
 
     if (search) {
-      const haystack = [
-        prompt.title,
-        prompt.description,
-        prompt.content,
-        ...prompt.tags,
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      if (!haystack.includes(search)) return false;
+      const hay = [p.title, p.description, p.content, ...p.tags].join(" ").toLowerCase();
+      if (!hay.includes(search)) return false;
     }
-
     return true;
   });
 }
 
-/**
- * Reemplaza {{variables}} en el contenido del prompt con los valores provistos.
- * Las variables sin valor se dejan tal como están.
- */
-export function resolvePromptVariables(
-  content: string,
-  values: Record<string, string>
-): string {
-  return content.replace(/\{\{(\w+)\}\}/g, (match, key: string) => {
-    return values[key] ?? match;
-  });
+// ─── Write ────────────────────────────────────────────────────────────────────
+
+export async function saveCustomPrompt(
+  data: Omit<Prompt, "id" | "createdAt" | "updatedBy" | "updatedAt">,
+  userId: string,
+): Promise<Prompt | null> {
+  const id = `custom-${Date.now()}`;
+
+  const { data: row, error } = await supabase
+    .from("prompts")
+    .insert({
+      id,
+      title:         data.title,
+      description:   data.description ?? "",
+      category:      data.category,
+      brand:         data.brand,
+      tone:          data.tone,
+      tags:          data.tags,
+      content:       data.content,
+      variables:     data.variables ?? null,
+      model:         data.model     ?? null,
+      created_by:    data.createdBy ?? null,
+      created_by_id: userId,
+    })
+    .select()
+    .single();
+
+  if (error) { console.error("saveCustomPrompt:", error); return null; }
+  return rowToPrompt(row as PromptRow);
 }
 
-/**
- * Copia el contenido de un prompt al clipboard.
- * Retorna true si fue exitoso.
- */
+export async function updateCustomPrompt(
+  id: string,
+  changes: Partial<Omit<Prompt, "id" | "createdBy" | "createdAt">>,
+  updatedBy: string,
+  userId: string,
+): Promise<boolean> {
+  if (!id.startsWith("custom-")) return false;
+
+  const { error } = await supabase
+    .from("prompts")
+    .update({
+      ...(changes.title       !== undefined && { title:       changes.title }),
+      ...(changes.description !== undefined && { description: changes.description }),
+      ...(changes.category    !== undefined && { category:    changes.category }),
+      ...(changes.brand       !== undefined && { brand:       changes.brand }),
+      ...(changes.tone        !== undefined && { tone:        changes.tone }),
+      ...(changes.content     !== undefined && { content:     changes.content }),
+      ...(changes.model       !== undefined && { model:       changes.model ?? null }),
+      ...(changes.variables   !== undefined && { variables:   changes.variables ?? null }),
+      ...(changes.tags        !== undefined && { tags:        changes.tags }),
+      updated_by:    updatedBy,
+      updated_by_id: userId,
+      updated_at:    new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) { console.error("updateCustomPrompt:", error); return false; }
+  return true;
+}
+
+export async function deletePrompt(id: string, userId: string): Promise<boolean> {
+  if (id.startsWith("custom-")) {
+    const { error } = await supabase.from("prompts").delete().eq("id", id);
+    if (error) { console.error("deletePrompt:", error); return false; }
+  } else {
+    const { error } = await supabase
+      .from("hidden_catalog_prompts")
+      .upsert({ catalog_id: id, hidden_by: userId });
+    if (error) { console.error("hidePrompt:", error); return false; }
+  }
+  return true;
+}
+
+// ─── Clipboard (unchanged) ───────────────────────────────────────────────────
+
 export async function copyPromptToClipboard(content: string): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(content);
@@ -140,4 +178,11 @@ export async function copyPromptToClipboard(content: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+export function resolvePromptVariables(
+  content: string,
+  values: Record<string, string>,
+): string {
+  return content.replace(/\{\{(\w+)\}\}/g, (match, key: string) => values[key] ?? match);
 }

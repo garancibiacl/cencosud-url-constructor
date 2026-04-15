@@ -112,23 +112,29 @@ export function CreatePromptModal({ open, onClose, onCreated }: Props) {
     return Object.keys(next).length === 0;
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!validate()) return;
 
     const variables = extractVariables(form.content);
+    const title = form.title.trim();
 
-    saveCustomPrompt({
-      title: form.title.trim(),
-      description: form.description.trim(),
-      category: form.category as PromptCategory,
-      brand: form.brand as PromptBrand,
-      tone: form.tone as PromptTone,
-      content: form.content.trim(),
-      tags: [],
-      model: form.model.trim() || undefined,
-      variables: variables.length > 0 ? variables : undefined,
-      createdBy: creatorName,
-    });
+    const result = await saveCustomPrompt(
+      {
+        title,
+        description: form.description.trim(),
+        category:    form.category as PromptCategory,
+        brand:       form.brand    as PromptBrand,
+        tone:        form.tone     as PromptTone,
+        content:     form.content.trim(),
+        tags:        [],
+        model:       form.model.trim() || undefined,
+        variables:   variables.length > 0 ? variables : undefined,
+        createdBy:   creatorName,
+      },
+      user?.id ?? "",
+    );
+
+    if (!result) return; // error already logged in service
 
     setForm(EMPTY);
     setErrors({});
@@ -138,7 +144,7 @@ export function CreatePromptModal({ open, onClose, onCreated }: Props) {
     Swal.fire({
       title: "¡Prompt creado!",
       html: `<span style="color:#64748b;font-size:14px">
-               <strong style="color:#0f172a">"${form.title.trim()}"</strong>
+               <strong style="color:#0f172a">"${title}"</strong>
                fue agregado a tu biblioteca.
              </span>`,
       icon: "success",

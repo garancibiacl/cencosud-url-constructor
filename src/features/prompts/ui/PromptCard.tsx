@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Check, Copy, ChevronDown, ChevronUp, Trash2, UserRound, Pencil, Clock } from "lucide-react";
 import Swal from "sweetalert2";
+import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -44,6 +45,7 @@ interface Props {
 }
 
 export function PromptCard({ prompt, canDelete = false, canEdit = false, onDelete, onUpdate }: Props) {
+  const { user } = useAuth();
   const [expanded,   setExpanded]   = useState(false);
   const [copied,     setCopied]     = useState(false);
   const [editOpen,   setEditOpen]   = useState(false);
@@ -80,7 +82,7 @@ export function PromptCard({ prompt, canDelete = false, canEdit = false, onDelet
     });
 
     if (result.isConfirmed) {
-      deletePrompt(prompt.id);
+      await deletePrompt(prompt.id, user?.id ?? "");
 
       await Swal.fire({
         title: "¡Eliminado!",

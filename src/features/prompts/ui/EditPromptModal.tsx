@@ -103,12 +103,12 @@ export function EditPromptModal({ prompt, open, onClose, onUpdated }: Props) {
     return Object.keys(next).length === 0;
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!prompt || !validate()) return;
 
     const variables = extractVariables(form.content);
 
-    updateCustomPrompt(
+    const ok = await updateCustomPrompt(
       prompt.id,
       {
         title:       form.title.trim(),
@@ -122,8 +122,10 @@ export function EditPromptModal({ prompt, open, onClose, onUpdated }: Props) {
         tags:        prompt.tags,
       },
       editorName,
+      user?.id ?? "",
     );
 
+    if (!ok) return;
     onUpdated();
     onClose();
   }

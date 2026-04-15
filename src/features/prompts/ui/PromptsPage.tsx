@@ -2,7 +2,8 @@ import { useState, useMemo } from "react";
 import { Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { filterPrompts } from "../services/prompts.service";
+import { applyFilters } from "../services/prompts.service";
+import { usePrompts } from "../hooks/usePrompts";
 import { PromptFilters } from "./PromptFilters";
 import { PromptCard } from "./PromptCard";
 import { CreatePromptModal } from "./CreatePromptModal";
@@ -15,24 +16,23 @@ const CAN_DELETE_ROLES = ["admin"] as const;
 type DeletableRole = (typeof CAN_DELETE_ROLES)[number];
 
 const DEFAULT_FILTERS: PromptFiltersType = {
-  search: "",
+  search:   "",
   category: "todas",
-  brand: "todas",
-  tone: "todos",
+  brand:    "todas",
+  tone:     "todos",
 };
 
 export default function PromptsPage() {
   const { role } = useAuth();
-  const [filters, setFilters] = useState<PromptFiltersType>(DEFAULT_FILTERS);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const { prompts, loading, refresh } = usePrompts();
+  const [filters,    setFilters]    = useState<PromptFiltersType>(DEFAULT_FILTERS);
+  const [modalOpen,  setModalOpen]  = useState(false);
 
   const canDelete = CAN_DELETE_ROLES.includes(role as DeletableRole);
 
   const results = useMemo(
-    () => filterPrompts(filters),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [filters, refreshKey]
+    () => applyFilters(prompts, filters),
+    [prompts, filters],
   );
 
   return (
@@ -61,7 +61,6 @@ export default function PromptsPage() {
 
       {/* Body */}
       <div className="flex flex-1 gap-0 overflow-hidden">
-        {/* Sidebar de filtros */}
         <aside className="hidden w-72 shrink-0 overflow-y-auto border-r border-border p-6 lg:block">
           <PromptFilters
             filters={filters}
@@ -70,9 +69,13 @@ export default function PromptsPage() {
           />
         </aside>
 
-        {/* Grid de prompts */}
         <main className="flex-1 overflow-y-auto p-6">
-          {results.length === 0 ? (
+          {loading ? (
+            <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
+              <Sparkles className="h-8 w-8 animate-pulse opacity-30" />
+              <p className="text-sm">Cargando prompts…</p>
+            </div>
+          ) : results.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
               <Sparkles className="h-10 w-10 opacity-20" />
               <p className="text-sm">No se encontraron prompts con esos filtros.</p>
@@ -85,8 +88,8 @@ export default function PromptsPage() {
                   prompt={prompt}
                   canDelete={canDelete}
                   canEdit={true}
-                  onDelete={() => setRefreshKey((k) => k + 1)}
-                  onUpdate={() => setRefreshKey((k) => k + 1)}
+                  onDelete={refresh}
+                  onUpdate={refresh}
                 />
               ))}
             </div>
@@ -94,11 +97,10 @@ export default function PromptsPage() {
         </main>
       </div>
 
-      {/* Modal de creación */}
       <CreatePromptModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        onCreated={() => setRefreshKey((k) => k + 1)}
+        onCreated={refresh}
       />
     </div>
   );
