@@ -111,6 +111,8 @@ const ROLE_LABELS: Record<string, string> = {
   disenador: "Diseñador",
   programador: "Programador",
   director: "Director",
+  cencosud: "Cencosud",
+  emailing: "Emailing",
 };
 
 const ROLE_COLORS: Record<string, string> = {
@@ -118,6 +120,8 @@ const ROLE_COLORS: Record<string, string> = {
   disenador: "bg-sky-500/20 text-sky-300",
   programador: "bg-emerald-500/20 text-emerald-300",
   director: "bg-amber-500/20 text-amber-300",
+  cencosud: "bg-orange-500/20 text-orange-300",
+  emailing: "bg-violet-500/20 text-violet-300",
 };
 
 const UserInfo = ({ isOpen }: { isOpen: boolean }) => {

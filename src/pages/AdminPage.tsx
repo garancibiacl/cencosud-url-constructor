@@ -19,13 +19,15 @@ type Profile = {
   created_at: string;
 };
 
-const ROLES = ["admin", "disenador", "programador", "director"] as const;
+const ROLES = ["admin", "disenador", "programador", "director", "cencosud", "emailing"] as const;
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Administrador",
   disenador: "Diseñador",
   programador: "Programador",
   director: "Director",
+  cencosud: "Cencosud",
+  emailing: "Emailing",
 };
 
 const ROLE_COLORS: Record<string, string> = {
@@ -33,6 +35,8 @@ const ROLE_COLORS: Record<string, string> = {
   disenador: "border-primary/30 bg-primary/10 text-primary",
   programador: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600",
   director: "border-warning/30 bg-warning/10 text-warning-foreground",
+  cencosud: "border-orange-500/30 bg-orange-500/10 text-orange-600",
+  emailing: "border-violet-500/30 bg-violet-500/10 text-violet-600",
 };
 
 export default function AdminPage() {
