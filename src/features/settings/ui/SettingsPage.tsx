@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
+import Swal from "sweetalert2";
 import { motion } from "framer-motion";
 import {
   User, Lock, Mail, Loader2, Eye, EyeOff,
@@ -59,8 +59,32 @@ export default function SettingsPage() {
     setSavingProfile(true);
     const { error } = await updateProfile({ first_name: firstName.trim(), last_name: lastName.trim() });
     setSavingProfile(false);
-    if (error) toast.error(error);
-    else toast.success("Perfil actualizado");
+
+    if (error) {
+      Swal.fire({
+        title: "Error al guardar",
+        text: error,
+        icon: "error",
+        timer: 2500,
+        showConfirmButton: false,
+        customClass: { popup: "swal-brand-popup", title: "swal-brand-title" },
+      });
+    } else {
+      Swal.fire({
+        title: "¡Cambios guardados!",
+        html: `<span style="color:#64748b;font-size:14px">
+                 Tu información personal fue actualizada correctamente.
+               </span>`,
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
+        customClass: {
+          popup: "swal-brand-popup",
+          title: "swal-brand-title",
+          icon:  "swal-brand-icon",
+        },
+      });
+    }
   };
 
   /* contraseña */
@@ -80,10 +104,24 @@ export default function SettingsPage() {
     const { error } = await updatePassword(newPassword);
     setSavingPassword(false);
     if (error) {
-      toast.error(error);
+      Swal.fire({
+        title: "Error al actualizar",
+        text: error,
+        icon: "error",
+        timer: 2500,
+        showConfirmButton: false,
+        customClass: { popup: "swal-brand-popup", title: "swal-brand-title" },
+      });
     } else {
-      toast.success("Contraseña actualizada");
       setNewPassword(""); setConfirmPassword("");
+      Swal.fire({
+        title: "¡Contraseña actualizada!",
+        html: `<span style="color:#64748b;font-size:14px">Tu contraseña fue cambiada correctamente.</span>`,
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
+        customClass: { popup: "swal-brand-popup", title: "swal-brand-title", icon: "swal-brand-icon" },
+      });
     }
   };
 
@@ -94,8 +132,25 @@ export default function SettingsPage() {
     setSendingReset(true);
     const { error } = await resetPassword(user.email);
     setSendingReset(false);
-    if (error) toast.error(error);
-    else toast.success("Enlace enviado a tu correo");
+    if (error) {
+      Swal.fire({
+        title: "Error al enviar",
+        text: error,
+        icon: "error",
+        timer: 2500,
+        showConfirmButton: false,
+        customClass: { popup: "swal-brand-popup", title: "swal-brand-title" },
+      });
+    } else {
+      Swal.fire({
+        title: "¡Enlace enviado!",
+        html: `<span style="color:#64748b;font-size:14px">Revisa tu correo para restablecer la contraseña.</span>`,
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
+        customClass: { popup: "swal-brand-popup", title: "swal-brand-title", icon: "swal-brand-icon" },
+      });
+    }
   };
 
   /* ── render ── */

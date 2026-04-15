@@ -4,8 +4,9 @@ import { useAuth } from "@/hooks/useAuth";
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, mustChangePassword } = useAuth();
 
-  // While auth is resolving, render nothing (near-instant, no flash)
-  if (loading) return null;
+  // Solo blanquear en carga inicial (sin usuario conocido).
+  // Si el usuario ya está autenticado y loading es por un refresco de perfil, no interrumpir la UI.
+  if (loading && !user) return null;
   if (!user) return <Navigate to="/login" replace />;
   if (mustChangePassword) return <Navigate to="/cambio-pass" replace />;
 

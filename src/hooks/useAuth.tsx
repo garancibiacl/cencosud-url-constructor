@@ -79,6 +79,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (event === "INITIAL_SESSION") return;
       if (!mountedRef.current) return;
+
+      // USER_UPDATED solo actualiza metadatos del usuario (ej: nombre/apellido).
+      // No es necesario re-fetchar el profile de Supabase — evita el flash de pantalla blanca.
+      if (event === "USER_UPDATED") {
+        setSession(nextSession);
+        setUser(nextSession?.user ?? null);
+        return;
+      }
+
       setAuthReady(true);
       void syncProfile(nextSession);
     });
