@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ClipboardEvent as ReactClipboardEvent } from "react";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import { format, isValid, parse } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -1032,9 +1033,9 @@ const URLBuilder = () => {
   );
   const currentWeekValue = useMemo(() => getCurrentISOWeekValue(), []);
 
-  const [activeTab, setActiveTab] = useState("cms-web");
-  const [webMode, setWebMode] = useState("individual");
-  const [appMode, setAppMode] = useState("individual");
+  const [activeTab, setActiveTab] = usePersistedState("url-builder:activeTab", "cms-web");
+  const [webMode, setWebMode] = usePersistedState("url-builder:webMode", "individual");
+  const [appMode, setAppMode] = usePersistedState("url-builder:appMode", "individual");
   const [globalParams, setGlobalParams] = useState<Omit<URLParams, "descripcion">>({
     ubicacion: "",
     componente: "",
