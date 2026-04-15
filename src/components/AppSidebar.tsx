@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Moon, Sun, PanelLeftClose, PanelLeftOpen, LogOut } from "lucide-react";
+import { Moon, Sun, PanelLeftClose, PanelLeftOpen, LogOut, Settings, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 import { appModules } from "@/modules/appModules";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/hooks/useAuth";
@@ -120,6 +122,7 @@ const ROLE_COLORS: Record<string, string> = {
 
 const UserInfo = ({ isOpen }: { isOpen: boolean }) => {
   const { user, role, logout } = useAuth();
+  const [popoverOpen, setPopoverOpen] = useState(false);
   if (!user) return null;
 
   const meta = user.user_metadata ?? {};
@@ -134,55 +137,148 @@ const UserInfo = ({ isOpen }: { isOpen: boolean }) => {
     ? `${firstName} ${lastName}`.trim()
     : (user.email ?? "");
 
-  const badge = (
-    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${ROLE_COLORS[role ?? "disenador"]}`}>
-      {ROLE_LABELS[role ?? "disenador"]}
-    </span>
+  /** Shared avatar element — reused in both trigger states */
+  const Avatar = ({ size = 8 }: { size?: number }) => (
+    <div
+      className={`flex h-${size} w-${size} shrink-0 items-center justify-center rounded-full text-xs font-bold text-white uppercase`}
+      style={{
+        background: "linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1))",
+        border: "1px solid rgba(255,255,255,0.2)",
+      }}
+    >
+      {initials}
+    </div>
   );
 
+  /** Floating panel content — shared between both trigger modes */
+  const PopoverPanel = () => (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95, y: 4 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ duration: 0.15, ease: [0.25, 0.1, 0.25, 1] }}
+    >
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 py-4">
+        <div
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white uppercase"
+          style={{
+            background: "linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1))",
+            border: "1px solid rgba(255,255,255,0.2)",
+          }}
+        >
+          {initials}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="truncate text-sm font-semibold text-white">{displayName}</p>
+          <p className="truncate text-xs text-white/50">{user.email ?? ""}</p>
+          <span
+            className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${ROLE_COLORS[role ?? "disenador"]}`}
+          >
+            {ROLE_LABELS[role ?? "disenador"]}
+          </span>
+        </div>
+      </div>
+
+      <Separator className="bg-white/20" />
+
+      {/* Configuración */}
+      <div className="px-2 py-2">
+        <Link
+          to="/configuracion"
+          onClick={() => setPopoverOpen(false)}
+          className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-white/85 hover:bg-white/15 hover:text-white transition-all cursor-pointer"
+        >
+          <Settings size={16} className="shrink-0 text-white/70" />
+          Configuración
+        </Link>
+      </div>
+
+      <Separator className="bg-white/20" />
+
+      {/* Cerrar sesión */}
+      <div className="px-2 py-2">
+        <button
+          onClick={() => { setPopoverOpen(false); logout(); }}
+          className="flex w-full items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-white/85 hover:text-white hover:bg-white/15 transition-all cursor-pointer"
+        >
+          <LogOut size={16} className="shrink-0 text-white/70" />
+          Cerrar sesión
+        </button>
+      </div>
+    </motion.div>
+  );
+
+  /* ── Collapsed: avatar-only trigger ── */
   if (!isOpen) {
     return (
-      <SidebarTooltip isOpen={false} label={displayName || (user.email ?? "")}>
-        <motion.button
-          onClick={logout}
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.95 }}
-          className="flex w-full items-center justify-center rounded-lg bg-white/10 py-2.5 text-white/70 transition-all hover:bg-red-500/20 hover:text-red-300"
+      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <motion.button
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.95 }}
+                className="flex w-full items-center justify-center rounded-lg bg-white/10 py-2.5 text-white/70 transition-all hover:bg-white/15 hover:text-white"
+              >
+                <Avatar size={8} />
+              </motion.button>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent
+            side="right"
+            sideOffset={8}
+            className="border border-white/15 bg-slate-950/95 px-3 py-2 text-xs font-semibold text-white shadow-xl shadow-black/40 backdrop-blur-sm"
+          >
+            {displayName || (user.email ?? "")}
+          </TooltipContent>
+        </Tooltip>
+        <PopoverContent
+          side="right"
+          align="end"
+          sideOffset={12}
+          className="w-64 sm:w-72 p-0 border border-white/10 shadow-2xl shadow-black/50 rounded-2xl overflow-hidden"
+          style={{ background: "linear-gradient(to bottom, #0341a5, #0e7cf0)" }}
         >
-          <LogOut size={18} />
-        </motion.button>
-      </SidebarTooltip>
+          <PopoverPanel />
+        </PopoverContent>
+      </Popover>
     );
   }
 
+  /* ── Expanded: full row trigger ── */
   return (
-    <div className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2.5">
-      {/* Avatar con iniciales */}
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white uppercase"
-        style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1))", border: "1px solid rgba(255,255,255,0.2)" }}
+    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+      <PopoverTrigger asChild>
+        <motion.button
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+          className="flex w-full items-center gap-3 rounded-xl bg-white/5 px-3 py-2.5 text-left transition-all hover:bg-white/10 cursor-pointer"
+        >
+          <Avatar size={8} />
+          <div className="flex-1 min-w-0">
+            <p className="truncate text-xs font-semibold text-white/90">{displayName}</p>
+            <span
+              className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${ROLE_COLORS[role ?? "disenador"]}`}
+            >
+              {ROLE_LABELS[role ?? "disenador"]}
+            </span>
+          </div>
+          <ChevronRight
+            size={14}
+            className={`shrink-0 text-white/30 transition-transform duration-200 ${popoverOpen ? "rotate-90" : ""}`}
+          />
+        </motion.button>
+      </PopoverTrigger>
+      <PopoverContent
+        side="right"
+        align="end"
+        sideOffset={12}
+        className="w-64 sm:w-72 p-0 border border-white/10 shadow-2xl shadow-black/50 rounded-2xl overflow-hidden"
+        style={{ background: "linear-gradient(to bottom, #0341a5, #0e7cf0)" }}
       >
-        {initials}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="truncate text-xs font-semibold text-white/90">{displayName}</p>
-        {badge}
-      </div>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <motion.button
-            onClick={logout}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.92 }}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white/40 hover:bg-red-500/20 hover:text-red-300 transition-colors"
-          >
-            <LogOut size={14} />
-          </motion.button>
-        </TooltipTrigger>
-        <TooltipContent side="right" className="border-white/10 bg-slate-950/95 text-xs font-medium text-white">
-          Cerrar sesión
-        </TooltipContent>
-      </Tooltip>
-    </div>
+        <PopoverPanel />
+      </PopoverContent>
+    </Popover>
   );
 };
 

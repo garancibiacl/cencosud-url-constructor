@@ -9,12 +9,11 @@
  *  Add an entry to `appModules` with the same path used in router.tsx.
  */
 import type { LucideIcon } from "lucide-react";
-import { Code2, Link, Settings, Shield, Sparkles, Wand2 } from "lucide-react";
+import { Code2, Link, Shield, Sparkles, Wand2 } from "lucide-react";
 
 export type AppModuleId =
   | "constructor-url"
   | "banner-expand"
-  | "settings"
   | "prompts"
   | "scripts"
   | "admin";
@@ -52,12 +51,6 @@ export const appModules: AppModuleDefinition[] = [
     label: "Relleno Generativo IA",
     icon: Wand2,
     path: "/banner-expand",
-  },
-  {
-    id: "settings",
-    label: "Configuración",
-    icon: Settings,
-    path: "/configuracion",
   },
   {
     id: "admin",
