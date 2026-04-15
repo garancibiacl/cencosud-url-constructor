@@ -24,8 +24,20 @@ export interface AppModuleDefinition {
   label: string;
   icon: LucideIcon;
   path: string;
-  /** If set, only users with this role see the module */
-  adminOnly?: boolean;
+  /**
+   * Roles that can access this module.
+   * - undefined / empty → visible for ALL roles.
+   * - non-empty → only listed roles see it.
+   * "admin" always has access to every module regardless of this list.
+   */
+  allowedRoles?: AppRole[];
+}
+
+/** Utility: checks if a role can access a module */
+export function canAccessModule(mod: AppModuleDefinition, role: AppRole | null): boolean {
+  if (role === "admin") return true;
+  if (!mod.allowedRoles || mod.allowedRoles.length === 0) return true;
+  return role !== null && mod.allowedRoles.includes(role);
 }
 
 export const appModules: AppModuleDefinition[] = [
