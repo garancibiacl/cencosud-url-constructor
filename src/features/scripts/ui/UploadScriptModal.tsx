@@ -191,15 +191,16 @@ export function UploadScriptModal({ open, onClose, onUploaded }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-      <DialogContent className="max-w-xl">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90dvh] w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden rounded-2xl p-0 sm:w-full sm:max-w-xl">
+        <DialogHeader className="shrink-0 border-b px-6 py-4">
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-4 w-4 text-orange-500" />
             Cargar script .jsx
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-1">
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="space-y-4">
 
           {/* Archivo */}
           <Field label="Archivo .jsx" required error={fileError || undefined}>
@@ -285,8 +286,9 @@ export function UploadScriptModal({ open, onClose, onUploaded }: Props) {
             />
           </Field>
         </div>
+        </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0 border-t px-6 py-4">
           <Button variant="outline" onClick={handleClose}>
             Cancelar
           </Button>
