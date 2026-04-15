@@ -11,6 +11,8 @@ import NotFound from "@/pages/NotFound";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import RoleGuard from "@/components/RoleGuard";
 import LdrsLoader from "@/components/LdrsLoader";
+import { useAuth } from "@/hooks/useAuth";
+import { appModules, canAccessModule } from "@/modules/appModules";
 
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"));
@@ -39,6 +41,13 @@ function Guarded({ path, children }: { path: string; children: React.ReactNode }
   return <RoleGuard path={path}><Lazy>{children}</Lazy></RoleGuard>;
 }
 
+/** Redirects to the first module the current user's role can access */
+function DefaultRedirect() {
+  const { role } = useAuth();
+  const first = appModules.find((m) => canAccessModule(m, role));
+  return <Navigate to={first?.path ?? "/login"} replace />;
+}
+
 export default function AppRouter() {
   return (
     <Routes>
@@ -47,7 +56,7 @@ export default function AppRouter() {
       <Route path="/cambio-pass" element={<Lazy><ForceChangePassword /></Lazy>} />
 
       <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
-        <Route index element={<Navigate to="/constructor-url" replace />} />
+        <Route index element={<DefaultRedirect />} />
         <Route path="/constructor-url" element={<Guarded path="/constructor-url"><ConstructorUrlPage /></Guarded>} />
         <Route path="/banner-expand" element={<Guarded path="/banner-expand"><BannerExpandPage /></Guarded>} />
         <Route path="/configuracion" element={<Lazy><SettingsPage /></Lazy>} />
