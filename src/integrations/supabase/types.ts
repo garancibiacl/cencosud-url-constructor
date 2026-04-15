@@ -56,57 +56,6 @@ export type Database = {
         }
         Relationships: []
       }
-      scripts: {
-        Row: {
-          id: string
-          title: string
-          description: string
-          app: string
-          tags: string[]
-          prompt: string
-          code: string
-          filename: string
-          uploaded_by: string | null
-          uploaded_by_id: string | null
-          uploaded_at: string
-          updated_by: string | null
-          updated_by_id: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id: string
-          title: string
-          description?: string
-          app: string
-          tags?: string[]
-          prompt?: string
-          code: string
-          filename: string
-          uploaded_by?: string | null
-          uploaded_by_id?: string | null
-          uploaded_at?: string
-          updated_by?: string | null
-          updated_by_id?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          title?: string
-          description?: string
-          app?: string
-          tags?: string[]
-          prompt?: string
-          code?: string
-          filename?: string
-          uploaded_by?: string | null
-          uploaded_by_id?: string | null
-          uploaded_at?: string
-          updated_by?: string | null
-          updated_by_id?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       prompts: {
         Row: {
           brand: string
@@ -161,6 +110,57 @@ export type Database = {
           updated_by?: string | null
           updated_by_id?: string | null
           variables?: string[] | null
+        }
+        Relationships: []
+      }
+      scripts: {
+        Row: {
+          app: string
+          code: string
+          description: string
+          filename: string
+          id: string
+          prompt: string
+          tags: string[]
+          title: string
+          updated_at: string | null
+          updated_by: string | null
+          updated_by_id: string | null
+          uploaded_at: string
+          uploaded_by: string | null
+          uploaded_by_id: string | null
+        }
+        Insert: {
+          app?: string
+          code: string
+          description?: string
+          filename: string
+          id: string
+          prompt?: string
+          tags?: string[]
+          title: string
+          updated_at?: string | null
+          updated_by?: string | null
+          updated_by_id?: string | null
+          uploaded_at?: string
+          uploaded_by?: string | null
+          uploaded_by_id?: string | null
+        }
+        Update: {
+          app?: string
+          code?: string
+          description?: string
+          filename?: string
+          id?: string
+          prompt?: string
+          tags?: string[]
+          title?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          updated_by_id?: string | null
+          uploaded_at?: string
+          uploaded_by?: string | null
+          uploaded_by_id?: string | null
         }
         Relationships: []
       }
