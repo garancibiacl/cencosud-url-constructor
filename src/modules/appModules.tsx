@@ -76,6 +76,6 @@ export const appModules: AppModuleDefinition[] = [
     label: "Administración",
     icon: Shield,
     path: "/admin",
-    allowedRoles: [], // empty = all roles, but canAccessModule gives admin automatic access
+    allowedRoles: ["admin"],
   },
 ];
