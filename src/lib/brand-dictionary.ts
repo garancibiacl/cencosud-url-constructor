@@ -42,6 +42,14 @@ export const BRAND_DICTIONARY = {
   "zeukid": "Zeukid",
   "nestle chandelle": "Nestlé Chandelle",
   "quix": "Quix",
+  "aceite de oliva": "Aceite de Oliva",
+  "sour": "Sour",
+  "coladas": "Coladas",
+  "cerveza corona": "Cerveza Corona",
+  "royal guard": "Royal Guard",
+  "budweiser": "Budweiser",
+  "stella artois": "Stella Artois",
+  "yogurt protein goodnes": "Yogurt Protein Goodnes",
 } as const;
 
 const BRAND_ENTRIES = Object.entries(BRAND_DICTIONARY)
