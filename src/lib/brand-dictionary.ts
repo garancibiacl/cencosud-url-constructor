@@ -50,6 +50,13 @@ export const BRAND_DICTIONARY = {
   "budweiser": "Budweiser",
   "stella artois": "Stella Artois",
   "yogurt protein goodnes": "Yogurt Protein Goodnes",
+  "cerveza stones": "Cerveza Stones",
+  "stones": "Stones",
+  "co & co y punto": "Co & Co y Punto",
+  "santas ofertas black": "Santas Ofertas Black",
+  "big size cuisine & co": "Big Size Cuisine & Co",
+  "detergentes omo": "Detergentes Omo",
+  "omo": "Omo",
 } as const;
 
 const BRAND_ENTRIES = Object.entries(BRAND_DICTIONARY)
