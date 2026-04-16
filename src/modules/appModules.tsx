@@ -8,10 +8,10 @@
 import type { LucideIcon } from "lucide-react";
 import { Code2, Link, Shield, Sparkles, Wand2, Zap } from "lucide-react";
 
-type AppRole = "admin" | "disenador" | "programador" | "director" | "cencosud" | "emailing";
+type AppRole = "admin" | "disenador" | "programador" | "director" | "cencosud" | "mailing";
 
 const STANDARD_MODULE_ROLES: AppRole[] = ["disenador", "programador", "director", "cencosud"];
-const AMPSCRIPT_MODULE_ROLES: AppRole[] = ["programador", "emailing"];
+const AMPSCRIPT_MODULE_ROLES: AppRole[] = ["programador", "mailing"];
 
 export type AppModuleId =
   | "constructor-url"
