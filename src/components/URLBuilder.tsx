@@ -1216,6 +1216,10 @@ const URLBuilder = () => {
   const [bulkAppTitles, setBulkAppTitles] = usePersistedState("url-builder:bulkAppTitles", "");
   const [bulkAppUrls, setBulkAppUrls] = usePersistedState("url-builder:bulkAppUrls", "");
   const [editableAppRows, setEditableAppRows] = useState<AppBatchRow[]>([]);
+  const [appRowOverrides, setAppRowOverrides] = usePersistedState<Record<string, { cleanTitle?: string; collectionCode?: string }>>(
+    "url-builder:app-row-overrides",
+    {},
+  );
   const [bulkResolvedLinks, setBulkResolvedLinks] = useState<Record<string, string>>({});
   const [isBulkWebCopySuccess, setIsBulkWebCopySuccess] = useState(false);
   const [isBulkAppCopySuccess, setIsBulkAppCopySuccess] = useState(false);
@@ -1248,17 +1252,19 @@ const URLBuilder = () => {
   }, [batchRows]);
 
   useEffect(() => {
-    setEditableAppRows((current) => {
-      const currentByIndex = new Map(current.map((row) => [row.index, row]));
-      return appBatchRows.map((newRow) => {
-        const existing = currentByIndex.get(newRow.index);
-        if (existing && existing.dirtyTitle === newRow.dirtyTitle && existing.sourceUrl === newRow.sourceUrl) {
-          return existing;
-        }
-        return newRow;
-      });
-    });
-  }, [appBatchRows]);
+    setEditableAppRows(
+      appBatchRows.map((row) => {
+        const key = `${row.dirtyTitle}|${row.sourceUrl}`;
+        const override = appRowOverrides[key];
+        if (!override) return row;
+        return {
+          ...row,
+          ...(override.cleanTitle !== undefined ? { cleanTitle: override.cleanTitle } : {}),
+          ...(override.collectionCode !== undefined ? { collectionCode: override.collectionCode } : {}),
+        };
+      }),
+    );
+  }, [appBatchRows, appRowOverrides]);
 
   useEffect(() => {
     if (!isSingleFinalUrlEditing) {
@@ -1552,14 +1558,15 @@ const URLBuilder = () => {
     value: string,
   ) => {
     setEditableAppRows((current) =>
-      current.map((row) =>
-        row.index === rowIndex
-          ? {
-              ...row,
-              [key]: value,
-            }
-          : row,
-      ),
+      current.map((row) => {
+        if (row.index !== rowIndex) return row;
+        const overrideKey = `${row.dirtyTitle}|${row.sourceUrl}`;
+        setAppRowOverrides((prev) => ({
+          ...prev,
+          [overrideKey]: { ...prev[overrideKey], [key]: value },
+        }));
+        return { ...row, [key]: value };
+      }),
     );
   };
 
