@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type ClipboardEvent as ReactClipboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ClipboardEvent as ReactClipboardEvent } from "react";
 import { usePersistedState } from "@/hooks/usePersistedState";
+import { useOptionFrequency } from "@/hooks/useOptionFrequency";
+import { useAuth } from "@/hooks/useAuth";
 import { format, isValid, parse } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -64,6 +66,38 @@ import {
 } from "@/lib/week-options";
 
 type GlobalParamKey = Exclude<keyof URLParams, "descripcion">;
+
+const BLOCKED_WORDS = new Set([
+  "puta","puto","puta","putas","putos","mierda","mierdas","concha","conchas",
+  "culiao","culiado","culiada","culiao","weón","weon","hueon","hueón",
+  "ctm","stm","chucha","chuchas","maricon","maricón","maricones",
+  "imbecil","imbécil","idiota","idiomas","estupido","estúpido",
+  "pico","pene","penes","culo","culos","teta","tetas",
+]);
+
+const VOWELS = new Set(["a","e","i","o","u","á","é","í","ó","ú","ü"]);
+
+function hasEnoughVowels(word: string): boolean {
+  const lower = word.toLowerCase();
+  const letters = lower.replace(/[^a-záéíóúü]/g, "");
+  if (letters.length <= 3) return true; // acronyms like "DSP", "KV" are OK
+  const vowelCount = [...letters].filter((c) => VOWELS.has(c)).length;
+  return vowelCount / letters.length >= 0.15;
+}
+
+function validateCustomOption(label: string): string | null {
+  const trimmed = label.trim();
+  if (trimmed.length < 3) return "Mínimo 3 caracteres.";
+  if (trimmed.length > 60) return "Máximo 60 caracteres.";
+  if (!/[a-záéíóúüA-ZÁÉÍÓÚÜ]/.test(trimmed)) return "Debe contener al menos una letra.";
+  const words = trimmed.split(/\s+/);
+  for (const word of words) {
+    const lower = word.toLowerCase();
+    if (BLOCKED_WORDS.has(lower)) return `La palabra "${word}" no está permitida.`;
+    if (!hasEnoughVowels(word)) return `"${word}" no parece una palabra válida.`;
+  }
+  return null;
+}
 
 const CUSTOM_WEEK_LABELS: Record<string, string> = {
   s12: "KV SANTA YAPA",
@@ -176,6 +210,7 @@ const dropdownOptions: Record<GlobalParamKey, { value: string; label: string }[]
     { value: "navidad", label: "Navidad" },
     { value: "aniversario", label: "Aniversario" },
     { value: "oferta-semanal", label: "Oferta Semanal" },
+    { value: "santo-black", label: "Santo Black" },
   ],
   semana: [],
   fecha: [],
@@ -196,6 +231,9 @@ interface ComboFieldProps {
   placeholder: string;
   options: { value: string; label: string }[];
   customValueFormatter?: (value: string) => string;
+  onAddCustom?: (value: string, label: string) => void;
+  customValues?: Set<string>;
+  onRemoveCustom?: (value: string) => void;
 }
 
 const ComboField = ({
@@ -205,19 +243,29 @@ const ComboField = ({
   placeholder,
   options,
   customValueFormatter,
+  onAddCustom,
+  customValues,
+  onRemoveCustom,
 }: ComboFieldProps) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [inputError, setInputError] = useState<string | null>(null);
 
   const selectedLabel = options.find((option) => option.value === value)?.label;
 
   const handleCustomValue = () => {
-    const nextValue = customValueFormatter
-      ? customValueFormatter(search)
-      : search.trim().replace(/\s+/g, "-").toLowerCase();
-    if (!nextValue) {
+    const label = search.trim();
+    const error = validateCustomOption(label);
+    if (error) {
+      setInputError(error);
       return;
     }
+    const nextValue = customValueFormatter
+      ? customValueFormatter(search)
+      : label.replace(/\s+/g, "-").toLowerCase();
+    if (!nextValue) return;
+    setInputError(null);
+    onAddCustom?.(nextValue, label);
     onChange(nextValue);
     setSearch("");
     setOpen(false);
@@ -242,8 +290,13 @@ const ComboField = ({
             <CommandInput
               placeholder="Buscar o escribir..."
               value={search}
-              onValueChange={setSearch}
+              onValueChange={(v) => { setSearch(v); setInputError(null); }}
             />
+            {inputError && (
+              <p className="border-b border-border px-3 py-2 text-xs text-destructive">
+                {inputError}
+              </p>
+            )}
             <CommandList>
               <CommandEmpty>
                 <button
@@ -264,18 +317,35 @@ const ComboField = ({
                       setSearch("");
                       setOpen(false);
                     }}
+                    className="group flex items-center justify-between"
                   >
-                    <Check className={`mr-2 h-4 w-4 ${value === option.value ? "opacity-100" : "opacity-0"}`} />
-                    {option.label}
+                    <span className="flex items-center">
+                      <Check className={`mr-2 h-4 w-4 shrink-0 ${value === option.value ? "opacity-100" : "opacity-0"}`} />
+                      {option.label}
+                    </span>
+                    {onRemoveCustom && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onRemoveCustom(option.value); }}
+                        className="ml-2 rounded p-0.5 opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+                        title="Eliminar de la lista"
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
                   </CommandItem>
                 ))}
               </CommandGroup>
               {search.trim() && !options.some((option) => option.label.toLowerCase() === search.toLowerCase()) && (
                 <CommandGroup heading="Personalizado">
-                  <CommandItem value={`custom-${search}`} onSelect={handleCustomValue}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Usar "{search}"
-                  </CommandItem>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <CommandItem value={`custom-${search}`} onSelect={handleCustomValue} className="cursor-pointer">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Usar "{search}"
+                      </CommandItem>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Agregar a la lista</TooltipContent>
+                  </Tooltip>
                 </CommandGroup>
               )}
             </CommandList>
@@ -685,6 +755,11 @@ interface BulkEditableRowProps {
   weekOptions: WeekOption[];
   currentWeekValue: string;
   isoWeekYear: number;
+  sortedOptions: Record<GlobalParamKey, { value: string; label: string }[]>;
+  onOptionSelect: (field: string, value: string) => void;
+  onAddCustom: (field: string, value: string, label: string) => void;
+  customValueSets: Record<string, Set<string>>;
+  onRemoveCustom?: (field: string, value: string) => void;
 }
 
 const BulkEditableRow = ({
@@ -695,6 +770,11 @@ const BulkEditableRow = ({
   weekOptions,
   currentWeekValue,
   isoWeekYear,
+  sortedOptions,
+  onOptionSelect,
+  onAddCustom,
+  customValueSets,
+  onRemoveCustom,
 }: BulkEditableRowProps) => {
   const { hydrateUrl } = useUrlHydrator();
   const rowId = `row-${row.index}`;
@@ -982,8 +1062,11 @@ const BulkEditableRow = ({
                           label={field.label}
                           placeholder={field.placeholder}
                           value={localParams[field.key]}
-                          onChange={(value) => updateLocalParam(field.key, value)}
-                          options={dropdownOptions[field.key]}
+                          onChange={(value) => { updateLocalParam(field.key, value); onOptionSelect(field.key, value); }}
+                          options={sortedOptions[field.key]}
+                          onAddCustom={(value, label) => onAddCustom(field.key, value, label)}
+                          customValues={customValueSets[field.key]}
+                          onRemoveCustom={onRemoveCustom ? (value) => onRemoveCustom(field.key, value) : undefined}
                         />
                       )
                     ))}
@@ -1032,6 +1115,79 @@ const URLBuilder = () => {
     [isoWeekYear],
   );
   const currentWeekValue = useMemo(() => getCurrentISOWeekValue(), []);
+  const { role } = useAuth();
+  const isAdmin = role === "admin";
+  const { recordSelection, getSortedOptions } = useOptionFrequency("url-builder:option-frequency");
+  const [customOptions, setCustomOptions] = usePersistedState<Record<string, { value: string; label: string }[]>>(
+    "url-builder:custom-options",
+    {},
+  );
+  const [hiddenOptions, setHiddenOptions] = usePersistedState<Record<string, string[]>>(
+    "url-builder:hidden-options",
+    {},
+  );
+
+  const addCustomOption = useCallback(
+    (field: string, value: string, label: string) => {
+      setCustomOptions((prev) => {
+        const existing = prev[field] ?? [];
+        if (existing.some((o) => o.value === value)) return prev;
+        toast({ title: `"${label}" agregado a la lista`, description: `Disponible en el campo ${field} para futuras selecciones.` });
+        return { ...prev, [field]: [...existing, { value, label }] };
+      });
+    },
+    [setCustomOptions],
+  );
+
+  const removeCustomOption = useCallback(
+    (field: string, value: string) => {
+      const isCustom = (customOptions[field] ?? []).some((o) => o.value === value);
+      const removedLabel = isCustom
+        ? (customOptions[field] ?? []).find((o) => o.value === value)?.label ?? value
+        : dropdownOptions[field as GlobalParamKey]?.find((o) => o.value === value)?.label ?? value;
+
+      if (isCustom) {
+        setCustomOptions((prev) => ({
+          ...prev,
+          [field]: (prev[field] ?? []).filter((o) => o.value !== value),
+        }));
+      } else {
+        setHiddenOptions((prev) => ({
+          ...prev,
+          [field]: [...new Set([...(prev[field] ?? []), value])],
+        }));
+      }
+      toast({ title: `"${removedLabel}" eliminado de la lista` });
+    },
+    [customOptions, setCustomOptions, setHiddenOptions],
+  );
+
+  const customValueSets = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(customOptions).map(([field, opts]) => [field, new Set(opts.map((o) => o.value))]),
+      ) as Record<string, Set<string>>,
+    [customOptions],
+  );
+
+  const mergedDropdownOptions = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(dropdownOptions).map(([key, opts]) => {
+          const hidden = new Set(hiddenOptions[key] ?? []);
+          return [key, [...opts.filter((o) => !hidden.has(o.value)), ...(customOptions[key] ?? [])]];
+        }),
+      ) as typeof dropdownOptions,
+    [customOptions, hiddenOptions],
+  );
+
+  const sortedDropdownOptions = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(mergedDropdownOptions).map(([key, opts]) => [key, getSortedOptions(key, opts)]),
+      ) as typeof dropdownOptions,
+    [getSortedOptions, mergedDropdownOptions],
+  );
 
   const [activeTab, setActiveTab] = usePersistedState("url-builder:activeTab", "cms-web");
   const [webMode, setWebMode] = usePersistedState("url-builder:webMode", "individual");
@@ -1472,8 +1628,11 @@ const URLBuilder = () => {
               label={field.label}
                   placeholder={field.placeholder}
                   value={globalParams[field.key]}
-                  onChange={(value) => updateGlobalParam(field.key, value)}
-                  options={dropdownOptions[field.key]}
+                  onChange={(value) => { updateGlobalParam(field.key, value); recordSelection(field.key, value); }}
+                  options={sortedDropdownOptions[field.key]}
+                  onAddCustom={(value, label) => addCustomOption(field.key, value, label)}
+                  customValues={customValueSets[field.key]}
+                  onRemoveCustom={isAdmin ? (value) => removeCustomOption(field.key, value) : undefined}
                 />
               )
             ))}
@@ -1824,6 +1983,11 @@ const URLBuilder = () => {
                                         weekOptions={weekOptions}
                                         currentWeekValue={currentWeekValue}
                                         isoWeekYear={isoWeekYear}
+                                        sortedOptions={sortedDropdownOptions}
+                                        onOptionSelect={recordSelection}
+                                        onAddCustom={addCustomOption}
+                                        customValueSets={customValueSets}
+                                        onRemoveCustom={isAdmin ? removeCustomOption : undefined}
                                       />
                                     ))
                                   )}
