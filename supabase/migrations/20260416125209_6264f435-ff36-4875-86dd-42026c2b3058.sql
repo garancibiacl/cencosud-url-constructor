@@ -1,0 +1,1 @@
+ALTER TYPE public.app_role RENAME VALUE 'emailing' TO 'mailing';
