@@ -1248,7 +1248,16 @@ const URLBuilder = () => {
   }, [batchRows]);
 
   useEffect(() => {
-    setEditableAppRows(appBatchRows);
+    setEditableAppRows((current) => {
+      const currentByIndex = new Map(current.map((row) => [row.index, row]));
+      return appBatchRows.map((newRow) => {
+        const existing = currentByIndex.get(newRow.index);
+        if (existing && existing.dirtyTitle === newRow.dirtyTitle && existing.sourceUrl === newRow.sourceUrl) {
+          return existing;
+        }
+        return newRow;
+      });
+    });
   }, [appBatchRows]);
 
   useEffect(() => {
@@ -1348,6 +1357,8 @@ const URLBuilder = () => {
     [editableAppRows],
   );
   const bulkAppCopyValue = bulkAppClipboardRows.join("\n");
+  const editableAppRowsRef = useRef(editableAppRows);
+  editableAppRowsRef.current = editableAppRows;
 
   const updateGlobalParam = (key: GlobalParamKey, value: string) => {
     setGlobalParams((current) => {
@@ -1421,14 +1432,14 @@ const URLBuilder = () => {
   };
 
   const handleBulkAppCopy = async () => {
-    if (!bulkAppCopyValue) {
-      return;
-    }
+    const latestRows = buildBulkAppClipboardRows(editableAppRowsRef.current);
+    const latestValue = latestRows.join("\n");
+    if (!latestValue) return;
 
     const didCopy = await copyValue(
-      bulkAppCopyValue,
+      latestValue,
       "Copiado al portapapeles",
-      `${bulkAppClipboardRows.length} filas limpias copiadas al portapapeles.`,
+      `${latestRows.length} filas limpias copiadas al portapapeles.`,
     );
 
     if (didCopy) {
