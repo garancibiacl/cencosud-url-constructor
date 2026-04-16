@@ -1251,11 +1251,14 @@ const URLBuilder = () => {
     setBulkResolvedLinks({});
   }, [batchRows]);
 
+  const appRowOverridesRef = useRef(appRowOverrides);
+  appRowOverridesRef.current = appRowOverrides;
+
   useEffect(() => {
     setEditableAppRows(
       appBatchRows.map((row) => {
         const key = `${row.dirtyTitle}|${row.sourceUrl}`;
-        const override = appRowOverrides[key];
+        const override = appRowOverridesRef.current[key];
         if (!override) return row;
         return {
           ...row,
@@ -1264,7 +1267,7 @@ const URLBuilder = () => {
         };
       }),
     );
-  }, [appBatchRows, appRowOverrides]);
+  }, [appBatchRows]);
 
   useEffect(() => {
     if (!isSingleFinalUrlEditing) {
@@ -1557,16 +1560,16 @@ const URLBuilder = () => {
     key: "cleanTitle" | "collectionCode",
     value: string,
   ) => {
+    const row = editableAppRowsRef.current.find((r) => r.index === rowIndex);
+    if (row) {
+      const overrideKey = `${row.dirtyTitle}|${row.sourceUrl}`;
+      setAppRowOverrides((prev) => ({
+        ...prev,
+        [overrideKey]: { ...prev[overrideKey], [key]: value },
+      }));
+    }
     setEditableAppRows((current) =>
-      current.map((row) => {
-        if (row.index !== rowIndex) return row;
-        const overrideKey = `${row.dirtyTitle}|${row.sourceUrl}`;
-        setAppRowOverrides((prev) => ({
-          ...prev,
-          [overrideKey]: { ...prev[overrideKey], [key]: value },
-        }));
-        return { ...row, [key]: value };
-      }),
+      current.map((r) => (r.index === rowIndex ? { ...r, [key]: value } : r)),
     );
   };
 
@@ -2368,7 +2371,7 @@ const URLBuilder = () => {
                                                 )
                                               }
                                               onBlur={(event) =>
-                                                commitEditableAppCleanTitle(row.index, event.target.value)
+                                                updateEditableAppRow(row.index, "cleanTitle", event.target.value.trim())
                                               }
                                               onPaste={(event) => {
                                                 const pastedText = event.clipboardData.getData("text");
