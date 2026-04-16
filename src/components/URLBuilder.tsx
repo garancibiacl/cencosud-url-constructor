@@ -10,10 +10,13 @@ import {
   Check,
   ChevronsUpDown,
   Copy,
+  FileText,
+  Globe,
   Layers3,
   Plus,
   RotateCcw,
   Rows3,
+  Smartphone,
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -1691,32 +1694,35 @@ const URLBuilder = () => {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <TabsList className="flex h-auto w-full flex-wrap rounded-2xl bg-card p-1 shadow-card lg:w-auto">
-              <TabsTrigger
-                value="cms-web"
-                className="flex-1 rounded-xl px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground lg:flex-none"
-              >
-                CMS WEB
-              </TabsTrigger>
-              <TabsTrigger
-                value="cms-app"
-                className="flex-1 rounded-xl px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground lg:flex-none"
-              >
-                CMS APP
-              </TabsTrigger>
-            </TabsList>
-
-            {activeTab === "cms-app" && appMode === "masivo" && (
-              <Button
-                variant="brand"
-                onClick={handleBulkAppCopy}
-                disabled={!bulkAppCopyValue}
-                className="h-11 rounded-2xl px-4 gap-2"
-              >
-                {isBulkAppCopySuccess ? <Check size={16} /> : <Copy size={16} />}
-                {isBulkAppCopySuccess ? "Copiado al portapapeles" : "Copiar Todo"}
-              </Button>
-            )}
+            <div className="flex gap-3">
+              {[
+                { value: "cms-web", icon: Globe, label: "CMS Web", desc: "Constructor de URLs" },
+                { value: "cms-app", icon: Smartphone, label: "CMS App", desc: "Limpieza de títulos" },
+              ].map(({ value, icon: Icon, label, desc }) => {
+                const active = activeTab === value;
+                return (
+                  <button
+                    key={value}
+                    onClick={() => setActiveTab(value)}
+                    className={`group flex items-center gap-3.5 rounded-2xl border px-5 py-3 text-left transition-all duration-200 ${
+                      active
+                        ? "border-primary/30 bg-gradient-to-br from-primary to-primary/80 shadow-lg shadow-primary/20"
+                        : "border-border bg-card shadow-sm hover:border-primary/30 hover:shadow-md"
+                    }`}
+                  >
+                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                      active ? "bg-white/20" : "bg-muted group-hover:bg-primary/10"
+                    }`}>
+                      <Icon size={18} className={active ? "text-white" : "text-muted-foreground group-hover:text-primary"} />
+                    </div>
+                    <div>
+                      <p className={`text-sm font-bold leading-tight tracking-wide ${active ? "text-white" : "text-foreground"}`}>{label}</p>
+                      <p className={`text-[11px] leading-tight ${active ? "text-white/70" : "text-muted-foreground"}`}>{desc}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <AnimatePresence mode="wait">
@@ -1735,22 +1741,33 @@ const URLBuilder = () => {
                           </p>
                         </div>
 
-                        <Tabs value={webMode} onValueChange={setWebMode}>
-                          <TabsList className="h-auto rounded-2xl bg-secondary p-1 shadow-inner">
-                            <TabsTrigger
-                              value="individual"
-                              className="rounded-xl px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                            >
-                              Modo Individual
-                            </TabsTrigger>
-                            <TabsTrigger
-                              value="masivo"
-                              className="rounded-xl px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                            >
-                              Modo Masivo
-                            </TabsTrigger>
-                          </TabsList>
-                        </Tabs>
+                        <div className="flex gap-2">
+                          {[
+                            { value: "individual", icon: FileText, label: "Individual", desc: "Un título a la vez" },
+                            { value: "masivo", icon: Rows3, label: "Masivo", desc: "Procesar en lote" },
+                          ].map(({ value, icon: Icon, label, desc }) => {
+                            const active = webMode === value;
+                            return (
+                              <button
+                                key={value}
+                                onClick={() => setWebMode(value)}
+                                className={`flex items-center gap-3 rounded-2xl border px-4 py-2.5 text-left transition-all duration-200 ${
+                                  active
+                                    ? "border-primary bg-primary/8 shadow-sm"
+                                    : "border-border bg-card hover:border-primary/40 hover:bg-muted/40"
+                                }`}
+                              >
+                                <div className={`rounded-xl p-1.5 transition-colors ${active ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}>
+                                  <Icon size={15} />
+                                </div>
+                                <div>
+                                  <p className={`text-sm font-semibold leading-tight ${active ? "text-primary" : "text-foreground"}`}>{label}</p>
+                                  <p className="text-[11px] leading-tight text-muted-foreground">{desc}</p>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </section>
 
@@ -2055,22 +2072,33 @@ const URLBuilder = () => {
                           </p>
                         </div>
 
-                        <Tabs value={appMode} onValueChange={setAppMode}>
-                          <TabsList className="h-auto rounded-2xl bg-secondary p-1 shadow-inner">
-                            <TabsTrigger
-                              value="individual"
-                              className="rounded-xl px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                            >
-                              Modo Individual
-                            </TabsTrigger>
-                            <TabsTrigger
-                              value="masivo"
-                              className="rounded-xl px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                            >
-                              Modo Masivo
-                            </TabsTrigger>
-                          </TabsList>
-                        </Tabs>
+                        <div className="flex gap-2">
+                          {[
+                            { value: "individual", icon: FileText, label: "Individual", desc: "Un título a la vez" },
+                            { value: "masivo", icon: Rows3, label: "Masivo", desc: "Procesar en lote" },
+                          ].map(({ value, icon: Icon, label, desc }) => {
+                            const active = appMode === value;
+                            return (
+                              <button
+                                key={value}
+                                onClick={() => setAppMode(value)}
+                                className={`flex items-center gap-3 rounded-2xl border px-4 py-2.5 text-left transition-all duration-200 ${
+                                  active
+                                    ? "border-primary bg-primary/8 shadow-sm"
+                                    : "border-border bg-card hover:border-primary/40 hover:bg-muted/40"
+                                }`}
+                              >
+                                <div className={`rounded-xl p-1.5 transition-colors ${active ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}>
+                                  <Icon size={15} />
+                                </div>
+                                <div>
+                                  <p className={`text-sm font-semibold leading-tight ${active ? "text-primary" : "text-foreground"}`}>{label}</p>
+                                  <p className="text-[11px] leading-tight text-muted-foreground">{desc}</p>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </section>
 
@@ -2440,18 +2468,43 @@ const URLBuilder = () => {
                           </div>
                         </div>
 
-                        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                          <p className="text-sm text-muted-foreground">
-                            El boton copia cada fila como `Titulo Limpio[TAB]10047` para pegar directo en planillas.
-                          </p>
-                          <button
-                            onClick={handleBulkAppCopy}
-                            disabled={!bulkAppCopyValue}
-                            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#EA7120] px-5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#d96517] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            {isBulkAppCopySuccess ? <Check size={16} /> : <Copy size={16} />}
-                            {isBulkAppCopySuccess ? "Copiado al portapapeles" : "Copiar Todo"}
-                          </button>
+                        <div className="mt-6 flex items-center justify-between gap-4 rounded-2xl border border-border bg-muted/40 px-5 py-3">
+                          <div className="flex items-center gap-3">
+                            {bulkAppClipboardRows.length > 0 ? (
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                                <Check size={11} />
+                                {bulkAppClipboardRows.length} {bulkAppClipboardRows.length === 1 ? "fila lista" : "filas listas"}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">Sin filas listas para copiar</span>
+                            )}
+                            {editableAppRows.length > 0 && bulkAppClipboardRows.length < editableAppRows.length && (
+                              <span className="text-xs text-muted-foreground">
+                                · {editableAppRows.length - bulkAppClipboardRows.length} incompletas
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => { setBulkAppTitles(""); setBulkAppUrls(""); setAppRowOverrides({}); }}
+                              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted-foreground transition-colors hover:border-destructive/50 hover:text-destructive"
+                            >
+                              <RotateCcw size={12} />
+                              Limpiar filas
+                            </button>
+                            <button
+                              onClick={handleBulkAppCopy}
+                              disabled={!bulkAppCopyValue}
+                              className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#EA7120] px-4 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#d96517] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              {isBulkAppCopySuccess ? <Check size={14} /> : <Copy size={14} />}
+                              {isBulkAppCopySuccess
+                                ? "Copiado"
+                                : bulkAppClipboardRows.length > 0
+                                  ? `Copiar ${bulkAppClipboardRows.length} ${bulkAppClipboardRows.length === 1 ? "fila" : "filas"}`
+                                  : "Copiar todo"}
+                            </button>
+                          </div>
                         </div>
                       </section>
                     )}
