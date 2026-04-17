@@ -89,6 +89,9 @@ export async function deleteFile(file: FileRecord): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+/** Public production base URL for shareable links. */
+export const PUBLIC_APP_BASE_URL = "https://aguapp.vercel.app";
+
 export function buildShareUrl(slug: string): string {
-  return `${window.location.origin}/banco-archivos/${slug}`;
+  return `${PUBLIC_APP_BASE_URL}/banco-archivos/${slug}`;
 }
