@@ -188,6 +188,7 @@ export async function deleteFile(file: FileRecord): Promise<void> {
 
 export const PUBLIC_APP_BASE_URL = "https://aguapp.vercel.app";
 
+/** Public preview page URL (no login required). */
 export function buildShareUrl(slug: string): string {
-  return `${PUBLIC_APP_BASE_URL}/banco-archivos/${slug}`;
+  return `${PUBLIC_APP_BASE_URL}/p/${slug}`;
 }

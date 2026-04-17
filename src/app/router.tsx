@@ -26,6 +26,7 @@ const AMPscriptBuilderPage = lazy(() => import("@/features/ampscript-builder/ui/
 const AdminPage = lazy(() => import("@/pages/AdminPage"));
 const FileBankPage = lazy(() => import("@/features/file-bank/ui/FileBankPage"));
 const SharedFilePage = lazy(() => import("@/features/file-bank/ui/SharedFilePage"));
+const PublicFilePage = lazy(() => import("@/features/file-bank/ui/PublicFilePage"));
 
 function PageLoader() {
   return (
@@ -60,6 +61,9 @@ export default function AppRouter() {
       <Route path="/login" element={<Lazy><LoginPage /></Lazy>} />
       <Route path="/reset-password" element={<Lazy><ResetPasswordPage /></Lazy>} />
       <Route path="/cambio-pass" element={<Lazy><ForceChangePassword /></Lazy>} />
+
+      {/* Public file preview — no login, no AppShell */}
+      <Route path="/p/:slug" element={<Lazy><PublicFilePage /></Lazy>} />
 
       <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
         <Route index element={<DefaultRedirect />} />
