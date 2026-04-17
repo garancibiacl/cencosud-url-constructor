@@ -2133,39 +2133,37 @@ const URLBuilder = () => {
                         </section>
 
                         <section className="rounded-[28px] border border-primary/10 bg-primary p-6 shadow-elevated md:p-8">
-                          <div className="mb-6 flex items-start justify-between gap-4">
-                            <div>
-                              <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-primary-foreground/72">
-                                Previsualizacion
-                              </h3>
-                              <p className="mt-2 max-w-sm text-sm leading-6 text-primary-foreground/70">
-                                Los resultados quedan listos para copiar de forma individual.
-                              </p>
-                            </div>
-
-                            <Button
-                              variant="brand"
-                              onClick={() =>
-                                copyValue(
-                                  `${displayedSingleAppCleanTitle} --> ${displayedSingleAppCollectionCode}`,
-                                  "Contenido copiado",
-                                  "Se copiaron Titulo Limpio y Codigo Coleccion.",
-                                )
-                              }
-                              disabled={!displayedSingleAppCleanTitle || !displayedSingleAppCollectionCode}
-                              className="h-11 whitespace-nowrap rounded-2xl px-4 gap-2"
-                            >
-                              <Copy size={16} />
-                              Copiar todo
-                            </Button>
-                          </div>
-
-                          <div className="space-y-4">
-                            <div className="rounded-2xl bg-black/10 p-4">
-                              <div className="flex items-center justify-between gap-3">
-                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-foreground/72">
-                                  Titulo Limpio
-                                </p>
+                          <div className="flex flex-col space-y-4">
+                            <div className="rounded-2xl bg-white/95 p-3 shadow-sm">
+                              <div className="flex items-center gap-2">
+                                <input
+                                  ref={singleAppTitleInputRef}
+                                  type="text"
+                                  value={displayedSingleAppCleanTitle}
+                                  placeholder="Nectar Watt's"
+                                  onChange={(event) => {
+                                    setSingleAppCleanTitleDraft(event.target.value);
+                                    setHasManualSingleAppTitle(true);
+                                  }}
+                                  onPaste={(event) => {
+                                    const pasted = event.clipboardData.getData("text");
+                                    event.preventDefault();
+                                    const titled = pasted
+                                      .toLowerCase()
+                                      .replace(/(?:^|\s)\S/g, (c) => c.toUpperCase());
+                                    setSingleAppCleanTitleDraft(titled);
+                                    setHasManualSingleAppTitle(true);
+                                  }}
+                                  onKeyDown={(event) => {
+                                    if (event.key === "Escape") {
+                                      event.preventDefault();
+                                      setSingleAppCleanTitleDraft(singleAppCleanTitle);
+                                      setHasManualSingleAppTitle(false);
+                                    }
+                                  }}
+                                  className="h-11 min-w-0 flex-1 rounded-xl bg-transparent px-3 text-lg font-semibold text-primary outline-none placeholder:text-primary/40"
+                                  aria-label="Titulo limpio editable"
+                                />
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <button
@@ -2177,7 +2175,7 @@ const URLBuilder = () => {
                                         )
                                       }
                                       disabled={!displayedSingleAppCleanTitle}
-                                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-primary-foreground/60 transition-colors hover:bg-white/10 hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                                      className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-primary/50 transition-colors hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
                                       aria-label="Copiar titulo limpio"
                                     >
                                       <Copy size={14} />
@@ -2186,63 +2184,29 @@ const URLBuilder = () => {
                                   <TooltipContent side="top">Copiar en el portapapeles</TooltipContent>
                                 </Tooltip>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => setIsSingleAppTitleEditing(true)}
-                                className={`mt-2 block w-full rounded-xl border text-left transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/20 ${
-                                  isSingleAppTitleEditing
-                                    ? "border-white/30 bg-black/15 ring-4 ring-white/10"
-                                    : hasManualSingleAppTitle
-                                      ? "border-white/20 bg-black/10"
-                                      : "border-transparent hover:bg-black/10"
-                                }`}
-                                aria-label="Editar titulo limpio"
-                              >
+                            </div>
+
+                            <div className="rounded-2xl bg-white/95 p-3 shadow-sm">
+                              <div className="flex items-center gap-2">
                                 <input
-                                  ref={singleAppTitleInputRef}
+                                  ref={singleAppCodeInputRef}
                                   type="text"
-                                  value={displayedSingleAppCleanTitle || "Nectar Watt's"}
+                                  value={displayedSingleAppCollectionCode}
+                                  placeholder="10047"
                                   onChange={(event) => {
-                                    setSingleAppCleanTitleDraft(
-                                      formatEditableCleanTitleInput(event.target.value),
-                                    );
-                                    setHasManualSingleAppTitle(true);
-                                  }}
-                                  onPaste={(event) => {
-                                    const pastedText = event.clipboardData.getData("text");
-                                    event.preventDefault();
-                                    setSingleAppCleanTitleDraft(
-                                      formatEditableCleanTitleInput(pastedText),
-                                    );
-                                    setHasManualSingleAppTitle(true);
-                                  }}
-                                  onFocus={() => setIsSingleAppTitleEditing(true)}
-                                  onBlur={(event) => {
-                                    setSingleAppCleanTitleDraft(
-                                      formatEditableCleanTitleInput(event.target.value),
-                                    );
-                                    setHasManualSingleAppTitle(true);
-                                    setIsSingleAppTitleEditing(false);
+                                    setSingleAppCollectionCodeDraft(event.target.value);
+                                    setHasManualSingleAppCode(true);
                                   }}
                                   onKeyDown={(event) => {
                                     if (event.key === "Escape") {
                                       event.preventDefault();
-                                      setSingleAppCleanTitleDraft(singleAppCleanTitle);
-                                      setHasManualSingleAppTitle(false);
-                                      setIsSingleAppTitleEditing(false);
+                                      setSingleAppCollectionCodeDraft(singleAppCollectionCode);
+                                      setHasManualSingleAppCode(false);
                                     }
                                   }}
-                                  className="h-11 w-full rounded-xl bg-transparent px-3 text-lg font-semibold text-primary-foreground/95 outline-none placeholder:text-primary-foreground/40"
-                                  aria-label="Titulo limpio editable"
+                                  className="h-11 min-w-0 flex-1 rounded-xl bg-transparent px-3 font-mono text-lg font-semibold text-primary outline-none placeholder:text-primary/40"
+                                  aria-label="Codigo coleccion editable"
                                 />
-                              </button>
-                            </div>
-
-                            <div className="rounded-2xl bg-black/10 p-4">
-                              <div className="flex items-center justify-between gap-3">
-                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-foreground/72">
-                                  Codigo Coleccion
-                                </p>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <button
@@ -2254,7 +2218,7 @@ const URLBuilder = () => {
                                         )
                                       }
                                       disabled={!displayedSingleAppCollectionCode}
-                                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-primary-foreground/60 transition-colors hover:bg-white/10 hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                                      className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-primary/50 transition-colors hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
                                       aria-label="Copiar codigo coleccion"
                                     >
                                       <Copy size={14} />
@@ -2263,44 +2227,22 @@ const URLBuilder = () => {
                                   <TooltipContent side="top">Copiar en el portapapeles</TooltipContent>
                                 </Tooltip>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => setIsSingleAppCodeEditing(true)}
-                                className={`mt-2 block w-full rounded-xl border text-left transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/20 ${
-                                  isSingleAppCodeEditing
-                                    ? "border-white/30 bg-black/15 ring-4 ring-white/10"
-                                    : hasManualSingleAppCode
-                                      ? "border-white/20 bg-black/10"
-                                      : "border-transparent hover:bg-black/10"
-                                }`}
-                                aria-label="Editar codigo coleccion"
-                              >
-                                <input
-                                  ref={singleAppCodeInputRef}
-                                  type="text"
-                                  value={displayedSingleAppCollectionCode || "10047"}
-                                  onChange={(event) => {
-                                    setSingleAppCollectionCodeDraft(event.target.value);
-                                    setHasManualSingleAppCode(true);
-                                  }}
-                                  onFocus={() => setIsSingleAppCodeEditing(true)}
-                                  onBlur={() => {
-                                    setHasManualSingleAppCode(true);
-                                    setIsSingleAppCodeEditing(false);
-                                  }}
-                                  onKeyDown={(event) => {
-                                    if (event.key === "Escape") {
-                                      event.preventDefault();
-                                      setSingleAppCollectionCodeDraft(singleAppCollectionCode);
-                                      setHasManualSingleAppCode(false);
-                                      setIsSingleAppCodeEditing(false);
-                                    }
-                                  }}
-                                  className="h-11 w-full rounded-xl bg-transparent px-3 font-mono text-lg font-semibold text-primary-foreground/95 outline-none placeholder:text-primary-foreground/40"
-                                  aria-label="Codigo coleccion editable"
-                                />
-                              </button>
                             </div>
+
+                            <button
+                              onClick={() =>
+                                copyValue(
+                                  `${displayedSingleAppCleanTitle} --> ${displayedSingleAppCollectionCode}`,
+                                  "Contenido copiado",
+                                  "Se copiaron Titulo Limpio y Codigo Coleccion.",
+                                )
+                              }
+                              disabled={!displayedSingleAppCleanTitle || !displayedSingleAppCollectionCode}
+                              className="inline-flex w-1/2 h-11 ml-auto items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-500 to-orange-400 text-sm font-bold text-white shadow-lg shadow-orange-500/40 transition-all hover:from-orange-600 hover:to-orange-500 hover:shadow-xl hover:shadow-orange-500/50 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+                            >
+                              <Copy size={16} />
+                              Copiar todo
+                            </button>
                           </div>
                         </section>
                       </div>
