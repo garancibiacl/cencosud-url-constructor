@@ -1,6 +1,18 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Loader2, Download, FileText, Copy, Check, ExternalLink } from "lucide-react";
+import { motion } from "framer-motion";
+import {
+  Loader2,
+  Download,
+  FileText,
+  Copy,
+  Check,
+  ExternalLink,
+  Calendar,
+  HardDrive,
+  User,
+  ShieldCheck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { getFileBySlug } from "../services/file-bank.service";
@@ -9,7 +21,7 @@ import type { FileRecord } from "../logic/file-bank.types";
 
 /**
  * Public preview page — accessible without login.
- * Shows inline preview by file type and provides a manual download button.
+ * Branded with Aguapp corporate blue, sidebar logo, and modernized UX.
  */
 export default function PublicFilePage() {
   const { slug } = useParams<{ slug: string }>();
@@ -42,20 +54,31 @@ export default function PublicFilePage() {
     setTimeout(() => setCopied(false), 1500);
   };
 
+  // Brand background — same deep blue as the sidebar
+  const brandBg =
+    "bg-[radial-gradient(ellipse_at_top,_#0a4fb8_0%,_#0341a5_45%,_#01307a_100%)]";
+
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">
-        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Cargando...
+      <div className={`flex min-h-screen items-center justify-center ${brandBg} text-white/90`}>
+        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Cargando archivo…
       </div>
     );
   }
 
   if (error || !file) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background p-8 text-center">
-        <FileText className="h-12 w-12 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">{error ?? "Archivo no disponible."}</p>
-        <a href="https://aguapp.vercel.app" className="text-sm text-primary hover:underline">
+      <div className={`flex min-h-screen flex-col items-center justify-center gap-4 ${brandBg} p-8 text-center`}>
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm ring-1 ring-white/20">
+          <FileText className="h-10 w-10 text-white/80" />
+        </div>
+        <p className="max-w-sm text-base font-medium text-white/90">
+          {error ?? "Archivo no disponible."}
+        </p>
+        <a
+          href="https://aguapp.vercel.app"
+          className="rounded-full bg-white/15 px-5 py-2 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/25"
+        >
           Ir a Aguapp
         </a>
       </div>
@@ -80,50 +103,89 @@ export default function PublicFilePage() {
   const isImage = storedType.startsWith("image/") || (isGenericStored && imageExts.includes(ext));
   const isVideo = storedType.startsWith("video/") || (isGenericStored && videoExts.includes(ext));
   const isAudio = storedType.startsWith("audio/") || (isGenericStored && audioExts.includes(ext));
-  const t = isVideo
-    ? `video/${ext === "mov" ? "quicktime" : ext}`
+  const displayType = isVideo
+    ? "Video"
     : isAudio
-      ? `audio/${ext}`
+      ? "Audio"
       : isImage
-        ? `image/${ext === "jpg" ? "jpeg" : ext}`
-        : storedType;
+        ? "Imagen"
+        : isPdf
+          ? "PDF"
+          : (storedType.split("/")[1] || "Archivo").toUpperCase();
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
+    <div className={`flex min-h-screen flex-col ${brandBg}`}>
+      {/* Brand header */}
+      <header className="border-b border-white/10 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <a
             href="https://aguapp.vercel.app"
-            className="flex items-center gap-2 text-sm font-bold text-primary"
+            className="flex items-center gap-2 transition hover:opacity-90"
+            aria-label="Aguapp"
           >
-            <span className="text-lg">💧</span>
-            <span>Aguapp</span>
+            <img src="/logo.png" alt="Aguapp" className="h-10 w-auto" />
           </a>
-          <span className="hidden text-xs text-muted-foreground sm:inline">
-            Automatiza · Optimiza · Acelera
-          </span>
+          <div className="hidden items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/85 backdrop-blur-sm sm:flex">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            <span>Automatiza · Optimiza · Acelera</span>
+          </div>
         </div>
       </header>
 
-      {/* Title bar */}
-      <div className="border-b border-border bg-card">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6">
-          <div className="min-w-0">
-            <h1 className="truncate text-xl font-bold text-foreground sm:text-2xl">
-              {file.title}
-            </h1>
-            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-              {formatBytes(file.file_size)} ·{" "}
-              {new Date(file.created_at).toLocaleDateString("es-CL")}
-              {file.uploaded_by_email ? ` · ${file.uploaded_by_email}` : ""}
-            </p>
-            {file.description && (
-              <p className="mt-2 max-w-2xl text-sm text-foreground/80">{file.description}</p>
-            )}
+      {/* Hero / file title card */}
+      <section className="px-4 pb-2 pt-6 sm:px-6 sm:pt-10">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          className="mx-auto flex w-full max-w-6xl flex-col gap-5 rounded-3xl border border-white/15 bg-white/10 p-5 shadow-2xl shadow-black/20 backdrop-blur-md sm:flex-row sm:items-start sm:justify-between sm:p-7"
+        >
+          <div className="flex min-w-0 items-start gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400/30 to-white/5 ring-1 ring-white/30">
+              <FileText className="h-7 w-7 text-white" />
+            </div>
+            <div className="min-w-0">
+              <span className="inline-flex items-center rounded-full bg-cyan-400/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-cyan-100 ring-1 ring-cyan-300/40">
+                {displayType}
+              </span>
+              <h1 className="mt-2 break-words text-xl font-bold leading-tight text-white sm:text-2xl">
+                {file.title}
+              </h1>
+              {file.description && (
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/80">
+                  {file.description}
+                </p>
+              )}
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-white/70">
+                <span className="inline-flex items-center gap-1.5">
+                  <HardDrive className="h-3.5 w-3.5" />
+                  {formatBytes(file.file_size)}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5" />
+                  {new Date(file.created_at).toLocaleDateString("es-CL", {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </span>
+                {file.uploaded_by_email && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <User className="h-3.5 w-3.5" />
+                    {file.uploaded_by_email}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="flex shrink-0 gap-2">
-            <Button variant="outline" size="sm" onClick={copyLink}>
+
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={copyLink}
+              className="border-white/25 bg-white/10 text-white backdrop-blur-sm hover:bg-white/20 hover:text-white"
+            >
               {copied ? (
                 <Check className="mr-1.5 h-4 w-4" />
               ) : (
@@ -131,18 +193,27 @@ export default function PublicFilePage() {
               )}
               {copied ? "Copiado" : "Copiar link"}
             </Button>
-            <Button asChild size="sm">
+            <Button
+              asChild
+              size="sm"
+              className="bg-cyan-400 text-[#01307a] shadow-lg shadow-cyan-500/30 hover:bg-cyan-300"
+            >
               <a href={file.file_url} download={file.title}>
                 <Download className="mr-1.5 h-4 w-4" /> Descargar
               </a>
             </Button>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </section>
 
       {/* Preview area */}
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col p-4 sm:p-6">
-        <div className="flex flex-1 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-6 sm:px-6 sm:py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
+          className="flex flex-1 overflow-hidden rounded-3xl border border-white/15 bg-white/95 shadow-2xl shadow-black/30"
+        >
           {isPdf && (
             <iframe
               src={file.file_url}
@@ -151,11 +222,11 @@ export default function PublicFilePage() {
             />
           )}
           {isImage && (
-            <div className="flex w-full items-center justify-center p-4">
+            <div className="flex w-full items-center justify-center bg-slate-50 p-4 sm:p-6">
               <img
                 src={file.file_url}
                 alt={file.title}
-                className="max-h-[80vh] max-w-full rounded-lg object-contain"
+                className="max-h-[80vh] max-w-full rounded-xl object-contain shadow-md"
                 loading="lazy"
               />
             </div>
@@ -166,36 +237,36 @@ export default function PublicFilePage() {
                 src={file.file_url}
                 controls
                 preload="metadata"
-                className="max-h-[80vh] w-full rounded-lg"
+                className="max-h-[80vh] w-full rounded-xl"
               >
                 Tu navegador no soporta video HTML5.
               </video>
             </div>
           )}
           {isAudio && (
-            <div className="flex w-full items-center justify-center p-8">
+            <div className="flex w-full items-center justify-center bg-slate-50 p-10">
               <audio src={file.file_url} controls preload="metadata" className="w-full max-w-xl">
                 Tu navegador no soporta audio HTML5.
               </audio>
             </div>
           )}
           {!isPdf && !isImage && !isVideo && !isAudio && (
-            <div className="flex w-full flex-col items-center justify-center gap-4 p-12 text-center">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-                <FileText className="h-10 w-10 text-primary" />
+            <div className="flex w-full flex-col items-center justify-center gap-5 bg-slate-50 p-12 text-center">
+              <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-[#0341a5] to-[#01307a] shadow-lg">
+                <FileText className="h-12 w-12 text-white" />
               </div>
               <div>
-                <p className="text-base font-semibold text-foreground">{file.title}</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {t || "Archivo"} · {formatBytes(file.file_size)}
+                <p className="text-base font-bold text-slate-900">{file.title}</p>
+                <p className="mt-1 text-sm text-slate-500">
+                  {displayType} · {formatBytes(file.file_size)}
                 </p>
-                <p className="mt-3 max-w-md text-sm text-muted-foreground">
+                <p className="mt-3 max-w-md text-sm text-slate-600">
                   La vista previa no está disponible para este tipo de archivo. Descárgalo para
                   abrirlo en tu equipo.
                 </p>
               </div>
               <div className="flex flex-wrap justify-center gap-2">
-                <Button asChild>
+                <Button asChild className="bg-[#0341a5] text-white hover:bg-[#01307a]">
                   <a href={file.file_url} download={file.title}>
                     <Download className="mr-2 h-4 w-4" /> Descargar archivo
                   </a>
@@ -208,12 +279,15 @@ export default function PublicFilePage() {
               </div>
             </div>
           )}
-        </div>
+        </motion.div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-card px-4 py-3 text-center text-xs text-muted-foreground sm:px-6">
-        Compartido con Aguapp · Banco de Archivos
+      <footer className="border-t border-white/10 px-4 py-4 text-center text-xs text-white/70 sm:px-6">
+        <a href="https://aguapp.vercel.app" className="font-semibold text-white hover:underline">
+          Aguapp
+        </a>{" "}
+        · Banco de Archivos · Compartido de forma segura
       </footer>
     </div>
   );
