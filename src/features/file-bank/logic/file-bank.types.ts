@@ -13,7 +13,8 @@ export interface FileRecord {
   updated_at: string;
 }
 
-export const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
+export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024 * 1024; // 5 GB
+export const RESUMABLE_THRESHOLD_BYTES = 6 * 1024 * 1024; // archivos > 6 MB usan TUS
 
 export const ALLOWED_MIME_TYPES = [
   "application/pdf",
