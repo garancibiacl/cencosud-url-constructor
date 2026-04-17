@@ -1,6 +1,7 @@
 import * as tus from "tus-js-client";
 import { supabase } from "@/integrations/supabase/client";
 import { uniqueSlug } from "../logic/slug";
+import { resolveMimeType, getExtension } from "../logic/mime";
 import {
   ALLOWED_MIME_TYPES,
   MAX_FILE_SIZE_BYTES,
