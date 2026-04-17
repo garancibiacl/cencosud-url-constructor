@@ -23,10 +23,10 @@ export function FileCard({ file, onPreview, onDelete }: Props) {
   const isPdf = file.file_type === "application/pdf";
 
   const copyLink = async () => {
-    const url = buildShareUrl(file.slug);
-    await navigator.clipboard.writeText(url);
+    // Link directo al archivo en Storage: público, sin login, sin app
+    await navigator.clipboard.writeText(file.file_url);
     setCopied(true);
-    toast({ title: "Link copiado", description: url });
+    toast({ title: "Link público copiado", description: "Cualquiera con el link puede ver/descargar el archivo." });
     setTimeout(() => setCopied(false), 1500);
   };
 
