@@ -51,16 +51,13 @@ export default function AdminAccesosPage() {
 
   const fetchLogs = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("access_logs")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(500);
+    const { data, error } = await supabase.functions.invoke("admin-access-logs");
 
-    if (error) {
-      toast.error("Error al cargar el registro de accesos");
+    if (error || data?.error) {
+      console.error("[admin-access-logs]", error ?? data?.error);
+      toast.error(data?.error ?? "Error al cargar el registro de accesos");
     } else {
-      setLogs((data as AccessLog[]) ?? []);
+      setLogs((data?.logs as AccessLog[]) ?? []);
     }
     setLoading(false);
   };

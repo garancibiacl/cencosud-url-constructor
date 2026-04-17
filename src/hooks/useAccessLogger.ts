@@ -35,12 +35,14 @@ export function useAccessLogger() {
 
     lastLoggedPath.current = location.pathname;
 
-    void supabase.from("access_logs").insert({
+    supabase.from("access_logs").insert({
       user_id: user.id,
       email: user.email ?? "",
       event_type: "module_visit",
       module_path: resolved.path,
       module_label: resolved.label,
+    }).then(({ error }) => {
+      if (error) console.error("[access-log] insert error:", error.message, error);
     });
   }, [location.pathname, user]);
 }

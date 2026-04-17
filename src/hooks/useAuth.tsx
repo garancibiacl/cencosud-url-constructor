@@ -103,10 +103,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (!error && data.user) {
-      void supabase.from("access_logs").insert({
+      supabase.from("access_logs").insert({
         user_id: data.user.id,
         email: data.user.email ?? email,
         event_type: "login",
+      }).then(({ error: logErr }) => {
+        if (logErr) console.error("[access-log] login insert error:", logErr.message);
       });
     }
     return { error: error?.message ?? null };
