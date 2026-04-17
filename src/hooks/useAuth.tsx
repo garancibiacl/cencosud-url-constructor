@@ -80,9 +80,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === "INITIAL_SESSION") return;
       if (!mountedRef.current) return;
 
-      // USER_UPDATED solo actualiza metadatos del usuario (ej: nombre/apellido).
-      // No es necesario re-fetchar el profile de Supabase — evita el flash de pantalla blanca.
-      if (event === "USER_UPDATED") {
+      // TOKEN_REFRESHED y USER_UPDATED no cambian el perfil/rol — solo actualizan la sesión
+      // en memoria para evitar el flash de pantalla blanca al volver a la pestaña.
+      if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
         setSession(nextSession);
         setUser(nextSession?.user ?? null);
         return;
