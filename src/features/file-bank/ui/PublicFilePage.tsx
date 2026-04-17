@@ -180,10 +180,9 @@ export default function PublicFilePage() {
 
           <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
             <Button
-              variant="outline"
               size="sm"
               onClick={copyLink}
-              className="border-white/25 bg-white/10 text-white backdrop-blur-sm hover:bg-white/20 hover:text-white"
+              className="bg-cyan-400 text-[#01307a] shadow-lg shadow-cyan-500/30 hover:bg-cyan-300"
             >
               {copied ? (
                 <Check className="mr-1.5 h-4 w-4" />
@@ -191,15 +190,6 @@ export default function PublicFilePage() {
                 <Copy className="mr-1.5 h-4 w-4" />
               )}
               {copied ? "Copiado" : "Copiar link"}
-            </Button>
-            <Button
-              asChild
-              size="sm"
-              className="bg-cyan-400 text-[#01307a] shadow-lg shadow-cyan-500/30 hover:bg-cyan-300"
-            >
-              <a href={file.file_url} download={file.title}>
-                <Download className="mr-1.5 h-4 w-4" /> Descargar
-              </a>
             </Button>
           </div>
         </motion.div>
@@ -295,7 +285,7 @@ export default function PublicFilePage() {
                       <Download className="mr-2 h-4 w-4" /> Descargar archivo
                     </a>
                   </Button>
-                  <Button asChild variant="outline" size="lg" className="w-full border-slate-200 text-slate-600 hover:bg-slate-50">
+                  <Button asChild size="lg" className="w-full border border-transparent bg-white text-[#0341a5] shadow-none transition-all duration-200 hover:bg-white hover:border-[#0341a5] hover:text-[#01307a]">
                     <a href={file.file_url} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="mr-2 h-4 w-4" /> Abrir en el navegador
                     </a>
