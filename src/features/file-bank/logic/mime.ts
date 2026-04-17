@@ -46,6 +46,77 @@ const EXT_TO_MIME: Record<string, string> = {
   gz: "application/gzip",
 };
 
+const MIME_TO_LABEL: Record<string, string> = {
+  // PowerPoint
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": "PowerPoint (.pptx)",
+  "application/vnd.ms-powerpoint": "PowerPoint (.ppt)",
+  // Word
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "Word (.docx)",
+  "application/msword": "Word (.doc)",
+  // Excel
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "Excel (.xlsx)",
+  "application/vnd.ms-excel": "Excel (.xls)",
+  // Google Workspace
+  "application/vnd.google-apps.presentation": "Google Slides",
+  "application/vnd.google-apps.document": "Google Docs",
+  "application/vnd.google-apps.spreadsheet": "Google Sheets",
+  // PDF e imágenes vectoriales
+  "application/pdf": "PDF",
+  "application/postscript": "PostScript (.ai / .eps)",
+  // Archivos comprimidos
+  "application/zip": "ZIP (.zip)",
+  "application/x-zip-compressed": "ZIP (.zip)",
+  "application/vnd.rar": "RAR (.rar)",
+  "application/x-rar-compressed": "RAR (.rar)",
+  "application/x-7z-compressed": "7-Zip (.7z)",
+  "application/gzip": "GZip (.gz)",
+  "application/x-tar": "Tar (.tar)",
+  // Texto y datos
+  "text/plain": "Texto (.txt)",
+  "text/csv": "CSV (.csv)",
+  "text/html": "HTML",
+  "text/xml": "XML",
+  "application/json": "JSON",
+  "application/xml": "XML",
+  // Fuentes
+  "font/ttf": "Fuente TTF",
+  "font/otf": "Fuente OTF",
+  "font/woff": "Fuente WOFF",
+  "font/woff2": "Fuente WOFF2",
+  // Genérico
+  "application/octet-stream": "Archivo",
+};
+
+const EXT_TO_LABEL: Record<string, string> = {
+  pptx: "PowerPoint (.pptx)", ppt: "PowerPoint (.ppt)",
+  docx: "Word (.docx)", doc: "Word (.doc)",
+  xlsx: "Excel (.xlsx)", xls: "Excel (.xls)",
+  pdf: "PDF",
+  zip: "ZIP (.zip)", rar: "RAR (.rar)", "7z": "7-Zip (.7z)", gz: "GZip (.gz)", tar: "Tar (.tar)",
+  csv: "CSV (.csv)", txt: "Texto (.txt)", json: "JSON", xml: "XML", html: "HTML",
+  ai: "Illustrator (.ai)", eps: "EPS (.eps)", psd: "Photoshop (.psd)",
+  indd: "InDesign (.indd)", sketch: "Sketch (.sketch)",
+  ttf: "Fuente TTF", otf: "Fuente OTF", woff: "Fuente WOFF", woff2: "Fuente WOFF2",
+  mp4: "Video MP4", mov: "Video MOV", webm: "Video WebM", avi: "Video AVI", mkv: "Video MKV",
+  mp3: "Audio MP3", wav: "Audio WAV", aac: "Audio AAC", m4a: "Audio M4A",
+  jpg: "Imagen JPEG", jpeg: "Imagen JPEG", png: "Imagen PNG", gif: "Imagen GIF",
+  webp: "Imagen WebP", svg: "Imagen SVG", avif: "Imagen AVIF",
+};
+
+/** Devuelve una etiqueta legible para un tipo MIME + nombre de archivo. */
+export function mimeToLabel(mime: string, filename: string): string {
+  const normalized = (mime || "").toLowerCase();
+  if (MIME_TO_LABEL[normalized]) return MIME_TO_LABEL[normalized];
+  // Tipos nativos con prefijo reconocible
+  if (normalized.startsWith("video/")) return `Video (.${getExtension(filename) || normalized.split("/")[1]})`;
+  if (normalized.startsWith("audio/")) return `Audio (.${getExtension(filename) || normalized.split("/")[1]})`;
+  if (normalized.startsWith("image/")) return `Imagen (.${getExtension(filename) || normalized.split("/")[1]})`;
+  // Fallback por extensión
+  const ext = getExtension(filename);
+  if (EXT_TO_LABEL[ext]) return EXT_TO_LABEL[ext];
+  return ext ? `Archivo (.${ext})` : "Archivo";
+}
+
 export function getExtension(filename: string): string {
   const i = filename.lastIndexOf(".");
   return i >= 0 ? filename.slice(i + 1).toLowerCase() : "";

@@ -4,6 +4,7 @@ import { Loader2, Download, ArrowLeft, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getFileBySlug } from "../services/file-bank.service";
 import { formatBytes } from "../logic/slug";
+import { mimeToLabel } from "../logic/mime";
 import type { FileRecord } from "../logic/file-bank.types";
 
 export default function SharedFilePage() {
@@ -50,7 +51,8 @@ export default function SharedFilePage() {
         <div className="min-w-0">
           <h1 className="truncate text-xl font-bold text-foreground">{file.title}</h1>
           <p className="text-sm text-muted-foreground">
-            {formatBytes(file.file_size)} · {new Date(file.created_at).toLocaleDateString("es-CL")}
+            <span className="font-medium text-foreground/70">{mimeToLabel(file.file_type, file.title)}</span>
+            {" · "}{formatBytes(file.file_size)} · {new Date(file.created_at).toLocaleDateString("es-CL")}
             {file.uploaded_by_email ? ` · ${file.uploaded_by_email}` : ""}
           </p>
           {file.description && (

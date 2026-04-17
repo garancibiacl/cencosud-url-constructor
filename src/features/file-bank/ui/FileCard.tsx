@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { buildShareUrl } from "../services/file-bank.service";
 import { formatBytes } from "../logic/slug";
+import { mimeToLabel } from "../logic/mime";
 import type { FileRecord } from "../logic/file-bank.types";
 
 interface Props {
@@ -59,7 +60,10 @@ export function FileCard({ file, onPreview, onDelete }: Props) {
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-sm font-semibold text-foreground">{file.title}</h3>
           <p className="text-xs text-muted-foreground">
-            {formatBytes(file.file_size)} · {new Date(file.created_at).toLocaleDateString("es-CL")}
+            {mimeToLabel(file.file_type, file.title)} · {formatBytes(file.file_size)}
+          </p>
+          <p className="text-xs text-muted-foreground/70">
+            {new Date(file.created_at).toLocaleDateString("es-CL")}
           </p>
           {file.uploaded_by_email && (
             <p className="truncate text-[11px] text-muted-foreground/80">{file.uploaded_by_email}</p>

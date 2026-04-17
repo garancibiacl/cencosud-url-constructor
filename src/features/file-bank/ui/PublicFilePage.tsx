@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { getFileBySlug } from "../services/file-bank.service";
 import { formatBytes } from "../logic/slug";
+import { mimeToLabel } from "../logic/mime";
 import type { FileRecord } from "../logic/file-bank.types";
 
 /**
@@ -104,14 +105,12 @@ export default function PublicFilePage() {
   const isVideo = storedType.startsWith("video/") || (isGenericStored && videoExts.includes(ext));
   const isAudio = storedType.startsWith("audio/") || (isGenericStored && audioExts.includes(ext));
   const displayType = isVideo
-    ? "Video"
+    ? `Video (.${ext || "mp4"})`
     : isAudio
-      ? "Audio"
+      ? `Audio (.${ext || "mp3"})`
       : isImage
-        ? "Imagen"
-        : isPdf
-          ? "PDF"
-          : (storedType.split("/")[1] || "Archivo").toUpperCase();
+        ? `Imagen (.${ext || "jpg"})`
+        : mimeToLabel(storedType, file.title);
 
   return (
     <div className={`flex min-h-screen flex-col ${brandBg}`}>
