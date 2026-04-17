@@ -43,19 +43,7 @@ export default function SharedFilePage() {
     );
   }
 
-  const ext = file.title.toLowerCase().split(".").pop() ?? "";
-  const storedType = (file.file_type || "").toLowerCase();
-  const officeExts = ["pptx", "ppt", "xlsx", "xls", "docx", "doc"];
-  const isPdf = storedType === "application/pdf" || ext === "pdf";
-  const isOffice =
-    officeExts.includes(ext) ||
-    storedType.includes("officedocument") ||
-    storedType.includes("ms-powerpoint") ||
-    storedType.includes("ms-excel") ||
-    storedType.includes("ms-word");
-  const officeViewerUrl = isOffice
-    ? `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(file.file_url)}`
-    : null;
+  const isPdf = file.file_type === "application/pdf";
 
   return (
     <div className="flex flex-1 flex-col min-w-0 overflow-y-auto">
@@ -79,22 +67,13 @@ export default function SharedFilePage() {
       </div>
 
       <div className="flex flex-1 p-6">
-        {isPdf && (
+        {isPdf ? (
           <iframe
             src={file.file_url}
             title={file.title}
             className="flex-1 w-full rounded-xl border border-border bg-card"
           />
-        )}
-        {isOffice && (
-          <iframe
-            src={officeViewerUrl!}
-            title={file.title}
-            className="flex-1 w-full rounded-xl border border-border bg-card"
-            allowFullScreen
-          />
-        )}
-        {!isPdf && !isOffice && (
+        ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border text-center text-muted-foreground">
             <FileText className="h-12 w-12" />
             <p className="text-sm">La vista previa no está disponible para este tipo de archivo.</p>

@@ -100,20 +100,10 @@ export default function PublicFilePage() {
   const audioExts = ["mp3", "wav", "ogg", "m4a", "aac"];
   const imageExts = ["jpg", "jpeg", "png", "gif", "webp", "svg", "avif"];
 
-  const officeExts = ["pptx", "ppt", "xlsx", "xls", "docx", "doc"];
   const isPdf = storedType === "application/pdf" || ext === "pdf";
   const isImage = storedType.startsWith("image/") || (isGenericStored && imageExts.includes(ext));
   const isVideo = storedType.startsWith("video/") || (isGenericStored && videoExts.includes(ext));
   const isAudio = storedType.startsWith("audio/") || (isGenericStored && audioExts.includes(ext));
-  const isOffice =
-    officeExts.includes(ext) ||
-    storedType.includes("officedocument") ||
-    storedType.includes("ms-powerpoint") ||
-    storedType.includes("ms-excel") ||
-    storedType.includes("ms-word");
-  const officeViewerUrl = isOffice
-    ? `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(file.file_url)}`
-    : null;
   const displayType = isVideo
     ? `Video (.${ext || "mp4"})`
     : isAudio
@@ -230,14 +220,6 @@ export default function PublicFilePage() {
               className="h-full min-h-[70vh] w-full"
             />
           )}
-          {isOffice && (
-            <iframe
-              src={officeViewerUrl!}
-              title={file.title}
-              className="h-full min-h-[70vh] w-full"
-              allowFullScreen
-            />
-          )}
           {isImage && (
             <div className="flex w-full items-center justify-center bg-slate-50 p-4 sm:p-6">
               <img
@@ -267,7 +249,7 @@ export default function PublicFilePage() {
               </audio>
             </div>
           )}
-          {!isPdf && !isImage && !isVideo && !isAudio && !isOffice && (
+          {!isPdf && !isImage && !isVideo && !isAudio && (
             <div className="flex w-full flex-col sm:flex-row min-h-[70vh]">
               {/* Panel izquierdo — branding */}
               <div className="flex flex-col justify-between gap-8 bg-[radial-gradient(ellipse_at_bottom_left,_#0a4fb8_0%,_#0341a5_50%,_#01307a_100%)] p-10 sm:w-[45%] sm:p-14">
@@ -313,8 +295,8 @@ export default function PublicFilePage() {
                       <Download className="mr-2 h-4 w-4" /> Descargar archivo
                     </a>
                   </Button>
-                  <Button asChild variant="outline" size="lg" className="w-full border-[#0341a5] text-[#0341a5] hover:bg-[#0341a5] hover:text-white">
-                    <a href={officeViewerUrl ?? file.file_url} target="_blank" rel="noopener noreferrer">
+                  <Button asChild variant="outline" size="lg" className="w-full border-slate-200 text-slate-600 hover:bg-slate-50">
+                    <a href={file.file_url} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="mr-2 h-4 w-4" /> Abrir en el navegador
                     </a>
                   </Button>
