@@ -5,15 +5,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { validateFile } from "../services/file-bank.service";
 import { formatBytes } from "../logic/slug";
-import { MAX_FILE_SIZE_BYTES } from "../logic/file-bank.types";
-import { CompressionTipsModal } from "./CompressionTipsModal";
-import type { UploadOptions } from "../services/file-bank.service";
+import type { UploadOptions, UploadProgress } from "../services/file-bank.service";
 
 interface Props {
   onUpload: (opts: UploadOptions) => Promise<unknown>;
+}
+
+function formatSpeed(bytesPerSec: number): string {
+  if (bytesPerSec <= 0) return "—";
+  return `${formatBytes(bytesPerSec)}/s`;
+}
+
+function formatEta(seconds: number): string {
+  if (!isFinite(seconds) || seconds <= 0) return "—";
+  if (seconds < 60) return `${Math.ceil(seconds)}s`;
+  const m = Math.floor(seconds / 60);
+  const s = Math.ceil(seconds % 60);
+  return `${m}m ${s}s`;
 }
 
 export function UploadDropzone({ onUpload }: Props) {
@@ -24,14 +36,9 @@ export function UploadDropzone({ onUpload }: Props) {
   const [description, setDescription] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [oversized, setOversized] = useState<{ name: string; size: number; type: string } | null>(null);
+  const [progress, setProgress] = useState<UploadProgress | null>(null);
 
   const pickFile = (f: File) => {
-    if (f.size > MAX_FILE_SIZE_BYTES) {
-      setOversized({ name: f.name, size: f.size, type: f.type });
-      if (inputRef.current) inputRef.current.value = "";
-      return;
-    }
     const err = validateFile(f);
     if (err) {
       toast({ title: "Archivo no válido", description: err, variant: "destructive" });
@@ -52,6 +59,7 @@ export function UploadDropzone({ onUpload }: Props) {
     setFile(null);
     setTitle("");
     setDescription("");
+    setProgress(null);
     if (inputRef.current) inputRef.current.value = "";
   };
 
@@ -63,7 +71,13 @@ export function UploadDropzone({ onUpload }: Props) {
     }
     try {
       setUploading(true);
-      await onUpload({ file, title, description });
+      setProgress({ bytesUploaded: 0, bytesTotal: file.size, percent: 0, speed: 0 });
+      await onUpload({
+        file,
+        title,
+        description,
+        onProgress: (p) => setProgress(p),
+      });
       toast({ title: "Archivo subido", description: title });
       reset();
     } catch (e) {
@@ -74,8 +88,14 @@ export function UploadDropzone({ onUpload }: Props) {
       });
     } finally {
       setUploading(false);
+      setProgress(null);
     }
   };
+
+  const eta =
+    progress && progress.speed > 0
+      ? (progress.bytesTotal - progress.bytesUploaded) / progress.speed
+      : Infinity;
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
@@ -92,12 +112,13 @@ export function UploadDropzone({ onUpload }: Props) {
         className={`relative flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 transition-colors ${
           dragOver ? "border-primary bg-primary/5" : "border-border bg-muted/30 hover:bg-muted/50"
         }`}
-        onClick={() => inputRef.current?.click()}
+        onClick={() => !uploading && inputRef.current?.click()}
       >
         <input
           ref={inputRef}
           type="file"
           className="hidden"
+          disabled={uploading}
           onChange={(e) => {
             const f = e.target.files?.[0];
             if (f) pickFile(f);
@@ -110,7 +131,10 @@ export function UploadDropzone({ onUpload }: Props) {
               Arrastra un archivo aquí o haz clic para seleccionar
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              PDF, PPT, DOC, XLS, imágenes o ZIP — máximo 50 MB
+              PDF, PPT, DOC, XLS, imágenes, video o ZIP — hasta 5 GB
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground/80">
+              Subida resumible: si se corta internet, retoma automáticamente
             </p>
           </>
         ) : (
@@ -122,16 +146,18 @@ export function UploadDropzone({ onUpload }: Props) {
                 <p className="text-xs text-muted-foreground">{formatBytes(file.size)}</p>
               </div>
             </div>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={(e) => {
-                e.stopPropagation();
-                reset();
-              }}
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            {!uploading && (
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  reset();
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         )}
       </motion.div>
@@ -146,6 +172,7 @@ export function UploadDropzone({ onUpload }: Props) {
               onChange={(e) => setTitle(e.target.value)}
               maxLength={120}
               placeholder="Nombre visible del archivo"
+              disabled={uploading}
             />
           </div>
           <div>
@@ -157,12 +184,33 @@ export function UploadDropzone({ onUpload }: Props) {
               maxLength={500}
               rows={2}
               placeholder="Breve contexto del archivo"
+              disabled={uploading}
             />
           </div>
+
+          {uploading && progress && (
+            <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium text-foreground">
+                  {progress.percent.toFixed(1)}%
+                </span>
+                <span className="text-muted-foreground">
+                  {formatBytes(progress.bytesUploaded)} / {formatBytes(progress.bytesTotal)}
+                </span>
+              </div>
+              <Progress value={progress.percent} className="h-2" />
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                <span>Velocidad: {formatSpeed(progress.speed)}</span>
+                <span>Restante: {formatEta(eta)}</span>
+              </div>
+            </div>
+          )}
+
           <Button onClick={submit} disabled={uploading} className="w-full">
             {uploading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Subiendo...
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Subiendo... {progress ? `${progress.percent.toFixed(0)}%` : ""}
               </>
             ) : (
               "Subir archivo"
@@ -170,14 +218,6 @@ export function UploadDropzone({ onUpload }: Props) {
           </Button>
         </div>
       )}
-
-      <CompressionTipsModal
-        open={!!oversized}
-        onClose={() => setOversized(null)}
-        fileName={oversized?.name}
-        fileSize={oversized?.size}
-        fileType={oversized?.type}
-      />
     </div>
   );
 }
