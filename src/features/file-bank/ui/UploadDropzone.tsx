@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { validateFile } from "../services/file-bank.service";
 import { formatBytes } from "../logic/slug";
+import { MAX_FILE_SIZE_BYTES } from "../logic/file-bank.types";
+import { CompressionTipsModal } from "./CompressionTipsModal";
 import type { UploadOptions } from "../services/file-bank.service";
 
 interface Props {
