@@ -1,210 +1,136 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
-import { Loader2, KeyRound, Shield, Users } from "lucide-react";
+import { Navigate, useNavigate } from "react-router-dom";
+import { Activity, ArrowRight, FolderOpen, Loader2, Settings, Shield, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { toast } from "sonner";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
-type Profile = {
+type AdminCard = {
   id: string;
-  email: string;
-  role: string;
-  must_change_password: boolean;
-  created_at: string;
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  path: string;
+  iconColor: string;
+  iconBg: string;
+  badge?: string;
 };
 
-const ROLES = ["admin", "disenador", "programador", "director", "cencosud", "mailing"] as const;
-
-const ROLE_LABELS: Record<string, string> = {
-  admin: "Administrador",
-  disenador: "Diseñador",
-  programador: "Programador",
-  director: "Director",
-  cencosud: "Cencosud",
-  mailing: "Mailing",
-};
-
-const ROLE_COLORS: Record<string, string> = {
-  admin: "border-destructive/30 bg-destructive/10 text-destructive",
-  disenador: "border-primary/30 bg-primary/10 text-primary",
-  programador: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600",
-  director: "border-warning/30 bg-warning/10 text-warning-foreground",
-  cencosud: "border-orange-500/30 bg-orange-500/10 text-orange-600",
-  mailing: "border-violet-500/30 bg-violet-500/10 text-violet-600",
-};
+const CARDS: AdminCard[] = [
+  {
+    id: "usuarios",
+    title: "Usuarios",
+    description: "Gestiona usuarios, roles y contraseñas del sistema",
+    icon: Users,
+    path: "/admin/usuarios",
+    iconColor: "text-primary",
+    iconBg: "bg-primary/10",
+  },
+  {
+    id: "accesos",
+    title: "Registro de Accesos",
+    description: "Auditoría de inicios de sesión y actividad de usuarios",
+    icon: Activity,
+    path: "/admin/accesos",
+    iconColor: "text-emerald-600",
+    iconBg: "bg-emerald-500/10",
+    badge: "Próximamente",
+  },
+  {
+    id: "archivos",
+    title: "Banco de Archivos",
+    description: "Administra los archivos compartidos del sistema",
+    icon: FolderOpen,
+    path: "/admin/archivos",
+    iconColor: "text-orange-600",
+    iconBg: "bg-orange-500/10",
+  },
+  {
+    id: "config",
+    title: "Configuración",
+    description: "Ajustes generales y preferencias del sistema",
+    icon: Settings,
+    path: "/configuracion",
+    iconColor: "text-violet-600",
+    iconBg: "bg-violet-500/10",
+  },
+];
 
 export default function AdminPage() {
-  const { role, user, loading: authLoading } = useAuth();
-  const [users, setUsers] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-
-  const fetchUsers = async () => {
-    const { data, error } = await supabase.functions.invoke("admin-users");
-    if (error) {
-      toast.error("Error al cargar usuarios");
-      return;
-    }
-    setUsers(data.users ?? []);
-    setLoading(false);
-  };
+  const { role, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const [userCount, setUserCount] = useState<number | null>(null);
 
   useEffect(() => {
-    if (role === "admin") void fetchUsers();
+    if (role === "admin") {
+      supabase.functions.invoke("admin-users").then(({ data }) => {
+        if (data?.total != null) setUserCount(data.total as number);
+        else if (Array.isArray(data?.users)) setUserCount((data.users as unknown[]).length);
+      });
+    }
   }, [role]);
 
   if (authLoading) return null;
-
   if (role !== "admin") return <Navigate to="/" replace />;
 
-  const handleRoleChange = async (userId: string, newRole: string) => {
-    setActionLoading(`${userId}_role`);
-    const { data, error } = await supabase.functions.invoke("admin-manage", {
-      body: { userId, action: "update_role", role: newRole },
-    });
-    setActionLoading(null);
-
-    if (error || data?.error) {
-      toast.error(data?.error ?? "Error al cambiar rol");
-      return;
-    }
-
-    toast.success("Rol actualizado");
-    setUsers((prev) => prev.map((profile) => (profile.id === userId ? { ...profile, role: newRole } : profile)));
-  };
-
-  const handleResetPassword = async (userId: string, email: string) => {
-    setActionLoading(`${userId}_pw`);
-    const { data, error } = await supabase.functions.invoke("admin-manage", {
-      body: { userId, action: "reset_password" },
-    });
-    setActionLoading(null);
-
-    if (error || data?.error) {
-      toast.error(data?.error ?? "Error al resetear contraseña");
-      return;
-    }
-
-    toast.success(`Contraseña de ${email} reseteada a Agua2026!`);
-    setUsers((prev) => prev.map((profile) => (
-      profile.id === userId ? { ...profile, must_change_password: true } : profile
-    )));
-  };
-
   return (
-    <div className="flex-1 space-y-6 p-6">
+    <div className="flex-1 space-y-8 p-6">
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
           <Shield className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Panel de Administración</h1>
-          <p className="text-sm text-muted-foreground">Gestiona usuarios, roles y contraseñas</p>
+          <h1 className="text-2xl font-bold tracking-tight">Centro de Administración</h1>
+          <p className="text-sm text-muted-foreground">Gestiona todos los aspectos del sistema desde aquí</p>
         </div>
       </div>
 
-      <Card>
-        <CardHeader className="flex-row items-center gap-3 space-y-0 pb-4">
-          <Users className="h-5 w-5 text-muted-foreground" />
-          <CardTitle className="text-lg">Usuarios registrados ({users.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Rol</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Creado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map((profile) => {
-                    const isMe = profile.id === user?.id;
-
-                    return (
-                      <TableRow key={profile.id}>
-                        <TableCell className="font-medium">
-                          {profile.email}
-                          {isMe && <span className="ml-2 text-xs text-muted-foreground">(tú)</span>}
-                        </TableCell>
-                        <TableCell>
-                          {isMe ? (
-                            <Badge variant="outline" className={ROLE_COLORS[profile.role]}>
-                              {ROLE_LABELS[profile.role]}
-                            </Badge>
-                          ) : (
-                            <Select
-                              value={profile.role}
-                              onValueChange={(value) => handleRoleChange(profile.id, value)}
-                              disabled={actionLoading === `${profile.id}_role`}
-                            >
-                              <SelectTrigger className="h-8 w-[150px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {ROLES.map((roleOption) => (
-                                  <SelectItem key={roleOption} value={roleOption}>
-                                    {ROLE_LABELS[roleOption]}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {profile.must_change_password ? (
-                            <Badge variant="outline" className="border-warning/30 bg-warning/10 text-warning-foreground">
-                              Cambio pendiente
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600">
-                              Activo
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {new Date(profile.created_at).toLocaleDateString("es-CL")}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {!isMe && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={actionLoading === `${profile.id}_pw`}
-                              onClick={() => handleResetPassword(profile.id, profile.email)}
-                            >
-                              {actionLoading === `${profile.id}_pw` ? (
-                                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <KeyRound className="mr-1.5 h-3.5 w-3.5" />
-                              )}
-                              Reset Password
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {CARDS.map((card) => {
+          const Icon = card.icon;
+          return (
+            <Card
+              key={card.id}
+              onClick={() => navigate(card.path)}
+              className="group cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl", card.iconBg)}>
+                    <Icon className={cn("h-5 w-5", card.iconColor)} />
+                  </div>
+                  {card.badge && (
+                    <Badge variant="outline" className="text-xs">
+                      {card.badge}
+                    </Badge>
+                  )}
+                </div>
+                <CardTitle className="mt-3 text-base">{card.title}</CardTitle>
+                <CardDescription className="text-sm leading-snug">{card.description}</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="flex items-center justify-between">
+                  {card.id === "usuarios" ? (
+                    userCount === null ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    ) : (
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-2xl font-bold">{userCount}</span>
+                        <span className="text-xs text-muted-foreground">registrados</span>
+                      </div>
+                    )
+                  ) : (
+                    <span />
+                  )}
+                  <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -7,8 +7,10 @@
  */
 import { Outlet } from "react-router-dom";
 import AppSidebar from "@/components/AppSidebar";
+import { useAccessLogger } from "@/hooks/useAccessLogger";
 
 export default function AppShell() {
+  useAccessLogger();
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background font-sans selection:bg-accent/30">
       <AppSidebar />

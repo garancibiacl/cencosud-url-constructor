@@ -101,7 +101,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loading = !authReady || !profileReady;
 
   const login = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (!error && data.user) {
+      void supabase.from("access_logs").insert({
+        user_id: data.user.id,
+        email: data.user.email ?? email,
+        event_type: "login",
+      });
+    }
     return { error: error?.message ?? null };
   }, []);
 

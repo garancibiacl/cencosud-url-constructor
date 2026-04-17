@@ -24,6 +24,9 @@ const PromptsPage = lazy(() => import("@/features/prompts/ui/PromptsPage"));
 const ScriptsPage = lazy(() => import("@/features/scripts/ui/ScriptsPage"));
 const AMPscriptBuilderPage = lazy(() => import("@/features/ampscript-builder/ui/AMPscriptBuilderPage"));
 const AdminPage = lazy(() => import("@/pages/AdminPage"));
+const AdminUsuariosPage = lazy(() => import("@/pages/admin/AdminUsuariosPage"));
+const AdminAccesosPage = lazy(() => import("@/pages/admin/AdminAccesosPage"));
+const AdminArchivosPage = lazy(() => import("@/pages/admin/AdminArchivosPage"));
 const FileBankPage = lazy(() => import("@/features/file-bank/ui/FileBankPage"));
 const SharedFilePage = lazy(() => import("@/features/file-bank/ui/SharedFilePage"));
 const PublicFilePage = lazy(() => import("@/features/file-bank/ui/PublicFilePage"));
@@ -74,6 +77,9 @@ export default function AppRouter() {
         <Route path="/scripts" element={<Guarded path="/scripts"><ScriptsPage /></Guarded>} />
         <Route path="/ampscript-builder" element={<Guarded path="/ampscript-builder"><AMPscriptBuilderPage /></Guarded>} />
         <Route path="/admin" element={<Guarded path="/admin"><AdminPage /></Guarded>} />
+        <Route path="/admin/usuarios" element={<Guarded path="/admin"><AdminUsuariosPage /></Guarded>} />
+        <Route path="/admin/accesos" element={<Guarded path="/admin"><AdminAccesosPage /></Guarded>} />
+        <Route path="/admin/archivos" element={<Guarded path="/admin"><AdminArchivosPage /></Guarded>} />
         <Route path="/banco-archivos" element={<Guarded path="/banco-archivos"><FileBankPage /></Guarded>} />
         <Route path="/banco-archivos/:slug" element={<Lazy><SharedFilePage /></Lazy>} />
       </Route>
