@@ -1,6 +1,7 @@
 import * as tus from "tus-js-client";
 import { supabase } from "@/integrations/supabase/client";
 import { uniqueSlug } from "../logic/slug";
+import { resolveMimeType, getExtension } from "../logic/mime";
 import {
   ALLOWED_MIME_TYPES,
   MAX_FILE_SIZE_BYTES,
@@ -124,9 +125,9 @@ export async function uploadFile({
   const user = userResp.user;
 
   const slug = uniqueSlug(title);
-  const ext = file.name.includes(".") ? file.name.split(".").pop() : "bin";
+  const ext = getExtension(file.name) || "bin";
   const path = `${user.id}/${slug}.${ext}`;
-  const contentType = file.type || "application/octet-stream";
+  const contentType = resolveMimeType(file);
 
   if (file.size > RESUMABLE_THRESHOLD_BYTES) {
     await resumableUpload({ file, path, contentType, onProgress });
