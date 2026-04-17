@@ -170,6 +170,14 @@ export function UploadDropzone({ onUpload }: Props) {
           </Button>
         </div>
       )}
+
+      <CompressionTipsModal
+        open={!!oversized}
+        onClose={() => setOversized(null)}
+        fileName={oversized?.name}
+        fileSize={oversized?.size}
+        fileType={oversized?.type}
+      />
     </div>
   );
 }
