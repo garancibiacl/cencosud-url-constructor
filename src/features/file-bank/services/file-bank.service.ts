@@ -46,6 +46,7 @@ async function resumableUpload(params: {
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
   if (!token) throw new Error("Sesión expirada. Vuelve a iniciar sesión.");
+  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
   const startedAt = Date.now();
 
@@ -55,9 +56,11 @@ async function resumableUpload(params: {
       retryDelays: [0, 1000, 3000, 5000, 10000, 20000],
       headers: {
         authorization: `Bearer ${token}`,
+        apikey: anonKey,
         "x-upsert": "false",
       },
-      uploadDataDuringCreation: true,
+      // Per Supabase docs: must be false so TUS finalises the object on PATCH
+      uploadDataDuringCreation: false,
       removeFingerprintOnSuccess: true,
       metadata: {
         bucketName: BUCKET,
