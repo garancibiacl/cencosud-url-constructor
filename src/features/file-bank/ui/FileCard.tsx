@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Copy, Download, Eye, Trash2, FileText, Check, Link2 } from "lucide-react";
+import { Copy, Download, Eye, Trash2, FileText, Check, Link2, Archive, ImageIcon, Video, Music, File } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,27 +14,100 @@ interface Props {
   onDelete: (file: FileRecord) => Promise<void>;
 }
 
-function typeStyle(mime: string) {
-  if (mime === "application/pdf")
-    return { bg: "bg-rose-50", text: "text-rose-600", ring: "ring-rose-200", border: "border-l-rose-500" };
-  if (mime.includes("presentationml") || mime.includes("powerpoint"))
-    return { bg: "bg-orange-50", text: "text-orange-600", ring: "ring-orange-200", border: "border-l-orange-500" };
-  if (mime.includes("wordprocessingml") || mime === "application/msword")
-    return { bg: "bg-blue-50", text: "text-blue-600", ring: "ring-blue-200", border: "border-l-blue-500" };
-  if (mime.includes("spreadsheetml") || mime === "application/vnd.ms-excel")
-    return { bg: "bg-emerald-50", text: "text-emerald-600", ring: "ring-emerald-200", border: "border-l-emerald-500" };
+function getExt(filename: string) {
+  return filename.split(".").pop()?.toLowerCase() ?? "";
+}
+
+function TypeIcon({ mime, filename }: { mime: string; filename: string }) {
+  const ext = getExt(filename);
+  const base = "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-md";
+
+  // PowerPoint — rojo oficial #C43E1C
+  if (mime.includes("presentationml") || mime.includes("powerpoint") || ext === "pptx" || ext === "ppt")
+    return (
+      <div className={`${base} bg-[#C43E1C]`}>
+        <span className="text-[15px] font-black italic leading-none text-white">P</span>
+      </div>
+    );
+
+  // Word — azul oficial #185ABD
+  if (mime.includes("wordprocessingml") || mime === "application/msword" || ext === "docx" || ext === "doc")
+    return (
+      <div className={`${base} bg-[#185ABD]`}>
+        <span className="text-[15px] font-black italic leading-none text-white">W</span>
+      </div>
+    );
+
+  // Excel — verde oficial #107C41
+  if (mime.includes("spreadsheetml") || mime === "application/vnd.ms-excel" || ext === "xlsx" || ext === "xls")
+    return (
+      <div className={`${base} bg-[#107C41]`}>
+        <span className="text-[15px] font-black italic leading-none text-white">X</span>
+      </div>
+    );
+
+  // PDF
+  if (mime === "application/pdf" || ext === "pdf")
+    return (
+      <div className={`${base} bg-rose-600`}>
+        <FileText className="h-5 w-5 text-white" />
+      </div>
+    );
+
+  // ZIP / RAR / archivos comprimidos — amarillo estándar
+  if (["zip", "rar", "7z", "gz", "tar"].includes(ext) || mime.includes("zip") || mime.includes("rar") || mime.includes("7z") || mime.includes("tar") || mime.includes("gzip"))
+    return (
+      <div className={`${base} bg-amber-400`}>
+        <Archive className="h-5 w-5 text-white" />
+      </div>
+    );
+
+  // Imagen
   if (mime.startsWith("image/"))
-    return { bg: "bg-purple-50", text: "text-purple-600", ring: "ring-purple-200", border: "border-l-purple-500" };
+    return (
+      <div className={`${base} bg-purple-600`}>
+        <ImageIcon className="h-5 w-5 text-white" />
+      </div>
+    );
+
+  // Video
   if (mime.startsWith("video/"))
-    return { bg: "bg-pink-50", text: "text-pink-600", ring: "ring-pink-200", border: "border-l-pink-500" };
+    return (
+      <div className={`${base} bg-pink-600`}>
+        <Video className="h-5 w-5 text-white" />
+      </div>
+    );
+
+  // Audio
   if (mime.startsWith("audio/"))
-    return { bg: "bg-amber-50", text: "text-amber-600", ring: "ring-amber-200", border: "border-l-amber-500" };
-  return { bg: "bg-slate-50", text: "text-slate-500", ring: "ring-slate-200", border: "border-l-slate-400" };
+    return (
+      <div className={`${base} bg-amber-600`}>
+        <Music className="h-5 w-5 text-white" />
+      </div>
+    );
+
+  return (
+    <div className={`${base} bg-slate-500`}>
+      <File className="h-5 w-5 text-white" />
+    </div>
+  );
+}
+
+function borderColor(mime: string, filename: string) {
+  const ext = getExt(filename);
+  if (mime.includes("presentationml") || mime.includes("powerpoint") || ext === "pptx" || ext === "ppt") return "border-l-[#C43E1C]";
+  if (mime.includes("wordprocessingml") || mime === "application/msword" || ext === "docx" || ext === "doc") return "border-l-[#185ABD]";
+  if (mime.includes("spreadsheetml") || mime === "application/vnd.ms-excel" || ext === "xlsx" || ext === "xls") return "border-l-[#107C41]";
+  if (mime === "application/pdf" || ext === "pdf") return "border-l-rose-600";
+  if (["zip", "rar", "7z", "gz", "tar"].includes(ext)) return "border-l-amber-400";
+  if (mime.startsWith("image/")) return "border-l-purple-600";
+  if (mime.startsWith("video/")) return "border-l-pink-600";
+  if (mime.startsWith("audio/")) return "border-l-amber-600";
+  return "border-l-slate-400";
 }
 
 function shortLabel(mime: string, filename: string): string {
   const full = mimeToLabel(mime, filename);
-  // Extract just the first word / short name before parentheses
   const match = full.match(/^([A-Za-z]+)/);
   return match ? match[1] : full;
 }
@@ -47,7 +120,6 @@ export function FileCard({ file, onPreview, onDelete }: Props) {
 
   const canDelete = user?.id === file.user_id || role === "admin";
   const isPdf = file.file_type === "application/pdf";
-  const style = typeStyle(file.file_type);
 
   const copyLink = async () => {
     await navigator.clipboard.writeText(buildShareUrl(file.slug));
@@ -78,9 +150,9 @@ export function FileCard({ file, onPreview, onDelete }: Props) {
 
   return (
     <div
-      className={`group relative flex flex-col gap-3 rounded-2xl border border-slate-200 border-l-[3px] ${style.border} bg-white p-4 shadow-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5`}
+      className={`group relative flex flex-col gap-3 rounded-2xl border border-slate-200 border-l-[3px] ${borderColor(file.file_type, file.title)} bg-white p-4 shadow-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5`}
     >
-      {/* Trash button — appears on hover */}
+      {/* Trash — visible al hover */}
       {canDelete && (
         <button
           onClick={handleDelete}
@@ -92,89 +164,92 @@ export function FileCard({ file, onPreview, onDelete }: Props) {
         </button>
       )}
 
-      {/* Icon + meta */}
+      {/* Icono + meta */}
       <div className="flex items-start gap-3">
-        <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${style.bg} ${style.text} ring-1 ${style.ring}`}
-        >
-          <FileText className="h-5 w-5" />
-        </div>
+        <TypeIcon mime={file.file_type} filename={file.title} />
 
         <div className="min-w-0 flex-1 pr-6">
-          {/* Type badge */}
-          <span
-            className={`mb-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${style.bg} ${style.text}`}
-          >
+          <span className="mb-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
             {shortLabel(file.file_type, file.title)}
           </span>
 
-          <h3 className="truncate text-sm font-semibold text-slate-800 leading-snug">
+          <h3 className="truncate text-sm font-semibold leading-snug text-slate-800">
             {file.title}
           </h3>
 
-          <p className="text-xs text-slate-400 mt-0.5">
-            {formatBytes(file.file_size)} ·{" "}
-            {new Date(file.created_at).toLocaleDateString("es-CL")}
+          <p className="mt-0.5 text-xs text-slate-400">
+            {formatBytes(file.file_size)} · {new Date(file.created_at).toLocaleDateString("es-CL")}
           </p>
 
           {file.uploaded_by_email && (
-            <p className="truncate text-[11px] text-slate-400 mt-0.5">
-              {file.uploaded_by_email}
-            </p>
+            <p className="mt-0.5 truncate text-[11px] text-slate-400">{file.uploaded_by_email}</p>
           )}
         </div>
       </div>
 
-      {/* Description */}
+      {/* Descripción */}
       {file.description && (
-        <p className="line-clamp-2 text-xs text-slate-500 leading-relaxed">
-          {file.description}
-        </p>
+        <p className="line-clamp-2 text-xs leading-relaxed text-slate-500">{file.description}</p>
       )}
 
-      {/* Actions */}
-      <div className="mt-auto flex flex-wrap gap-2 pt-1">
-        {/* Primary CTA — Copy link */}
-        <Button
-          size="sm"
-          onClick={copyLink}
-          className={`flex-1 bg-gradient-to-r from-orange-500 to-orange-600 text-white border-0 shadow-sm transition-all duration-150 ${
-            copied
-              ? "from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700"
-              : "hover:from-orange-600 hover:to-orange-700"
-          }`}
-        >
-          {copied ? (
-            <>
-              <Check className="mr-1.5 h-3.5 w-3.5" />
-              Copiado
-            </>
-          ) : (
-            <>
-              <Link2 className="mr-1.5 h-3.5 w-3.5" />
-              Copiar link
-            </>
-          )}
-        </Button>
-
-        {/* Secondary CTA — Download */}
-        <Button size="sm" variant="outline" asChild className="flex-1 border-slate-200 text-slate-500 hover:border-orange-400 hover:bg-orange-50 hover:text-orange-600 transition-colors duration-150">
-          <a href={file.file_url} download>
-            <Download className="mr-1.5 h-3.5 w-3.5" />
-            Descargar
-          </a>
-        </Button>
-
-        {/* Preview (PDF only) */}
-        {isPdf && (
+      {/* Acciones */}
+      <div className="mt-auto flex flex-col gap-2 pt-1">
+        {/* Fila superior: Descargar + Ver (si aplica) */}
+        <div className="flex gap-2">
           <Button
             size="sm"
             variant="outline"
-            onClick={() => onPreview(file)}
-            className="flex-1 border-slate-200 text-slate-500 hover:border-orange-400 hover:bg-orange-50 hover:text-orange-600 transition-colors duration-150"
+            asChild
+            className="flex-1 border-slate-200 text-slate-500 transition-colors duration-150 hover:border-orange-400 hover:bg-orange-50 hover:text-orange-600"
           >
-            <Eye className="mr-1.5 h-3.5 w-3.5" />
-            Ver
+            <a href={file.file_url} download>
+              <Download className="mr-1.5 h-3.5 w-3.5" />
+              Descargar
+            </a>
+          </Button>
+
+          {isPdf && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onPreview(file)}
+              className="flex-1 border-slate-200 text-slate-500 transition-colors duration-150 hover:border-orange-400 hover:bg-orange-50 hover:text-orange-600"
+            >
+              <Eye className="mr-1.5 h-3.5 w-3.5" />
+              Ver
+            </Button>
+          )}
+
+          {/* Copiar link en la misma fila solo cuando no hay botón Ver */}
+          {!isPdf && (
+            <Button
+              size="sm"
+              onClick={copyLink}
+              className={`shrink-0 transition-all duration-150 ${
+                copied
+                  ? "border-0 bg-emerald-500 text-white shadow-sm hover:bg-emerald-600"
+                  : "border-0 bg-[linear-gradient(135deg,#0341a5_0%,#0568d6_100%)] text-white shadow-[0_4px_16px_rgba(3,65,165,0.35)] hover:brightness-110 hover:shadow-[0_6px_20px_rgba(3,65,165,0.55)]"
+              }`}
+            >
+              {copied ? <Check className="mr-1.5 h-3.5 w-3.5" /> : <Link2 className="mr-1.5 h-3.5 w-3.5" />}
+              {copied ? "Copiado" : "Copiar link"}
+            </Button>
+          )}
+        </div>
+
+        {/* Copiar link en fila propia cuando hay 3 botones (PDF) */}
+        {isPdf && (
+          <Button
+            size="sm"
+            onClick={copyLink}
+            className={`w-full transition-all duration-150 ${
+              copied
+                ? "border-0 bg-emerald-500 text-white shadow-sm hover:bg-emerald-600"
+                : "border-0 bg-[linear-gradient(135deg,#0341a5_0%,#0568d6_100%)] text-white shadow-[0_4px_16px_rgba(3,65,165,0.35)] hover:brightness-110 hover:shadow-[0_6px_20px_rgba(3,65,165,0.55)]"
+            }`}
+          >
+            {copied ? <Check className="mr-1.5 h-3.5 w-3.5" /> : <Link2 className="mr-1.5 h-3.5 w-3.5" />}
+            {copied ? "Copiado" : "Copiar link"}
           </Button>
         )}
       </div>
