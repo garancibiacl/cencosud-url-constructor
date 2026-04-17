@@ -268,7 +268,7 @@ export default function PublicFilePage() {
                   </p>
                   <div className="h-px w-12 bg-cyan-400/50" />
                   <p className="max-w-xs text-sm leading-relaxed text-white/55">
-                    Compartimos archivos de forma segura, directa y sin fricciones para los equipos de Cencosud.
+                    Compartimos archivos de forma segura, directa y sin fricciones para los distintos equipos de Agua.
                   </p>
                 </div>
 
