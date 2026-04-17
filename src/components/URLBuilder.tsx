@@ -1613,15 +1613,15 @@ const URLBuilder = () => {
     : (singleAppCollectionCodeDraft || singleAppCollectionCode);
 
   const globalContextSection = (
-    <section className="mt-4 rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
-      <div className="mb-5 flex items-center gap-3">
-        <Layers3 className="h-5 w-5 text-primary" />
+    <section className="rounded-[28px] border border-border bg-card px-6 py-4 shadow-card md:px-8">
+      <div className="mb-4 flex items-center gap-2.5">
+        <Layers3 className="h-4 w-4 text-primary" />
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-foreground">
             Contexto Global
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Estos selectores alimentan la nomenclatura individual y tambien el lote masivo.
+          <p className="text-xs text-muted-foreground">
+            Alimenta la nomenclatura individual y el lote masivo.
           </p>
         </div>
       </div>
@@ -1729,15 +1729,15 @@ const URLBuilder = () => {
             {activeTab === "cms-web" ? (
               <motion.div key="cms-web" variants={contentVariants} initial="initial" animate="animate" exit="exit">
                 <TabsContent value="cms-web" forceMount className="mt-4">
-                  <div className="grid gap-8">
-                    <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
-                      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                        <div className="space-y-2">
+                  <div className="grid gap-6">
+                    <section className="rounded-[28px] border border-border bg-card px-6 py-4 shadow-card md:px-8">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="space-y-0.5">
                           <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-foreground">
                             CMS WEB
                           </h3>
-                          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-                            Centraliza el constructor web individual y masivo bajo un unico flujo con la misma nomenclatura y controles actuales.
+                          <p className="max-w-3xl text-xs leading-5 text-muted-foreground">
+                            Centraliza el constructor web individual y masivo bajo un unico flujo.
                           </p>
                         </div>
 
@@ -1770,6 +1770,8 @@ const URLBuilder = () => {
                         </div>
                       </div>
                     </section>
+
+                    {globalContextSection}
 
                     {webMode === "individual" ? (
                       <>
@@ -1844,46 +1846,11 @@ const URLBuilder = () => {
                             </section>
 
                             <section className="rounded-[28px] border border-primary/10 bg-primary p-6 text-primary-foreground shadow-elevated md:p-8">
-                              <div className="mb-6 flex flex-col gap-4">
-                                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                                  <h3 className="pt-1 text-xs font-semibold uppercase tracking-[0.16em] text-primary-foreground/72">
-                                    Link Final
-                                  </h3>
-
-                                  <div className="grid w-full grid-cols-2 gap-2 lg:w-auto lg:min-w-[300px]">
-                                    <button
-                                      onClick={() =>
-                                        copyValue(
-                                          singleUrlOnlyValue,
-                                          "URL copiada",
-                                          "Se copio solo la URL final del link individual.",
-                                        )
-                                      }
-                                      disabled={!singleUrlOnlyValue}
-                                      className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-accent px-3 text-sm font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                      <Copy size={15} />
-                                      <span className="truncate">Copiar URL</span>
-                                    </button>
-
-                                    <button
-                                      onClick={() =>
-                                        copyValue(
-                                          singleClipboardBlock,
-                                          "Contenido copiado",
-                                          "Se copiaron Nombre, Url y Codigo del link individual.",
-                                        )
-                                      }
-                                      disabled={!singleClipboardBlock}
-                                      className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-primary-foreground/16 bg-primary-foreground/10 px-3 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary-foreground/16 disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                      <Copy size={15} />
-                                      <span className="truncate">Copiar bloque</span>
-                                    </button>
-                                  </div>
-                                </div>
-
-                                <p className="text-sm leading-6 text-primary-foreground/80">
+                              <div className="mb-6 flex flex-col gap-1">
+                                <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-foreground/72">
+                                  Link Final
+                                </h3>
+                                <p className="text-sm leading-6 text-primary-foreground/70">
                                   Preview inmediato con slug inteligente y concatenacion automatica.
                                 </p>
                               </div>
@@ -1918,10 +1885,41 @@ const URLBuilder = () => {
                                   className="block min-h-[96px] w-full resize-none bg-transparent font-mono text-sm leading-7 text-primary-foreground/95 outline-none placeholder:text-primary-foreground/60"
                                 />
                               </button>
+
+                              <div className="mt-4 grid grid-cols-2 gap-2">
+                                <button
+                                  onClick={() =>
+                                    copyValue(
+                                      singleClipboardBlock,
+                                      "Contenido copiado",
+                                      "Se copiaron Nombre, Url y Codigo del link individual.",
+                                    )
+                                  }
+                                  disabled={!singleClipboardBlock}
+                                  className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-primary-foreground/16 bg-primary-foreground/10 px-3 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary-foreground/16 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  <Copy size={15} />
+                                  <span className="truncate">Copiar bloque</span>
+                                </button>
+
+                                <button
+                                  onClick={() =>
+                                    copyValue(
+                                      singleUrlOnlyValue,
+                                      "URL copiada",
+                                      "Se copio solo la URL final del link individual.",
+                                    )
+                                  }
+                                  disabled={!singleUrlOnlyValue}
+                                  className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-accent px-3 text-sm font-semibold text-accent-foreground shadow-sm transition-all hover:brightness-95 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  <Copy size={15} />
+                                  <span className="truncate">Copiar URL</span>
+                                </button>
+                              </div>
                             </section>
                           </div>
 
-                          {globalContextSection}
                         </div>
                       </>
                     ) : (
@@ -1964,8 +1962,6 @@ const URLBuilder = () => {
                             />
                           </div>
                         </section>
-
-                        {globalContextSection}
 
                         <section className="rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
                           <div className="mb-4 flex items-center justify-between gap-4">
@@ -2136,13 +2132,13 @@ const URLBuilder = () => {
                           </div>
                         </section>
 
-                        <section className="rounded-[28px] border border-primary/10 bg-card p-6 shadow-card md:p-8">
+                        <section className="rounded-[28px] border border-primary/10 bg-primary p-6 shadow-elevated md:p-8">
                           <div className="mb-6 flex items-start justify-between gap-4">
                             <div>
-                              <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-foreground">
+                              <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-primary-foreground/72">
                                 Previsualizacion
                               </h3>
-                              <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
+                              <p className="mt-2 max-w-sm text-sm leading-6 text-primary-foreground/70">
                                 Los resultados quedan listos para copiar de forma individual.
                               </p>
                             </div>
@@ -2165,9 +2161,9 @@ const URLBuilder = () => {
                           </div>
 
                           <div className="space-y-4">
-                            <div className="rounded-2xl border border-border bg-secondary/50 p-4">
+                            <div className="rounded-2xl bg-black/10 p-4">
                               <div className="flex items-center justify-between gap-3">
-                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-foreground/72">
                                   Titulo Limpio
                                 </p>
                                 <Tooltip>
@@ -2181,7 +2177,7 @@ const URLBuilder = () => {
                                         )
                                       }
                                       disabled={!displayedSingleAppCleanTitle}
-                                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-[#EA7120] transition-colors hover:bg-[#FCE6D5] hover:text-[#EA7120] disabled:cursor-not-allowed disabled:opacity-40"
+                                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-primary-foreground/60 transition-colors hover:bg-white/10 hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-40"
                                       aria-label="Copiar titulo limpio"
                                     >
                                       <Copy size={14} />
@@ -2193,12 +2189,12 @@ const URLBuilder = () => {
                               <button
                                 type="button"
                                 onClick={() => setIsSingleAppTitleEditing(true)}
-                                className={`mt-3 block w-full rounded-xl border text-left transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15 ${
+                                className={`mt-2 block w-full rounded-xl border text-left transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/20 ${
                                   isSingleAppTitleEditing
-                                    ? "border-[#0055a5] bg-white shadow-sm ring-4 ring-[#0055a5]/15"
+                                    ? "border-white/30 bg-black/15 ring-4 ring-white/10"
                                     : hasManualSingleAppTitle
-                                      ? "border-primary/30 bg-white/60"
-                                      : "border-transparent hover:bg-white/40"
+                                      ? "border-white/20 bg-black/10"
+                                      : "border-transparent hover:bg-black/10"
                                 }`}
                                 aria-label="Editar titulo limpio"
                               >
@@ -2236,15 +2232,15 @@ const URLBuilder = () => {
                                       setIsSingleAppTitleEditing(false);
                                     }
                                   }}
-                                  className="h-11 w-full rounded-xl bg-transparent px-3 text-lg font-semibold text-slate-700 outline-none"
+                                  className="h-11 w-full rounded-xl bg-transparent px-3 text-lg font-semibold text-primary-foreground/95 outline-none placeholder:text-primary-foreground/40"
                                   aria-label="Titulo limpio editable"
                                 />
                               </button>
                             </div>
 
-                            <div className="rounded-2xl border border-border bg-secondary/50 p-4">
+                            <div className="rounded-2xl bg-black/10 p-4">
                               <div className="flex items-center justify-between gap-3">
-                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-foreground/72">
                                   Codigo Coleccion
                                 </p>
                                 <Tooltip>
@@ -2258,7 +2254,7 @@ const URLBuilder = () => {
                                         )
                                       }
                                       disabled={!displayedSingleAppCollectionCode}
-                                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-[#EA7120] transition-colors hover:bg-[#FCE6D5] hover:text-[#EA7120] disabled:cursor-not-allowed disabled:opacity-40"
+                                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-primary-foreground/60 transition-colors hover:bg-white/10 hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-40"
                                       aria-label="Copiar codigo coleccion"
                                     >
                                       <Copy size={14} />
@@ -2270,12 +2266,12 @@ const URLBuilder = () => {
                               <button
                                 type="button"
                                 onClick={() => setIsSingleAppCodeEditing(true)}
-                                className={`mt-3 block w-full rounded-xl border text-left transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15 ${
+                                className={`mt-2 block w-full rounded-xl border text-left transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/20 ${
                                   isSingleAppCodeEditing
-                                    ? "border-[#0055a5] bg-white shadow-sm ring-4 ring-[#0055a5]/15"
+                                    ? "border-white/30 bg-black/15 ring-4 ring-white/10"
                                     : hasManualSingleAppCode
-                                      ? "border-primary/30 bg-white/60"
-                                      : "border-transparent hover:bg-white/40"
+                                      ? "border-white/20 bg-black/10"
+                                      : "border-transparent hover:bg-black/10"
                                 }`}
                                 aria-label="Editar codigo coleccion"
                               >
@@ -2300,7 +2296,7 @@ const URLBuilder = () => {
                                       setIsSingleAppCodeEditing(false);
                                     }
                                   }}
-                                  className="h-11 w-full rounded-xl bg-transparent px-3 font-mono text-lg font-semibold text-slate-700 outline-none"
+                                  className="h-11 w-full rounded-xl bg-transparent px-3 font-mono text-lg font-semibold text-primary-foreground/95 outline-none placeholder:text-primary-foreground/40"
                                   aria-label="Codigo coleccion editable"
                                 />
                               </button>
