@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      files: {
+        Row: {
+          created_at: string
+          description: string
+          file_size: number
+          file_type: string
+          file_url: string
+          id: string
+          slug: string
+          storage_path: string
+          title: string
+          updated_at: string
+          uploaded_by_email: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          file_size: number
+          file_type: string
+          file_url: string
+          id?: string
+          slug: string
+          storage_path: string
+          title: string
+          updated_at?: string
+          uploaded_by_email?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          file_size?: number
+          file_type?: string
+          file_url?: string
+          id?: string
+          slug?: string
+          storage_path?: string
+          title?: string
+          updated_at?: string
+          uploaded_by_email?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       hidden_catalog_prompts: {
         Row: {
           catalog_id: string
