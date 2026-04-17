@@ -250,31 +250,61 @@ export default function PublicFilePage() {
             </div>
           )}
           {!isPdf && !isImage && !isVideo && !isAudio && (
-            <div className="flex w-full flex-col items-center justify-center gap-5 bg-slate-50 p-12 text-center">
-              <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-[#0341a5] to-[#01307a] shadow-lg">
-                <FileText className="h-12 w-12 text-white" />
+            <div className="flex w-full flex-col sm:flex-row min-h-[70vh]">
+              {/* Panel izquierdo — branding */}
+              <div className="flex flex-col justify-between gap-8 bg-[radial-gradient(ellipse_at_bottom_left,_#0a4fb8_0%,_#0341a5_50%,_#01307a_100%)] p-10 sm:w-[45%] sm:p-14">
+                <img src="/logo.png" alt="Aguapp" className="h-9 w-auto self-start opacity-90" />
+
+                <div className="flex flex-col gap-5">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-cyan-300/80">
+                    Aguapp · Banco de Archivos
+                  </p>
+                  <h2 className="text-4xl font-black leading-[1.1] tracking-tight text-white sm:text-5xl">
+                    Somos<br />
+                    <span className="text-cyan-300">100% Agua.</span>
+                  </h2>
+                  <p className="max-w-xs text-base font-medium leading-relaxed text-white/75">
+                    Una central de originales<br className="hidden sm:block" /> partner 360°.
+                  </p>
+                  <div className="h-px w-12 bg-cyan-400/50" />
+                  <p className="max-w-xs text-sm leading-relaxed text-white/55">
+                    Compartimos archivos de forma segura, directa y sin fricciones para los equipos de Cencosud.
+                  </p>
+                </div>
+
+                <p className="text-xs text-white/35">aguapp.vercel.app</p>
               </div>
-              <div>
-                <p className="text-base font-bold text-slate-900">{file.title}</p>
-                <p className="mt-1 text-sm text-slate-500">
-                  {displayType} · {formatBytes(file.file_size)}
+
+              {/* Panel derecho — descarga */}
+              <div className="flex flex-1 flex-col items-center justify-center gap-7 bg-white p-10 text-center sm:p-14">
+                <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-[#0341a5]/10 to-[#01307a]/20 ring-1 ring-[#0341a5]/15">
+                  <FileText className="h-10 w-10 text-[#0341a5]" />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                    {displayType}
+                  </p>
+                  <p className="text-xl font-bold leading-snug text-slate-900">{file.title}</p>
+                  <p className="text-sm text-slate-500">{formatBytes(file.file_size)}</p>
+                </div>
+
+                <div className="flex w-full max-w-xs flex-col gap-3">
+                  <Button asChild size="lg" className="w-full bg-[#0341a5] text-white shadow-md shadow-[#0341a5]/30 hover:bg-[#01307a]">
+                    <a href={file.file_url} download={file.title}>
+                      <Download className="mr-2 h-4 w-4" /> Descargar archivo
+                    </a>
+                  </Button>
+                  <Button asChild variant="outline" size="lg" className="w-full border-slate-200 text-slate-600 hover:bg-slate-50">
+                    <a href={file.file_url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="mr-2 h-4 w-4" /> Abrir en el navegador
+                    </a>
+                  </Button>
+                </div>
+
+                <p className="max-w-xs text-xs leading-relaxed text-slate-400">
+                  La vista previa no está disponible para este formato. Descarga el archivo para abrirlo con la aplicación correspondiente.
                 </p>
-                <p className="mt-3 max-w-md text-sm text-slate-600">
-                  La vista previa no está disponible para este tipo de archivo. Descárgalo para
-                  abrirlo en tu equipo.
-                </p>
-              </div>
-              <div className="flex flex-wrap justify-center gap-2">
-                <Button asChild className="bg-[#0341a5] text-white hover:bg-[#01307a]">
-                  <a href={file.file_url} download={file.title}>
-                    <Download className="mr-2 h-4 w-4" /> Descargar archivo
-                  </a>
-                </Button>
-                <Button asChild variant="outline">
-                  <a href={file.file_url} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="mr-2 h-4 w-4" /> Abrir directo
-                  </a>
-                </Button>
               </div>
             </div>
           )}
