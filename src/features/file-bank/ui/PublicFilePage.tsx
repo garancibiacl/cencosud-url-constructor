@@ -62,11 +62,31 @@ export default function PublicFilePage() {
     );
   }
 
-  const t = file.file_type || "";
-  const isPdf = t === "application/pdf";
-  const isImage = t.startsWith("image/");
-  const isVideo = t.startsWith("video/");
-  const isAudio = t.startsWith("audio/");
+  // Detect type from stored MIME, but fall back to extension when MIME is
+  // generic/wrong (e.g. legacy uploads where iOS reported "application/zip" for .mp4).
+  const ext = file.title.toLowerCase().split(".").pop() ?? "";
+  const storedType = (file.file_type || "").toLowerCase();
+  const isGenericStored =
+    !storedType ||
+    storedType === "application/octet-stream" ||
+    storedType === "application/zip" ||
+    storedType === "application/x-zip-compressed";
+
+  const videoExts = ["mp4", "m4v", "mov", "webm", "mkv", "avi"];
+  const audioExts = ["mp3", "wav", "ogg", "m4a", "aac"];
+  const imageExts = ["jpg", "jpeg", "png", "gif", "webp", "svg", "avif"];
+
+  const isPdf = storedType === "application/pdf" || ext === "pdf";
+  const isImage = storedType.startsWith("image/") || (isGenericStored && imageExts.includes(ext));
+  const isVideo = storedType.startsWith("video/") || (isGenericStored && videoExts.includes(ext));
+  const isAudio = storedType.startsWith("audio/") || (isGenericStored && audioExts.includes(ext));
+  const t = isVideo
+    ? `video/${ext === "mov" ? "quicktime" : ext}`
+    : isAudio
+      ? `audio/${ext}`
+      : isImage
+        ? `image/${ext === "jpg" ? "jpeg" : ext}`
+        : storedType;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
