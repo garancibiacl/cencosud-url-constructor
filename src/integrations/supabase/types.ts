@@ -16,31 +16,31 @@ export type Database = {
     Tables: {
       access_logs: {
         Row: {
-          id: string
-          user_id: string | null
+          created_at: string
           email: string
           event_type: string
-          module_path: string | null
+          id: string
           module_label: string | null
-          created_at: string
+          module_path: string | null
+          user_id: string | null
         }
         Insert: {
-          id?: string
-          user_id?: string | null
+          created_at?: string
           email: string
           event_type: string
-          module_path?: string | null
+          id?: string
           module_label?: string | null
-          created_at?: string
+          module_path?: string | null
+          user_id?: string | null
         }
         Update: {
-          id?: string
-          user_id?: string | null
+          created_at?: string
           email?: string
           event_type?: string
-          module_path?: string | null
+          id?: string
           module_label?: string | null
-          created_at?: string
+          module_path?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
