@@ -24,8 +24,14 @@ export function UploadDropzone({ onUpload }: Props) {
   const [description, setDescription] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [oversized, setOversized] = useState<{ name: string; size: number; type: string } | null>(null);
 
   const pickFile = (f: File) => {
+    if (f.size > MAX_FILE_SIZE_BYTES) {
+      setOversized({ name: f.name, size: f.size, type: f.type });
+      if (inputRef.current) inputRef.current.value = "";
+      return;
+    }
     const err = validateFile(f);
     if (err) {
       toast({ title: "Archivo no válido", description: err, variant: "destructive" });
