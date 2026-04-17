@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { validateFile } from "../services/file-bank.service";
 import { formatBytes } from "../logic/slug";
+import { MAX_FILE_SIZE_BYTES } from "../logic/file-bank.types";
+import { CompressionTipsModal } from "./CompressionTipsModal";
 import type { UploadOptions } from "../services/file-bank.service";
 
 interface Props {
@@ -22,8 +24,14 @@ export function UploadDropzone({ onUpload }: Props) {
   const [description, setDescription] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [oversized, setOversized] = useState<{ name: string; size: number; type: string } | null>(null);
 
   const pickFile = (f: File) => {
+    if (f.size > MAX_FILE_SIZE_BYTES) {
+      setOversized({ name: f.name, size: f.size, type: f.type });
+      if (inputRef.current) inputRef.current.value = "";
+      return;
+    }
     const err = validateFile(f);
     if (err) {
       toast({ title: "Archivo no válido", description: err, variant: "destructive" });
@@ -162,6 +170,14 @@ export function UploadDropzone({ onUpload }: Props) {
           </Button>
         </div>
       )}
+
+      <CompressionTipsModal
+        open={!!oversized}
+        onClose={() => setOversized(null)}
+        fileName={oversized?.name}
+        fileSize={oversized?.size}
+        fileType={oversized?.type}
+      />
     </div>
   );
 }
