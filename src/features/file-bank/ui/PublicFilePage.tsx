@@ -104,6 +104,20 @@ export default function PublicFilePage() {
   const isImage = storedType.startsWith("image/") || (isGenericStored && imageExts.includes(ext));
   const isVideo = storedType.startsWith("video/") || (isGenericStored && videoExts.includes(ext));
   const isAudio = storedType.startsWith("audio/") || (isGenericStored && audioExts.includes(ext));
+
+  const officeExts = ["pptx", "ppt", "docx", "doc", "xlsx", "xls"];
+  const isOffice =
+    officeExts.includes(ext) ||
+    storedType.includes("officedocument") ||
+    storedType.includes("ms-powerpoint") ||
+    storedType.includes("ms-excel") ||
+    storedType.includes("ms-word");
+
+  const OFFICE_VIEWER_MAX = 10 * 1024 * 1024;
+  const showOpenInBrowser = !isOffice || file.file_size <= OFFICE_VIEWER_MAX;
+  const openInBrowserUrl = isOffice
+    ? `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(file.file_url)}`
+    : file.file_url;
   const displayType = isVideo
     ? `Video (.${ext || "mp4"})`
     : isAudio
@@ -285,11 +299,13 @@ export default function PublicFilePage() {
                       <Download className="mr-2 h-4 w-4" /> Descargar archivo
                     </a>
                   </Button>
-                  <Button asChild size="lg" className="w-full border border-transparent bg-white text-[#0341a5] shadow-none transition-all duration-200 hover:bg-white hover:border-[#0341a5] hover:text-[#01307a]">
-                    <a href={file.file_url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="mr-2 h-4 w-4" /> Abrir en el navegador
-                    </a>
-                  </Button>
+                  {showOpenInBrowser && (
+                    <Button asChild size="lg" className="w-full border border-transparent bg-white text-[#0341a5] shadow-none transition-all duration-200 hover:bg-white hover:border-[#0341a5] hover:text-[#01307a]">
+                      <a href={openInBrowserUrl} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="mr-2 h-4 w-4" /> Abrir en el navegador
+                      </a>
+                    </Button>
+                  )}
                 </div>
 
                 <p className="max-w-xs text-xs leading-relaxed text-slate-400">

@@ -33,7 +33,7 @@ export default function FileBankPage() {
   return (
     <div className="flex flex-1 flex-col min-w-0 overflow-y-auto bg-slate-50/50">
       {/* Header */}
-      <div className="border-b border-slate-200 bg-white px-8 py-7 shadow-sm">
+      <div className="border-b border-slate-200 bg-white px-4 py-5 sm:px-8 sm:py-7 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-blue-700 to-blue-900 bg-clip-text text-transparent">
@@ -64,7 +64,7 @@ export default function FileBankPage() {
         </div>
       </div>
 
-      <div className="grid flex-1 gap-6 p-6 lg:grid-cols-[380px_1fr]">
+      <div className="grid flex-1 gap-4 p-3 sm:gap-6 sm:p-6 lg:grid-cols-[380px_1fr]">
         {/* Sidebar with dropzone */}
         <div className="lg:sticky lg:top-6 lg:self-start">
           <UploadDropzone onUpload={upload} />
@@ -108,7 +108,7 @@ export default function FileBankPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.25 }}
-              className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+              className="grid auto-rows-fr gap-4 sm:grid-cols-2 xl:grid-cols-3"
             >
               {filtered.map((f, i) => (
                 <motion.div
@@ -116,6 +116,7 @@ export default function FileBankPage() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2, delay: i * 0.04 }}
+                  className="h-full"
                 >
                   <FileCard file={f} onPreview={setPreviewing} onDelete={remove} />
                 </motion.div>
