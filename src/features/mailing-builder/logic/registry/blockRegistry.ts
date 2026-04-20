@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import type { MailingBlock, MailingBlockType } from "../schema/block.types";
 import { createBlock } from "../builders/createBlock";
+import { ButtonBlockInspector, HeroBlockInspector, ImageBlockInspector, SpacerBlockInspector, TextBlockInspector } from "../../ui/blocks/MailingBlockInspectors";
 import { ButtonBlockView, HeroBlockView, ImageBlockView, SpacerBlockView, TextBlockView } from "../../ui/blocks/MailingBlockViews";
 
 type BlockViewProps<TBlock extends MailingBlock = MailingBlock> = {
@@ -10,6 +11,7 @@ type BlockViewProps<TBlock extends MailingBlock = MailingBlock> = {
 
 type BlockInspectorProps<TBlock extends MailingBlock = MailingBlock> = {
   block: TBlock;
+  onChange: (nextBlock: TBlock) => void;
 };
 
 export interface BlockDefinition<TBlock extends MailingBlock = MailingBlock> {
@@ -25,9 +27,9 @@ const EmptyView = ({ block }: BlockViewProps) => `${block.type}` as unknown as n
 const EmptyInspector = ({ block }: BlockInspectorProps) => `${block.type}` as unknown as null;
 
 export const blockRegistry: Record<MailingBlockType, BlockDefinition> = {
-  hero: { type: "hero", label: "Hero", category: "content", create: () => createBlock("hero"), View: HeroBlockView, Inspector: EmptyInspector },
-  text: { type: "text", label: "Texto", category: "content", create: () => createBlock("text"), View: TextBlockView, Inspector: EmptyInspector },
-  image: { type: "image", label: "Imagen", category: "media", create: () => createBlock("image"), View: ImageBlockView, Inspector: EmptyInspector },
-  button: { type: "button", label: "Botón", category: "content", create: () => createBlock("button"), View: ButtonBlockView, Inspector: EmptyInspector },
-  spacer: { type: "spacer", label: "Espaciador", category: "layout", create: () => createBlock("spacer"), View: SpacerBlockView, Inspector: EmptyInspector },
+  hero: { type: "hero", label: "Hero", category: "content", create: () => createBlock("hero"), View: HeroBlockView, Inspector: HeroBlockInspector },
+  text: { type: "text", label: "Texto", category: "content", create: () => createBlock("text"), View: TextBlockView, Inspector: TextBlockInspector },
+  image: { type: "image", label: "Imagen", category: "media", create: () => createBlock("image"), View: ImageBlockView, Inspector: ImageBlockInspector },
+  button: { type: "button", label: "Botón", category: "content", create: () => createBlock("button"), View: ButtonBlockView, Inspector: ButtonBlockInspector },
+  spacer: { type: "spacer", label: "Espaciador", category: "layout", create: () => createBlock("spacer"), View: SpacerBlockView, Inspector: SpacerBlockInspector },
 };
