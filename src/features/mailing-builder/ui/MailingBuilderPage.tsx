@@ -5,15 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { blockRegistry } from "../logic/registry/blockRegistry";
 import { analyzeMailingHtml } from "../logic/exporters/analyzeMailingHtml";
-import { renderMailingHtml } from "../logic/exporters/renderMailingHtml";
+import { renderMailingHtml, resolveTrackedLink } from "../logic/exporters/renderMailingHtml";
 import { createDefaultMailing } from "../logic/builders/createDefaultMailing";
 import { useMailings } from "../hooks/useMailings";
 import { useMailingBuilderStore } from "../hooks/useMailingBuilderStore";
+import { mailingTemplates } from "../logic/templates/mailingTemplates";
 
 const CATEGORY_LABELS = {
   content: "Contenido",
@@ -44,6 +46,14 @@ export default function MailingBuilderPage() {
   const SelectedInspector = selectedBlock ? blockRegistry[selectedBlock.type].Inspector : null;
   const htmlPreview = useMemo(() => renderMailingHtml(document), [document]);
   const compatibility = useMemo(() => analyzeMailingHtml(htmlPreview), [htmlPreview]);
+  const trackedLinks = useMemo(() => (
+    document.blocks.flatMap((block) => {
+      if (block.type === "hero" && block.props.href) return [{ id: block.id, label: block.props.ctaLabel || "CTA", url: resolveTrackedLink(block.props.href, document) }];
+      if (block.type === "button" && block.props.href) return [{ id: block.id, label: block.props.label, url: resolveTrackedLink(block.props.href, document) }];
+      if (block.type === "image" && block.props.href) return [{ id: block.id, label: block.props.alt || "Imagen", url: resolveTrackedLink(block.props.href, document) }];
+      return [];
+    })
+  ), [document]);
 
   useEffect(() => {
     void refreshMailings();
@@ -93,6 +103,14 @@ export default function MailingBuilderPage() {
   const handleNewDraft = () => {
     replaceDocument(createDefaultMailing(), null);
     setVersionNote("");
+  };
+
+  const handleApplyTemplate = (templateId: string) => {
+    const template = mailingTemplates.find((item) => item.id === templateId);
+    if (!template) return;
+    replaceDocument(template.build(), null);
+    setVersionNote("");
+    toast({ title: "Template aplicado", description: `${template.label} quedó cargado en el canvas.` });
   };
 
   const handleSaveDraft = async () => {
@@ -153,6 +171,33 @@ export default function MailingBuilderPage() {
     acc[definition.category].push(definition);
     return acc;
   }, {});
+
+  const updateDocumentSettings = <T,>(key: keyof typeof document.settings, value: T) => {
+    useMailingBuilderStore.setState((state) => ({
+      document: {
+        ...state.document,
+        settings: {
+          ...state.document.settings,
+          [key]: value,
+        },
+      },
+    }));
+  };
+
+  const updateTrackingField = (key: keyof typeof document.settings.linkTracking, value: string | boolean) => {
+    useMailingBuilderStore.setState((state) => ({
+      document: {
+        ...state.document,
+        settings: {
+          ...state.document.settings,
+          linkTracking: {
+            ...state.document.settings.linkTracking,
+            [key]: value,
+          },
+        },
+      },
+    }));
+  };
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-background">
