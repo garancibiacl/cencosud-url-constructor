@@ -1,4 +1,6 @@
 import type { CSSProperties } from "react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import type { ButtonBlock, HeroBlock, ImageBlock, MailingBlock, SpacerBlock, TextBlock } from "../../logic/schema/block.types";
 
 const getPaddingStyle = (block: MailingBlock): CSSProperties => ({
