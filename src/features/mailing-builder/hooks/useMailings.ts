@@ -55,13 +55,21 @@ export function useMailings() {
     return { versionNumber, nextMailings };
   }, [loadVersions, refreshMailings]);
 
-  const scheduleAutosave = useCallback((params: { mailingId?: string | null; userId: string; document: MailingDocument; delay?: number }) => {
+  const scheduleAutosave = useCallback((params: {
+    mailingId?: string | null;
+    userId: string;
+    document: MailingDocument;
+    delay?: number;
+    onSaved?: (savedId: string | null) => void;
+  }) => {
     if (autosaveRef.current) {
       window.clearTimeout(autosaveRef.current);
     }
 
     autosaveRef.current = window.setTimeout(() => {
-      void saveDraft({ mailingId: params.mailingId, userId: params.userId, document: params.document });
+      void saveDraft({ mailingId: params.mailingId, userId: params.userId, document: params.document }).then((result) => {
+        params.onSaved?.(result.savedId);
+      });
     }, params.delay ?? 1200);
   }, [saveDraft]);
 

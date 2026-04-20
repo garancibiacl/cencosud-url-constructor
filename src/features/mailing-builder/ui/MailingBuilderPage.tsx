@@ -55,10 +55,20 @@ export default function MailingBuilderPage() {
 
   useEffect(() => {
     if (!user) return;
-    scheduleAutosave({ mailingId: activeMailingId, userId: user.id, document, delay: 1500 });
-    setLastAutosaveAt(new Date().toISOString());
+    scheduleAutosave({
+      mailingId: activeMailingId,
+      userId: user.id,
+      document,
+      delay: 1500,
+      onSaved: (savedId) => {
+        if (savedId && savedId !== activeMailingId) {
+          setActiveMailingId(savedId);
+        }
+        setLastAutosaveAt(new Date().toISOString());
+      },
+    });
     return () => cancelAutosave();
-  }, [activeMailingId, cancelAutosave, document, scheduleAutosave, user]);
+  }, [activeMailingId, cancelAutosave, document, scheduleAutosave, setActiveMailingId, user]);
 
   const exportHtml = () => htmlPreview;
 
