@@ -8,12 +8,15 @@ interface MailingBuilderState {
   document: MailingDocument;
   selectedBlockId: string | null;
   devicePreview: "desktop" | "mobile";
+  activeMailingId: string | null;
   selectBlock: (id: string | null) => void;
   addBlock: (type: MailingBlockType) => void;
   removeBlock: (id: string) => void;
   duplicateBlock: (id: string) => void;
   moveBlock: (fromIndex: number, toIndex: number) => void;
   updateDocument: (updater: (current: MailingDocument) => MailingDocument) => void;
+  replaceDocument: (document: MailingDocument, mailingId?: string | null) => void;
+  setActiveMailingId: (mailingId: string | null) => void;
 }
 
 const cloneBlock = (block: MailingBlock): MailingBlock => structuredClone({
@@ -27,6 +30,7 @@ export const useMailingBuilderStore = create<MailingBuilderState>((set) => ({
   document: createDefaultMailing(),
   selectedBlockId: null,
   devicePreview: "desktop",
+  activeMailingId: null,
   selectBlock: (id) => set({ selectedBlockId: id }),
   addBlock: (type) => set((state) => {
     const nextBlock = createBlock(type);
@@ -74,4 +78,6 @@ export const useMailingBuilderStore = create<MailingBuilderState>((set) => ({
   updateDocument: (updater) => set((state) => ({
     document: updater(state.document),
   })),
+  replaceDocument: (document, mailingId = null) => set({ document, activeMailingId: mailingId, selectedBlockId: null }),
+  setActiveMailingId: (mailingId) => set({ activeMailingId: mailingId }),
 }));
