@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Mail, MoveDown, MoveUp, Plus, Trash2, Copy, Download, Save, History, Eye, PenSquare, CodeXml, RotateCcw, ImagePlus } from "lucide-react";
+import { Mail, MoveDown, MoveUp, Plus, Trash2, Copy, Download, Save, History, Eye, PenSquare, CodeXml, RotateCcw, ImagePlus, Settings2, X, Type, Image as ImageIcon, RectangleHorizontal, MousePointerClick } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,6 +45,7 @@ export default function MailingBuilderPage() {
   const [previewMode, setPreviewMode] = useState<"canvas" | "split" | "html">("canvas");
   const [lastAutosaveAt, setLastAutosaveAt] = useState<string | null>(null);
   const [assetPickerOpen, setAssetPickerOpen] = useState(false);
+  const [showGlobalInspector, setShowGlobalInspector] = useState(false);
   const selectedBlock = document.blocks.find((block) => block.id === selectedBlockId) ?? null;
   const SelectedInspector = selectedBlock ? blockRegistry[selectedBlock.type].Inspector : null;
   const htmlPreview = useMemo(() => renderMailingHtml(document), [document]);
@@ -203,6 +204,25 @@ export default function MailingBuilderPage() {
   };
 
   const canPickImageAsset = selectedBlock?.type === "hero" || selectedBlock?.type === "image";
+  const isInspectorOpen = showGlobalInspector || !!selectedBlock;
+
+  const handleOpenGlobalInspector = () => {
+    selectBlock(null);
+    setShowGlobalInspector(true);
+  };
+
+  const handleCloseInspector = () => {
+    selectBlock(null);
+    setShowGlobalInspector(false);
+  };
+
+  const blockMeta = selectedBlock ? {
+    hero: { icon: ImageIcon, label: "Hero", detail: `${selectedBlock.layout.colSpan}/12 columnas` },
+    text: { icon: Type, label: "Texto", detail: `${selectedBlock.layout.colSpan}/12 columnas` },
+    image: { icon: ImageIcon, label: "Imagen", detail: `${selectedBlock.layout.colSpan}/12 columnas` },
+    button: { icon: MousePointerClick, label: "Botón", detail: `${selectedBlock.layout.colSpan}/12 columnas` },
+    spacer: { icon: RectangleHorizontal, label: "Espaciador", detail: `${selectedBlock.layout.colSpan}/12 columnas` },
+  }[selectedBlock.type] : null;
 
   const handleSelectAsset = (file: FileRecord) => {
     if (!selectedBlock) return;
@@ -268,7 +288,7 @@ export default function MailingBuilderPage() {
         </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[280px_minmax(0,1fr)_320px] gap-0">
+      <div className="grid min-h-0 flex-1 gap-0 transition-all duration-300" style={{ gridTemplateColumns: isInspectorOpen ? "280px minmax(0,1fr) 340px" : "280px minmax(0,1fr) 0px" }}>
         <aside className="border-r border-border bg-card">
           <ScrollArea className="h-full">
             <div className="space-y-6 p-5">
