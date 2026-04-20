@@ -6,7 +6,7 @@
  * This file owns label, icon, path, and role visibility for each module.
  */
 import type { LucideIcon } from "lucide-react";
-import { Code2, FolderArchive, Link, Shield, Sparkles, Wand2, Zap } from "lucide-react";
+import { Code2, FolderArchive, Link, Mail, Shield, Sparkles, Wand2, Zap } from "lucide-react";
 
 type AppRole = "admin" | "disenador" | "programador" | "director" | "cencosud" | "mailing";
 
@@ -19,6 +19,7 @@ export type AppModuleId =
   | "prompts"
   | "scripts"
   | "ampscript-builder"
+  | "mailing-builder"
   | "file-bank"
   | "admin";
 
@@ -71,6 +72,13 @@ export const appModules: AppModuleDefinition[] = [
     icon: Zap,
     path: "/ampscript-builder",
     allowedRoles: AMPSCRIPT_MODULE_ROLES,
+  },
+  {
+    id: "mailing-builder",
+    label: "Mailing Builder",
+    icon: Mail,
+    path: "/mailing-builder",
+    allowedRoles: STANDARD_MODULE_ROLES,
   },
   {
     id: "banner-expand",

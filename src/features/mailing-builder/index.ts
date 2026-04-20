@@ -1,0 +1,1 @@
+export { default as MailingBuilderPage } from "./ui/MailingBuilderPage";
