@@ -14,7 +14,9 @@ const getPaddingStyle = (block: MailingBlock): CSSProperties => ({
 const canvasShell = (isSelected?: boolean) =>
   `overflow-hidden rounded-md border transition ${isSelected ? "border-primary shadow-[var(--shadow-card)]" : "border-border bg-card"}`;
 
-export function HeroBlockView({ block, isSelected }: { block: HeroBlock; isSelected?: boolean }) {
+const inlineFieldClass = "border-transparent bg-transparent px-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0";
+
+export function HeroBlockView({ block, isSelected, onChange }: { block: HeroBlock; isSelected?: boolean; onChange?: (nextBlock: HeroBlock) => void }) {
   return (
     <article className={canvasShell(isSelected)}>
       <div className="aspect-[5/3] w-full overflow-hidden bg-secondary">
@@ -27,12 +29,40 @@ export function HeroBlockView({ block, isSelected }: { block: HeroBlock; isSelec
       </div>
       <div className="space-y-3" style={getPaddingStyle(block)}>
         <div className="space-y-2">
-          <h3 className="text-[28px] font-semibold leading-tight text-foreground">{block.props.title}</h3>
-          {block.props.subtitle ? <p className="text-sm leading-6 text-muted-foreground">{block.props.subtitle}</p> : null}
+          {isSelected && onChange ? (
+            <Input
+              value={block.props.title}
+              onChange={(event) => onChange({ ...block, props: { ...block.props, title: event.target.value } })}
+              className={`${inlineFieldClass} h-auto text-[28px] font-semibold leading-tight text-foreground`}
+              placeholder="Título del hero"
+              onClick={(event) => event.stopPropagation()}
+            />
+          ) : (
+            <h3 className="text-[28px] font-semibold leading-tight text-foreground">{block.props.title}</h3>
+          )}
+          {isSelected && onChange ? (
+            <Textarea
+              value={block.props.subtitle ?? ""}
+              onChange={(event) => onChange({ ...block, props: { ...block.props, subtitle: event.target.value } })}
+              className={`${inlineFieldClass} min-h-[72px] resize-none text-sm leading-6 text-muted-foreground`}
+              placeholder="Bajada del bloque"
+              onClick={(event) => event.stopPropagation()}
+            />
+          ) : block.props.subtitle ? <p className="text-sm leading-6 text-muted-foreground">{block.props.subtitle}</p> : null}
         </div>
         {block.props.ctaLabel ? (
           <div className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground">
-            {block.props.ctaLabel}
+            {isSelected && onChange ? (
+              <Input
+                value={block.props.ctaLabel}
+                onChange={(event) => onChange({ ...block, props: { ...block.props, ctaLabel: event.target.value } })}
+                className={`${inlineFieldClass} h-auto min-w-[140px] text-primary-foreground placeholder:text-primary-foreground/70`}
+                placeholder="CTA"
+                onClick={(event) => event.stopPropagation()}
+              />
+            ) : (
+              block.props.ctaLabel
+            )}
           </div>
         ) : null}
       </div>
@@ -40,18 +70,32 @@ export function HeroBlockView({ block, isSelected }: { block: HeroBlock; isSelec
   );
 }
 
-export function TextBlockView({ block, isSelected }: { block: TextBlock; isSelected?: boolean }) {
+export function TextBlockView({ block, isSelected, onChange }: { block: TextBlock; isSelected?: boolean; onChange?: (nextBlock: TextBlock) => void }) {
   return (
     <article className={canvasShell(isSelected)} style={getPaddingStyle(block)}>
-      <div
-        className="prose prose-sm max-w-none text-foreground prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-a:text-primary"
-        style={{
-          textAlign: block.props.align,
-          fontSize: block.props.fontSize,
-          lineHeight: `${block.props.lineHeight}px`,
-        }}
-        dangerouslySetInnerHTML={{ __html: block.props.html }}
-      />
+      {isSelected && onChange ? (
+        <Textarea
+          value={block.props.html}
+          onChange={(event) => onChange({ ...block, props: { ...block.props, html: event.target.value } })}
+          className={`${inlineFieldClass} min-h-[140px] resize-y`}
+          style={{
+            textAlign: block.props.align,
+            fontSize: block.props.fontSize,
+            lineHeight: `${block.props.lineHeight}px`,
+          }}
+          onClick={(event) => event.stopPropagation()}
+        />
+      ) : (
+        <div
+          className="prose prose-sm max-w-none text-foreground prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-a:text-primary"
+          style={{
+            textAlign: block.props.align,
+            fontSize: block.props.fontSize,
+            lineHeight: `${block.props.lineHeight}px`,
+          }}
+          dangerouslySetInnerHTML={{ __html: block.props.html }}
+        />
+      )}
     </article>
   );
 }
