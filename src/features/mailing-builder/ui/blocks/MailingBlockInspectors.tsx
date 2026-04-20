@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,7 +11,7 @@ type SharedProps<TBlock> = {
 
 type SectionProps = {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
 };
 
 function InspectorSection({ title, children }: SectionProps) {
@@ -22,7 +23,7 @@ function InspectorSection({ title, children }: SectionProps) {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
@@ -45,8 +46,8 @@ function LayoutFields<TBlock extends { layout: { colSpan: number; padding?: { to
           [side]: value,
         },
       },
-    });
-  } as TBlock);
+    } as TBlock);
+  };
 
   return (
     <InspectorSection title="Layout">
