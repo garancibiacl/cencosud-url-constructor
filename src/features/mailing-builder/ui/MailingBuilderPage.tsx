@@ -15,6 +15,16 @@ const CATEGORY_LABELS = {
 export default function MailingBuilderPage() {
   const { document, selectedBlockId, selectBlock, addBlock, removeBlock, duplicateBlock, moveBlock } = useMailingBuilderStore();
   const selectedBlock = document.blocks.find((block) => block.id === selectedBlockId) ?? null;
+  const SelectedInspector = selectedBlock ? blockRegistry[selectedBlock.type].Inspector : null;
+
+  const updateSelectedBlock = (nextBlock: typeof selectedBlock extends null ? never : NonNullable<typeof selectedBlock>) => {
+    useMailingBuilderStore.setState((state) => ({
+      document: {
+        ...state.document,
+        blocks: state.document.blocks.map((block) => (block.id === nextBlock.id ? nextBlock : block)),
+      },
+    }));
+  };
 
   const groupedBlocks = Object.values(blockRegistry).reduce<Record<string, typeof blockRegistry[keyof typeof blockRegistry][]>>((acc, definition) => {
     acc[definition.category] ??= [];
@@ -139,16 +149,7 @@ export default function MailingBuilderPage() {
                       <p className="text-muted-foreground">Tipo: {selectedBlock.type}</p>
                     </div>
                     <Separator />
-                    <div className="space-y-2">
-                      <p className="font-medium text-foreground">Layout</p>
-                      <p className="text-muted-foreground">Columnas: {selectedBlock.layout.colSpan}/12</p>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="font-medium text-foreground">Props base</p>
-                      <pre className="overflow-x-auto rounded-md bg-secondary p-3 text-xs text-secondary-foreground">
-                        {JSON.stringify(selectedBlock.props, null, 2)}
-                      </pre>
-                    </div>
+                    {SelectedInspector ? <SelectedInspector block={selectedBlock} onChange={updateSelectedBlock} /> : null}
                   </>
                 ) : (
                   <p className="text-muted-foreground">Selecciona un bloque del canvas para inspeccionarlo.</p>
