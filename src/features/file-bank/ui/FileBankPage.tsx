@@ -3,6 +3,7 @@ import { Search, Loader2, Files, HardDrive } from "lucide-react";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { useFiles } from "../hooks/useFiles";
+import { useAuth } from "@/hooks/useAuth";
 import { UploadDropzone } from "./UploadDropzone";
 import { FileCard } from "./FileCard";
 import { FilePreviewModal } from "./FilePreviewModal";
