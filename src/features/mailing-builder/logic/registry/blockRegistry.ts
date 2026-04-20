@@ -20,8 +20,8 @@ export interface BlockDefinition<TBlock extends MailingBlock = MailingBlock> {
   Inspector: ComponentType<BlockInspectorProps<TBlock>>;
 }
 
-const EmptyView = ({ block }: BlockViewProps) => <div>{block.type}</div>;
-const EmptyInspector = ({ block }: BlockInspectorProps) => <div>{block.type}</div>;
+const EmptyView = ({ block }: BlockViewProps) => `${block.type}` as unknown as null;
+const EmptyInspector = ({ block }: BlockInspectorProps) => `${block.type}` as unknown as null;
 
 export const blockRegistry: Record<MailingBlockType, BlockDefinition> = {
   hero: { type: "hero", label: "Hero", category: "content", create: () => createBlock("hero"), View: EmptyView, Inspector: EmptyInspector },
