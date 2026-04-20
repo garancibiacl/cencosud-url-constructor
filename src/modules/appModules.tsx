@@ -10,7 +10,7 @@ import { Code2, FolderArchive, Link, Shield, Sparkles, Wand2, Zap } from "lucide
 
 type AppRole = "admin" | "disenador" | "programador" | "director" | "cencosud" | "mailing";
 
-const STANDARD_MODULE_ROLES: AppRole[] = ["disenador", "programador", "director", "cencosud"];
+const STANDARD_MODULE_ROLES: AppRole[] = ["disenador", "programador", "director", "cencosud", "mailing"];
 const AMPSCRIPT_MODULE_ROLES: AppRole[] = ["programador", "mailing"];
 
 export type AppModuleId =
