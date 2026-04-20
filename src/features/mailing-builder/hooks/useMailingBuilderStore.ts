@@ -16,13 +16,12 @@ interface MailingBuilderState {
   updateDocument: (updater: (current: MailingDocument) => MailingDocument) => void;
 }
 
-const cloneBlock = (block: MailingBlock): MailingBlock => ({
+const cloneBlock = (block: MailingBlock): MailingBlock => structuredClone({
   ...block,
   id: crypto.randomUUID(),
   layout: block.layout ? { ...block.layout, padding: block.layout.padding ? { ...block.layout.padding } : undefined } : block.layout,
-  props: structuredClone(block.props),
   meta: block.meta ? { ...block.meta } : undefined,
-});
+}) as MailingBlock;
 
 export const useMailingBuilderStore = create<MailingBuilderState>((set) => ({
   document: createDefaultMailing(),

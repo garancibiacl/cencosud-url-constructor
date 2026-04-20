@@ -23,6 +23,7 @@ const SettingsPage = lazy(() => import("@/features/settings/ui/SettingsPage"));
 const PromptsPage = lazy(() => import("@/features/prompts/ui/PromptsPage"));
 const ScriptsPage = lazy(() => import("@/features/scripts/ui/ScriptsPage"));
 const AMPscriptBuilderPage = lazy(() => import("@/features/ampscript-builder/ui/AMPscriptBuilderPage"));
+const MailingBuilderPage = lazy(() => import("@/features/mailing-builder/ui/MailingBuilderPage"));
 const AdminPage = lazy(() => import("@/pages/AdminPage"));
 const AdminUsuariosPage = lazy(() => import("@/pages/admin/AdminUsuariosPage"));
 const AdminAccesosPage = lazy(() => import("@/pages/admin/AdminAccesosPage"));
@@ -76,6 +77,7 @@ export default function AppRouter() {
         <Route path="/prompts" element={<Guarded path="/prompts"><PromptsPage /></Guarded>} />
         <Route path="/scripts" element={<Guarded path="/scripts"><ScriptsPage /></Guarded>} />
         <Route path="/ampscript-builder" element={<Guarded path="/ampscript-builder"><AMPscriptBuilderPage /></Guarded>} />
+        <Route path="/mailing-builder" element={<Guarded path="/mailing-builder"><MailingBuilderPage /></Guarded>} />
         <Route path="/admin" element={<Guarded path="/admin"><AdminPage /></Guarded>} />
         <Route path="/admin/usuarios" element={<Guarded path="/admin"><AdminUsuariosPage /></Guarded>} />
         <Route path="/admin/accesos" element={<Guarded path="/admin"><AdminAccesosPage /></Guarded>} />
