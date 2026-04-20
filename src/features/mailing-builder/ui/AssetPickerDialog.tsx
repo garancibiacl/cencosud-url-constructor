@@ -3,7 +3,6 @@ import { Image as ImageIcon, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
 import { useFiles } from "@/features/file-bank/hooks/useFiles";
 import type { FileRecord } from "@/features/file-bank/logic/file-bank.types";
 
@@ -76,11 +75,7 @@ export function AssetPickerDialog({ open, onOpenChange, onSelect }: AssetPickerD
                   <div className="space-y-1 p-3">
                     <p className="line-clamp-1 text-sm font-medium text-foreground">{file.title}</p>
                     <p className="line-clamp-2 text-xs text-muted-foreground">{file.description || "Sin descripción"}</p>
-                    <div className="pt-1">
-                      <Button type="button" size="sm" variant="outline" className="w-full pointer-events-none">
-                        Usar imagen
-                      </Button>
-                    </div>
+                    <div className="pt-1 text-center text-xs font-medium text-primary">Usar imagen</div>
                   </div>
                 </button>
               ))}
