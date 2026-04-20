@@ -14,6 +14,13 @@ export function createDefaultMailing(): MailingDocument {
       fontFamily: "Arial, Helvetica, sans-serif",
       preheader: "Resumen de la campaña",
       subject: "Nuevo mailing",
+      linkTracking: {
+        enabled: true,
+        utmSource: "email",
+        utmMedium: "mailing",
+        utmCampaign: "campana-general",
+        promoName: "nuevo-mailing",
+      },
     },
     variables: {
       utm_source: "email",
