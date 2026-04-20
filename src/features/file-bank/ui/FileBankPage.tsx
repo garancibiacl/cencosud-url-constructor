@@ -12,19 +12,30 @@ import type { FileRecord } from "../logic/file-bank.types";
 
 export default function FileBankPage() {
   const { files, loading, error, upload, remove } = useFiles();
+  const { role } = useAuth();
   const [query, setQuery] = useState("");
   const [previewing, setPreviewing] = useState<FileRecord | null>(null);
 
+  const RESTRICTED_TITLES = ["credenciales agua 06 ia"];
+  const canSeeRestricted = role === "admin" || role === "director";
+
+  const visibleFiles = useMemo(() => {
+    if (canSeeRestricted) return files;
+    return files.filter(
+      (f) => !RESTRICTED_TITLES.some((t) => f.title.toLowerCase().includes(t))
+    );
+  }, [files, canSeeRestricted]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return files;
-    return files.filter(
+    if (!q) return visibleFiles;
+    return visibleFiles.filter(
       (f) =>
         f.title.toLowerCase().includes(q) ||
         f.description.toLowerCase().includes(q) ||
         (f.uploaded_by_email ?? "").toLowerCase().includes(q)
     );
-  }, [files, query]);
+  }, [visibleFiles, query]);
 
   const totalSize = useMemo(
     () => files.reduce((acc, f) => acc + f.file_size, 0),
