@@ -56,7 +56,7 @@ export default function FileBankPage() {
             </p>
           </div>
 
-          {files.length > 0 && (
+          {visibleFiles.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
@@ -65,7 +65,7 @@ export default function FileBankPage() {
             >
               <div className="flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3.5 py-1.5 text-xs font-semibold text-blue-700 shadow-sm">
                 <Files className="h-3.5 w-3.5" />
-                {files.length} {files.length === 1 ? "archivo" : "archivos"}
+                {visibleFiles.length} {visibleFiles.length === 1 ? "archivo" : "archivos"}
               </div>
               <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3.5 py-1.5 text-xs font-semibold text-slate-600 shadow-sm">
                 <HardDrive className="h-3.5 w-3.5" />
@@ -111,7 +111,7 @@ export default function FileBankPage() {
               className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white text-sm text-slate-400 gap-2"
             >
               <Files className="h-8 w-8 text-slate-300" />
-              {files.length === 0
+              {visibleFiles.length === 0
                 ? "Aún no hay archivos. Sube el primero."
                 : "Sin resultados para tu búsqueda."}
             </motion.div>
