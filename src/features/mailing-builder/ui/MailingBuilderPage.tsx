@@ -67,23 +67,28 @@ export default function MailingBuilderPage() {
         </aside>
 
         <section className="min-h-0 bg-secondary/35 px-8 py-6">
-          <div className="mx-auto flex h-full max-w-[720px] flex-col rounded-lg border border-border bg-card shadow-[var(--shadow-card)]">
+          <div className="mx-auto flex h-full max-w-[760px] flex-col rounded-lg border border-border bg-card shadow-[var(--shadow-card)]">
             <div className="border-b border-border px-6 py-4">
-              <p className="text-sm font-semibold text-foreground">Canvas JSON</p>
-              <p className="text-xs text-muted-foreground">{document.name} · {document.blocks.length} bloques</p>
+              <p className="text-sm font-semibold text-foreground">Canvas visual</p>
+              <p className="text-xs text-muted-foreground">{document.name} · {document.blocks.length} bloques · {document.settings.width}px</p>
             </div>
 
             <ScrollArea className="h-full">
-              <div className="space-y-3 p-6">
+              <div className="p-6">
+                <div
+                  className="mx-auto min-h-full space-y-4 rounded-md border border-dashed border-border bg-background p-4"
+                  style={{ width: `${document.settings.width}px`, maxWidth: "100%" }}
+                >
                 {document.blocks.map((block, index) => {
                   const isSelected = block.id === selectedBlockId;
+                  const BlockView = blockRegistry[block.type].View;
 
                   return (
                     <button
                       key={block.id}
                       type="button"
                       onClick={() => selectBlock(block.id)}
-                      className={`w-full rounded-lg border p-4 text-left transition ${
+                      className={`w-full rounded-lg border p-3 text-left transition ${
                         isSelected ? "border-primary bg-primary/5 shadow-[var(--shadow-card)]" : "border-border bg-background hover:border-primary/40"
                       }`}
                     >
@@ -107,9 +112,13 @@ export default function MailingBuilderPage() {
                           </Button>
                         </div>
                       </div>
+                      <div className="mt-3">
+                        <BlockView block={block} isSelected={isSelected} />
+                      </div>
                     </button>
                   );
                 })}
+                </div>
               </div>
             </ScrollArea>
           </div>
