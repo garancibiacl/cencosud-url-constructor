@@ -100,7 +100,7 @@ export function TextBlockView({ block, isSelected, onChange }: { block: TextBloc
   );
 }
 
-export function ImageBlockView({ block, isSelected }: { block: ImageBlock; isSelected?: boolean }) {
+export function ImageBlockView({ block, isSelected, onChange }: { block: ImageBlock; isSelected?: boolean; onChange?: (nextBlock: ImageBlock) => void }) {
   return (
     <article className={canvasShell(isSelected)} style={getPaddingStyle(block)}>
       <div className="overflow-hidden rounded-sm bg-secondary">
@@ -111,12 +111,29 @@ export function ImageBlockView({ block, isSelected }: { block: ImageBlock; isSel
           loading="lazy"
         />
       </div>
-      {block.props.alt ? <p className="mt-2 text-xs text-muted-foreground">{block.props.alt}</p> : null}
+      {isSelected && onChange ? (
+        <div className="mt-3 space-y-2">
+          <Input
+            value={block.props.src}
+            onChange={(event) => onChange({ ...block, props: { ...block.props, src: event.target.value } })}
+            className={inlineFieldClass}
+            placeholder="URL de imagen"
+            onClick={(event) => event.stopPropagation()}
+          />
+          <Input
+            value={block.props.alt}
+            onChange={(event) => onChange({ ...block, props: { ...block.props, alt: event.target.value } })}
+            className={`${inlineFieldClass} text-xs text-muted-foreground`}
+            placeholder="Texto alternativo"
+            onClick={(event) => event.stopPropagation()}
+          />
+        </div>
+      ) : block.props.alt ? <p className="mt-2 text-xs text-muted-foreground">{block.props.alt}</p> : null}
     </article>
   );
 }
 
-export function ButtonBlockView({ block, isSelected }: { block: ButtonBlock; isSelected?: boolean }) {
+export function ButtonBlockView({ block, isSelected, onChange }: { block: ButtonBlock; isSelected?: boolean; onChange?: (nextBlock: ButtonBlock) => void }) {
   const alignment = {
     left: "justify-start",
     center: "justify-center",
@@ -127,7 +144,17 @@ export function ButtonBlockView({ block, isSelected }: { block: ButtonBlock; isS
     <article className={canvasShell(isSelected)} style={getPaddingStyle(block)}>
       <div className={`flex ${alignment}`}>
         <div className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground shadow-[var(--shadow-card)]">
-          {block.props.label}
+          {isSelected && onChange ? (
+            <Input
+              value={block.props.label}
+              onChange={(event) => onChange({ ...block, props: { ...block.props, label: event.target.value } })}
+              className={`${inlineFieldClass} h-auto text-primary-foreground placeholder:text-primary-foreground/70`}
+              placeholder="Texto del botón"
+              onClick={(event) => event.stopPropagation()}
+            />
+          ) : (
+            block.props.label
+          )}
         </div>
       </div>
     </article>
