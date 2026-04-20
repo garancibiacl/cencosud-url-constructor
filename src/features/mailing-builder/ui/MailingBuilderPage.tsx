@@ -1,11 +1,16 @@
-import { Mail, MoveDown, MoveUp, Plus, Trash2, Copy, Download } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Mail, MoveDown, MoveUp, Plus, Trash2, Copy, Download, Save, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { blockRegistry } from "../logic/registry/blockRegistry";
 import { renderMailingHtml } from "../logic/exporters/renderMailingHtml";
+import { createDefaultMailing } from "../logic/builders/createDefaultMailing";
+import { useMailings } from "../hooks/useMailings";
 import { useMailingBuilderStore } from "../hooks/useMailingBuilderStore";
 
 const CATEGORY_LABELS = {
@@ -15,10 +20,32 @@ const CATEGORY_LABELS = {
 } as const;
 
 export default function MailingBuilderPage() {
-  const { document, selectedBlockId, selectBlock, addBlock, removeBlock, duplicateBlock, moveBlock } = useMailingBuilderStore();
+  const { user } = useAuth();
+  const {
+    document,
+    selectedBlockId,
+    activeMailingId,
+    selectBlock,
+    addBlock,
+    removeBlock,
+    duplicateBlock,
+    moveBlock,
+    replaceDocument,
+    setActiveMailingId,
+  } = useMailingBuilderStore();
   const { toast } = useToast();
+  const { mailings, versions, loading, saving, refreshMailings, loadVersions, saveDraft, saveVersion } = useMailings();
+  const [versionNote, setVersionNote] = useState("");
   const selectedBlock = document.blocks.find((block) => block.id === selectedBlockId) ?? null;
   const SelectedInspector = selectedBlock ? blockRegistry[selectedBlock.type].Inspector : null;
+
+  useEffect(() => {
+    void refreshMailings();
+  }, [refreshMailings]);
+
+  useEffect(() => {
+    void loadVersions(activeMailingId);
+  }, [activeMailingId, loadVersions]);
 
   const exportHtml = () => renderMailingHtml(document);
 
@@ -38,6 +65,47 @@ export default function MailingBuilderPage() {
     link.click();
     URL.revokeObjectURL(url);
     toast({ title: "HTML descargado", description: "Se descargó una versión email-safe del mailing." });
+  };
+
+  const handleNewDraft = () => {
+    replaceDocument(createDefaultMailing(), null);
+    setVersionNote("");
+  };
+
+  const handleSaveDraft = async () => {
+    if (!user) return;
+    const result = await saveDraft({ mailingId: activeMailingId, userId: user.id, document });
+    if (!result.savedId) {
+      toast({ title: "No se pudo guardar", description: "Revisa tu sesión e inténtalo nuevamente.", variant: "destructive" });
+      return;
+    }
+    setActiveMailingId(result.savedId);
+    toast({ title: "Borrador guardado", description: "El mailing quedó almacenado en backend." });
+  };
+
+  const handleSaveVersion = async () => {
+    if (!user) return;
+    const mailingId = activeMailingId ?? await saveDraft({ userId: user.id, document }).then((result) => result.savedId);
+    if (!mailingId) {
+      toast({ title: "No se pudo versionar", description: "Primero necesitamos guardar el mailing.", variant: "destructive" });
+      return;
+    }
+    setActiveMailingId(mailingId);
+    const result = await saveVersion({ mailingId, userId: user.id, document, note: versionNote });
+    if (!result.versionNumber) {
+      toast({ title: "No se pudo crear la versión", description: "Inténtalo nuevamente en unos segundos.", variant: "destructive" });
+      return;
+    }
+    setVersionNote("");
+    toast({ title: `Versión v${result.versionNumber} creada`, description: "El snapshot quedó guardado en el historial." });
+  };
+
+  const handleLoadMailing = async (mailingId: string) => {
+    const selectedMailing = mailings.find((item) => item.id === mailingId);
+    if (!selectedMailing) return;
+    replaceDocument(selectedMailing.document, selectedMailing.id);
+    await loadVersions(selectedMailing.id);
+    toast({ title: "Mailing cargado", description: "Se cargó el borrador seleccionado." });
   };
 
   const updateSelectedBlock = (nextBlock: typeof selectedBlock extends null ? never : NonNullable<typeof selectedBlock>) => {
@@ -69,6 +137,17 @@ export default function MailingBuilderPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleNewDraft}>
+              Nuevo
+            </Button>
+            <Button variant="outline" onClick={() => void handleSaveDraft()} disabled={!user || saving}>
+              <Save className="mr-2 h-4 w-4" />
+              Guardar draft
+            </Button>
+            <Button variant="outline" onClick={() => void handleSaveVersion()} disabled={!user || saving}>
+              <History className="mr-2 h-4 w-4" />
+              Guardar versión
+            </Button>
             <Button variant="outline" onClick={() => void handleCopyHtml()}>
               <Copy className="mr-2 h-4 w-4" />
               Copiar HTML
@@ -85,6 +164,45 @@ export default function MailingBuilderPage() {
         <aside className="border-r border-border bg-card">
           <ScrollArea className="h-full">
             <div className="space-y-6 p-5">
+              <section className="space-y-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Guardado</p>
+                </div>
+                <Input
+                  value={versionNote}
+                  onChange={(event) => setVersionNote(event.target.value)}
+                  placeholder="Nota para la versión"
+                />
+                <div className="grid gap-2">
+                  {loading ? <p className="text-xs text-muted-foreground">Cargando borradores…</p> : null}
+                  {mailings.slice(0, 6).map((mailing) => (
+                    <button
+                      key={mailing.id}
+                      type="button"
+                      onClick={() => void handleLoadMailing(mailing.id)}
+                      className={`rounded-md border px-3 py-2 text-left transition ${activeMailingId === mailing.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+                    >
+                      <p className="text-sm font-medium text-foreground">{mailing.name}</p>
+                      <p className="text-xs text-muted-foreground">v{mailing.currentVersion} · {new Date(mailing.updatedAt).toLocaleDateString("es-CL")}</p>
+                    </button>
+                  ))}
+                </div>
+                {versions.length ? (
+                  <div className="space-y-2 rounded-md border border-border p-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Versiones</p>
+                    {versions.map((version) => (
+                      <div key={version.id} className="flex items-start justify-between gap-2 text-xs">
+                        <div>
+                          <p className="font-medium text-foreground">v{version.versionNumber}</p>
+                          <p className="text-muted-foreground">{version.note || "Sin nota"}</p>
+                        </div>
+                        <span className="text-muted-foreground">{new Date(version.createdAt).toLocaleDateString("es-CL")}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </section>
+
               {Object.entries(groupedBlocks).map(([category, items]) => (
                 <section key={category} className="space-y-3">
                   <div>
