@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Mail, MoveDown, MoveUp, Plus, Trash2, Copy, Download, Save, History, Eye, PenSquare, CodeXml, RotateCcw, ImagePlus, Settings2, X, Type, Image as ImageIcon, RectangleHorizontal, MousePointerClick } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,8 @@ export default function MailingBuilderPage() {
   const [lastAutosaveAt, setLastAutosaveAt] = useState<string | null>(null);
   const [assetPickerOpen, setAssetPickerOpen] = useState(false);
   const [showGlobalInspector, setShowGlobalInspector] = useState(false);
+  const inspectorRef = useRef<HTMLDivElement | null>(null);
+  const globalInspectorButtonRef = useRef<HTMLButtonElement | null>(null);
   const selectedBlock = document.blocks.find((block) => block.id === selectedBlockId) ?? null;
   const SelectedInspector = selectedBlock ? blockRegistry[selectedBlock.type].Inspector : null;
   const htmlPreview = useMemo(() => renderMailingHtml(document), [document]);
@@ -250,6 +252,22 @@ export default function MailingBuilderPage() {
     }
   };
 
+  useEffect(() => {
+    if (!isInspectorOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      if (inspectorRef.current?.contains(target)) return;
+      if (globalInspectorButtonRef.current?.contains(target)) return;
+      if (target.closest('[data-mailing-block="true"]')) return;
+      handleCloseInspector();
+    };
+
+    window.document.addEventListener("mousedown", handlePointerDown);
+    return () => window.document.removeEventListener("mousedown", handlePointerDown);
+  }, [isInspectorOpen]);
+
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-background">
       <div className="border-b border-border bg-card px-8 py-6">
@@ -390,7 +408,7 @@ export default function MailingBuilderPage() {
                   <p className="text-xs text-muted-foreground">{document.name} · {document.blocks.length} bloques · {document.settings.width}px</p>
                 </div>
                   <div className="flex items-center gap-2">
-                    <Button type="button" variant={showGlobalInspector && !selectedBlock ? "default" : "outline"} size="icon" onClick={handleOpenGlobalInspector}>
+                    <Button ref={globalInspectorButtonRef} type="button" variant={showGlobalInspector && !selectedBlock ? "default" : "outline"} size="icon" onClick={handleOpenGlobalInspector}>
                       <Settings2 className="h-4 w-4" />
                     </Button>
                     <Tabs value={previewMode} onValueChange={(value) => setPreviewMode(value as typeof previewMode)}>
@@ -409,7 +427,6 @@ export default function MailingBuilderPage() {
                 <div className={`grid gap-4 ${previewMode === "split" ? "lg:grid-cols-2" : "grid-cols-1"}`}>
                   {previewMode !== "html" ? (
                     <div
-                      onClick={() => handleCloseInspector()}
                       className="mx-auto min-h-full w-full space-y-4 rounded-md border border-dashed border-border bg-background p-4"
                       style={{ maxWidth: `${document.settings.width + 32}px` }}
                     >
@@ -422,7 +439,11 @@ export default function MailingBuilderPage() {
                             <button
                               key={block.id}
                               type="button"
-                              onClick={() => selectBlock(block.id)}
+                              data-mailing-block="true"
+                              onClick={() => {
+                                setShowGlobalInspector(false);
+                                selectBlock(block.id);
+                              }}
                               className={`w-full rounded-lg border p-3 text-left transition ${
                                 isSelected ? "border-primary bg-primary/5 shadow-[var(--shadow-card)]" : "border-border bg-background hover:border-primary/40"
                               }`}
@@ -502,7 +523,7 @@ export default function MailingBuilderPage() {
 
         <aside className={`overflow-hidden border-l border-border bg-card transition-all duration-300 ${isInspectorOpen ? "opacity-100" : "pointer-events-none opacity-0"}`}>
           {isInspectorOpen ? (
-            <div className="h-full p-5">
+            <div ref={inspectorRef} className="h-full p-5">
               <Card className="flex h-full flex-col">
                 <CardHeader className="border-b border-border pb-4">
                   <div className="flex items-start justify-between gap-3">
