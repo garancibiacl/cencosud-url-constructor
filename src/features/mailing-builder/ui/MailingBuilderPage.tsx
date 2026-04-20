@@ -384,18 +384,23 @@ export default function MailingBuilderPage() {
         <section className="min-h-0 bg-secondary/35 px-8 py-6">
           <div className="mx-auto flex h-full max-w-[760px] flex-col rounded-lg border border-border bg-card shadow-[var(--shadow-card)]">
             <div className="border-b border-border px-6 py-4">
-              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-foreground">Canvas visual</p>
                   <p className="text-xs text-muted-foreground">{document.name} · {document.blocks.length} bloques · {document.settings.width}px</p>
                 </div>
-                <Tabs value={previewMode} onValueChange={(value) => setPreviewMode(value as typeof previewMode)}>
-                  <TabsList>
-                    <TabsTrigger value="canvas"><PenSquare className="mr-2 h-4 w-4" />Canvas</TabsTrigger>
-                    <TabsTrigger value="split"><Eye className="mr-2 h-4 w-4" />Split</TabsTrigger>
-                    <TabsTrigger value="html"><CodeXml className="mr-2 h-4 w-4" />HTML</TabsTrigger>
-                  </TabsList>
-                </Tabs>
+                  <div className="flex items-center gap-2">
+                    <Button type="button" variant={showGlobalInspector && !selectedBlock ? "default" : "outline"} size="icon" onClick={handleOpenGlobalInspector}>
+                      <Settings2 className="h-4 w-4" />
+                    </Button>
+                    <Tabs value={previewMode} onValueChange={(value) => setPreviewMode(value as typeof previewMode)}>
+                      <TabsList>
+                        <TabsTrigger value="canvas"><PenSquare className="mr-2 h-4 w-4" />Canvas</TabsTrigger>
+                        <TabsTrigger value="split"><Eye className="mr-2 h-4 w-4" />Split</TabsTrigger>
+                        <TabsTrigger value="html"><CodeXml className="mr-2 h-4 w-4" />HTML</TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  </div>
               </div>
             </div>
 
@@ -404,6 +409,7 @@ export default function MailingBuilderPage() {
                 <div className={`grid gap-4 ${previewMode === "split" ? "lg:grid-cols-2" : "grid-cols-1"}`}>
                   {previewMode !== "html" ? (
                     <div
+                      onClick={() => handleCloseInspector()}
                       className="mx-auto min-h-full w-full space-y-4 rounded-md border border-dashed border-border bg-background p-4"
                       style={{ maxWidth: `${document.settings.width + 32}px` }}
                     >
@@ -494,63 +500,69 @@ export default function MailingBuilderPage() {
           </div>
         </section>
 
-        <aside className="border-l border-border bg-card">
-          <div className="p-5">
-            <Card>
-              <CardHeader>
-                <CardTitle>Inspector</CardTitle>
-                <CardDescription>Propiedades contextuales del bloque seleccionado.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 text-sm">
-                <div className="space-y-4 rounded-md border border-border p-4">
-                  <div>
-                    <p className="font-medium text-foreground">Settings globales</p>
-                    <p className="text-muted-foreground">Subject, preheader, ancho, fuente y tracking.</p>
-                  </div>
-                  <Input value={document.name} onChange={(event) => useMailingBuilderStore.setState((state) => ({ document: { ...state.document, name: event.target.value } }))} placeholder="Nombre del mailing" />
-                  <Input value={document.settings.subject ?? ""} onChange={(event) => updateDocumentSettings("subject", event.target.value)} placeholder="Subject" />
-                  <Textarea value={document.settings.preheader ?? ""} onChange={(event) => updateDocumentSettings("preheader", event.target.value)} placeholder="Preheader" />
-                  <div className="grid grid-cols-2 gap-3">
-                    <Input type="number" value={document.settings.width} onChange={(event) => updateDocumentSettings("width", Number(event.target.value) || 600)} placeholder="Ancho" />
-                    <Input value={document.settings.fontFamily} onChange={(event) => updateDocumentSettings("fontFamily", event.target.value)} placeholder="Fuente" />
-                  </div>
-                  <Separator />
-                  <div className="space-y-3">
-                    <label className="flex items-center justify-between gap-3 text-sm">
-                      <span className="text-foreground">Activar tracking</span>
-                      <input type="checkbox" checked={document.settings.linkTracking.enabled} onChange={(event) => updateTrackingField("enabled", event.target.checked)} />
-                    </label>
-                    <div className="grid grid-cols-1 gap-3">
-                      <Input value={document.settings.linkTracking.utmSource} onChange={(event) => updateTrackingField("utmSource", event.target.value)} placeholder="utm_source" />
-                      <Input value={document.settings.linkTracking.utmMedium} onChange={(event) => updateTrackingField("utmMedium", event.target.value)} placeholder="utm_medium" />
-                      <Input value={document.settings.linkTracking.utmCampaign} onChange={(event) => updateTrackingField("utmCampaign", event.target.value)} placeholder="utm_campaign" />
-                      <Input value={document.settings.linkTracking.promoName ?? ""} onChange={(event) => updateTrackingField("promoName", event.target.value)} placeholder="nombre_promo" />
+        <aside className={`overflow-hidden border-l border-border bg-card transition-all duration-300 ${isInspectorOpen ? "opacity-100" : "pointer-events-none opacity-0"}`}>
+          {isInspectorOpen ? (
+            <div className="h-full p-5">
+              <Card className="flex h-full flex-col">
+                <CardHeader className="border-b border-border pb-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <CardTitle className="flex items-center gap-2">
+                        {selectedBlock && blockMeta ? <blockMeta.icon className="h-5 w-5 text-primary" /> : <Settings2 className="h-5 w-5 text-primary" />}
+                        {selectedBlock ? blockMeta?.label : "Inspector global"}
+                      </CardTitle>
+                      <CardDescription>
+                        {selectedBlock ? `${blockMeta?.detail} · texto, fuente, medidas y contenido.` : "Subject, preheader, ancho, fuente y tracking."}
+                      </CardDescription>
                     </div>
+                    <Button type="button" size="icon" variant="ghost" onClick={handleCloseInspector}>
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
-                </div>
-
-                {selectedBlock ? (
-                  <>
-                    <Separator />
-                    <div>
-                      <p className="font-medium text-foreground">{blockRegistry[selectedBlock.type].label}</p>
-                      <p className="text-muted-foreground">Tipo: {selectedBlock.type}</p>
+                </CardHeader>
+                <CardContent className="min-h-0 flex-1 space-y-4 overflow-auto pt-5 text-sm">
+                  {!selectedBlock ? (
+                    <div className="space-y-4 rounded-md border border-border p-4">
+                      <div>
+                        <p className="font-medium text-foreground">Settings globales</p>
+                        <p className="text-muted-foreground">Control general del mailing.</p>
+                      </div>
+                      <Input value={document.name} onChange={(event) => useMailingBuilderStore.setState((state) => ({ document: { ...state.document, name: event.target.value } }))} placeholder="Nombre del mailing" />
+                      <Input value={document.settings.subject ?? ""} onChange={(event) => updateDocumentSettings("subject", event.target.value)} placeholder="Subject" />
+                      <Textarea value={document.settings.preheader ?? ""} onChange={(event) => updateDocumentSettings("preheader", event.target.value)} placeholder="Preheader" />
+                      <div className="grid grid-cols-2 gap-3">
+                        <Input type="number" value={document.settings.width} onChange={(event) => updateDocumentSettings("width", Number(event.target.value) || 600)} placeholder="Ancho" />
+                        <Input value={document.settings.fontFamily} onChange={(event) => updateDocumentSettings("fontFamily", event.target.value)} placeholder="Fuente" />
+                      </div>
+                      <Separator />
+                      <div className="space-y-3">
+                        <label className="flex items-center justify-between gap-3 text-sm">
+                          <span className="text-foreground">Activar tracking</span>
+                          <input type="checkbox" checked={document.settings.linkTracking.enabled} onChange={(event) => updateTrackingField("enabled", event.target.checked)} />
+                        </label>
+                        <div className="grid grid-cols-1 gap-3">
+                          <Input value={document.settings.linkTracking.utmSource} onChange={(event) => updateTrackingField("utmSource", event.target.value)} placeholder="utm_source" />
+                          <Input value={document.settings.linkTracking.utmMedium} onChange={(event) => updateTrackingField("utmMedium", event.target.value)} placeholder="utm_medium" />
+                          <Input value={document.settings.linkTracking.utmCampaign} onChange={(event) => updateTrackingField("utmCampaign", event.target.value)} placeholder="utm_campaign" />
+                          <Input value={document.settings.linkTracking.promoName ?? ""} onChange={(event) => updateTrackingField("promoName", event.target.value)} placeholder="nombre_promo" />
+                        </div>
+                      </div>
                     </div>
-                    <Separator />
-                    {canPickImageAsset ? (
-                      <Button type="button" variant="outline" onClick={() => setAssetPickerOpen(true)}>
-                        <ImagePlus className="mr-2 h-4 w-4" />
-                        Elegir desde Banco de Archivos
-                      </Button>
-                    ) : null}
-                    {SelectedInspector ? <SelectedInspector block={selectedBlock} onChange={updateSelectedBlock} /> : null}
-                  </>
-                ) : (
-                  <p className="text-muted-foreground">Selecciona un bloque del canvas para inspeccionarlo.</p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                  ) : (
+                    <>
+                      {canPickImageAsset ? (
+                        <Button type="button" variant="outline" onClick={() => setAssetPickerOpen(true)}>
+                          <ImagePlus className="mr-2 h-4 w-4" />
+                          Elegir desde Banco de Archivos
+                        </Button>
+                      ) : null}
+                      {SelectedInspector ? <SelectedInspector block={selectedBlock} onChange={updateSelectedBlock} /> : null}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          ) : null}
         </aside>
       </div>
 

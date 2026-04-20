@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { AlignHorizontalJustifyCenter, Image as ImageIcon, Layers3, Link2, Ruler, Type, WholeWord } from "lucide-react";
+import { AlignHorizontalJustifyCenter, Image as ImageIcon, Layers3, Link2, MousePointerClick, Ruler, Type, WholeWord } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
