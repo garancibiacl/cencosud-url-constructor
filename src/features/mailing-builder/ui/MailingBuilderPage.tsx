@@ -86,22 +86,6 @@ export default function MailingBuilderPage() {
     return () => cancelAutosave();
   }, [activeMailingId, cancelAutosave, document, scheduleAutosave, setActiveMailingId, user]);
 
-  useEffect(() => {
-    if (!isInspectorOpen) return;
-
-    const handlePointerDown = (event: MouseEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (!target) return;
-      if (inspectorRef.current?.contains(target)) return;
-      if (globalInspectorButtonRef.current?.contains(target)) return;
-      if (target.closest('[data-mailing-block="true"]')) return;
-      handleCloseInspector();
-    };
-
-    document.addEventListener("mousedown", handlePointerDown);
-    return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, [isInspectorOpen, selectedBlockId, showGlobalInspector]);
-
   const exportHtml = () => htmlPreview;
 
   const handleCopyHtml = async () => {
@@ -267,6 +251,22 @@ export default function MailingBuilderPage() {
       });
     }
   };
+
+  useEffect(() => {
+    if (!isInspectorOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      if (inspectorRef.current?.contains(target)) return;
+      if (globalInspectorButtonRef.current?.contains(target)) return;
+      if (target.closest('[data-mailing-block="true"]')) return;
+      handleCloseInspector();
+    };
+
+    window.document.addEventListener("mousedown", handlePointerDown);
+    return () => window.document.removeEventListener("mousedown", handlePointerDown);
+  }, [isInspectorOpen]);
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-background">
