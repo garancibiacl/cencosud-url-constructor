@@ -1,12 +1,19 @@
 import type { MailingBlock } from "./block.types";
 
 export interface MailingSettings {
-  width: 600;
+  width: number;
   backgroundColor: string;
   contentBackgroundColor: string;
   fontFamily: string;
   preheader?: string;
   subject?: string;
+  linkTracking: {
+    enabled: boolean;
+    utmSource: string;
+    utmMedium: string;
+    utmCampaign: string;
+    promoName?: string;
+  };
 }
 
 export interface MailingDocument {

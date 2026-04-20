@@ -5,15 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { blockRegistry } from "../logic/registry/blockRegistry";
 import { analyzeMailingHtml } from "../logic/exporters/analyzeMailingHtml";
-import { renderMailingHtml } from "../logic/exporters/renderMailingHtml";
+import { renderMailingHtml, resolveTrackedLink } from "../logic/exporters/renderMailingHtml";
 import { createDefaultMailing } from "../logic/builders/createDefaultMailing";
 import { useMailings } from "../hooks/useMailings";
 import { useMailingBuilderStore } from "../hooks/useMailingBuilderStore";
+import { mailingTemplates } from "../logic/templates/mailingTemplates";
 
 const CATEGORY_LABELS = {
   content: "Contenido",
@@ -44,6 +46,14 @@ export default function MailingBuilderPage() {
   const SelectedInspector = selectedBlock ? blockRegistry[selectedBlock.type].Inspector : null;
   const htmlPreview = useMemo(() => renderMailingHtml(document), [document]);
   const compatibility = useMemo(() => analyzeMailingHtml(htmlPreview), [htmlPreview]);
+  const trackedLinks = useMemo(() => (
+    document.blocks.flatMap((block) => {
+      if (block.type === "hero" && block.props.href) return [{ id: block.id, label: block.props.ctaLabel || "CTA", url: resolveTrackedLink(block.props.href, document) }];
+      if (block.type === "button" && block.props.href) return [{ id: block.id, label: block.props.label, url: resolveTrackedLink(block.props.href, document) }];
+      if (block.type === "image" && block.props.href) return [{ id: block.id, label: block.props.alt || "Imagen", url: resolveTrackedLink(block.props.href, document) }];
+      return [];
+    })
+  ), [document]);
 
   useEffect(() => {
     void refreshMailings();
@@ -93,6 +103,14 @@ export default function MailingBuilderPage() {
   const handleNewDraft = () => {
     replaceDocument(createDefaultMailing(), null);
     setVersionNote("");
+  };
+
+  const handleApplyTemplate = (templateId: string) => {
+    const template = mailingTemplates.find((item) => item.id === templateId);
+    if (!template) return;
+    replaceDocument(template.build(), null);
+    setVersionNote("");
+    toast({ title: "Template aplicado", description: `${template.label} quedó cargado en el canvas.` });
   };
 
   const handleSaveDraft = async () => {
@@ -154,6 +172,33 @@ export default function MailingBuilderPage() {
     return acc;
   }, {});
 
+  const updateDocumentSettings = <T,>(key: keyof typeof document.settings, value: T) => {
+    useMailingBuilderStore.setState((state) => ({
+      document: {
+        ...state.document,
+        settings: {
+          ...state.document.settings,
+          [key]: value,
+        },
+      },
+    }));
+  };
+
+  const updateTrackingField = (key: keyof typeof document.settings.linkTracking, value: string | boolean) => {
+    useMailingBuilderStore.setState((state) => ({
+      document: {
+        ...state.document,
+        settings: {
+          ...state.document.settings,
+          linkTracking: {
+            ...state.document.settings.linkTracking,
+            [key]: value,
+          },
+        },
+      },
+    }));
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-background">
       <div className="border-b border-border bg-card px-8 py-6">
@@ -196,6 +241,25 @@ export default function MailingBuilderPage() {
         <aside className="border-r border-border bg-card">
           <ScrollArea className="h-full">
             <div className="space-y-6 p-5">
+              <section className="space-y-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Templates</p>
+                </div>
+                <div className="grid gap-2">
+                  {mailingTemplates.map((template) => (
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => handleApplyTemplate(template.id)}
+                      className="rounded-md border border-border px-3 py-2 text-left transition hover:border-primary/40"
+                    >
+                      <p className="text-sm font-medium text-foreground">{template.label}</p>
+                      <p className="text-xs text-muted-foreground">{template.description}</p>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
               <section className="space-y-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Guardado</p>
@@ -358,6 +422,17 @@ export default function MailingBuilderPage() {
                             </div>
                           )) : <p className="text-xs text-muted-foreground">No se detectaron alertas básicas de compatibilidad.</p>}
                         </div>
+                        {trackedLinks.length ? (
+                          <div className="mt-4 space-y-2">
+                            <p className="text-sm font-semibold text-foreground">Link Manager / UTMs</p>
+                            {trackedLinks.map((link) => (
+                              <div key={link.id} className="rounded-md border border-border px-3 py-2 text-xs">
+                                <p className="font-medium text-foreground">{link.label}</p>
+                                <p className="break-all text-muted-foreground">{link.url}</p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
                         <pre className="mt-4 max-h-56 overflow-auto rounded-md border border-border bg-secondary/35 p-3 text-[11px] leading-5 text-foreground whitespace-pre-wrap">{htmlPreview}</pre>
                       </div>
                     </div>
@@ -376,8 +451,36 @@ export default function MailingBuilderPage() {
                 <CardDescription>Propiedades contextuales del bloque seleccionado.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 text-sm">
+                <div className="space-y-4 rounded-md border border-border p-4">
+                  <div>
+                    <p className="font-medium text-foreground">Settings globales</p>
+                    <p className="text-muted-foreground">Subject, preheader, ancho, fuente y tracking.</p>
+                  </div>
+                  <Input value={document.name} onChange={(event) => useMailingBuilderStore.setState((state) => ({ document: { ...state.document, name: event.target.value } }))} placeholder="Nombre del mailing" />
+                  <Input value={document.settings.subject ?? ""} onChange={(event) => updateDocumentSettings("subject", event.target.value)} placeholder="Subject" />
+                  <Textarea value={document.settings.preheader ?? ""} onChange={(event) => updateDocumentSettings("preheader", event.target.value)} placeholder="Preheader" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input type="number" value={document.settings.width} onChange={(event) => updateDocumentSettings("width", Number(event.target.value) || 600)} placeholder="Ancho" />
+                    <Input value={document.settings.fontFamily} onChange={(event) => updateDocumentSettings("fontFamily", event.target.value)} placeholder="Fuente" />
+                  </div>
+                  <Separator />
+                  <div className="space-y-3">
+                    <label className="flex items-center justify-between gap-3 text-sm">
+                      <span className="text-foreground">Activar tracking</span>
+                      <input type="checkbox" checked={document.settings.linkTracking.enabled} onChange={(event) => updateTrackingField("enabled", event.target.checked)} />
+                    </label>
+                    <div className="grid grid-cols-1 gap-3">
+                      <Input value={document.settings.linkTracking.utmSource} onChange={(event) => updateTrackingField("utmSource", event.target.value)} placeholder="utm_source" />
+                      <Input value={document.settings.linkTracking.utmMedium} onChange={(event) => updateTrackingField("utmMedium", event.target.value)} placeholder="utm_medium" />
+                      <Input value={document.settings.linkTracking.utmCampaign} onChange={(event) => updateTrackingField("utmCampaign", event.target.value)} placeholder="utm_campaign" />
+                      <Input value={document.settings.linkTracking.promoName ?? ""} onChange={(event) => updateTrackingField("promoName", event.target.value)} placeholder="nombre_promo" />
+                    </div>
+                  </div>
+                </div>
+
                 {selectedBlock ? (
                   <>
+                    <Separator />
                     <div>
                       <p className="font-medium text-foreground">{blockRegistry[selectedBlock.type].label}</p>
                       <p className="text-muted-foreground">Tipo: {selectedBlock.type}</p>

@@ -39,6 +39,26 @@ const sanitizeUrl = (value?: string) => {
   return `https://${value}`;
 };
 
+const buildTrackedUrl = (value: string | undefined, document: MailingDocument) => {
+  const sanitized = sanitizeUrl(value);
+  if (!document.settings.linkTracking.enabled || sanitized === "#" || sanitized.startsWith("mailto:") || sanitized.startsWith("tel:")) {
+    return sanitized;
+  }
+
+  try {
+    const url = sanitized.startsWith("http") ? new URL(sanitized) : new URL(sanitized, "https://placeholder.local");
+    url.searchParams.set("utm_source", document.settings.linkTracking.utmSource);
+    url.searchParams.set("utm_medium", document.settings.linkTracking.utmMedium);
+    url.searchParams.set("utm_campaign", document.settings.linkTracking.utmCampaign);
+    if (document.settings.linkTracking.promoName) {
+      url.searchParams.set("nombre_promo", document.settings.linkTracking.promoName);
+    }
+    return sanitized.startsWith("http") ? url.toString() : `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return sanitized;
+  }
+};
+
 const getPadding = (block: MailingBlock) => ({
   top: block.layout.padding?.top ?? 0,
   right: block.layout.padding?.right ?? 0,
@@ -59,7 +79,7 @@ const wrapBlock = (block: MailingBlock, inner: string, backgroundColor?: string)
   `;
 };
 
-const renderHero = (block: HeroBlock) => {
+const renderHero = (block: HeroBlock, document: MailingDocument) => {
   const title = escapeHtml(block.props.title);
   const subtitle = block.props.subtitle ? `<p style="margin:0; font-size:16px; line-height:24px; color:${FALLBACK_COLORS.muted};">${escapeHtml(block.props.subtitle)}</p>` : "";
   const cta = block.props.ctaLabel
@@ -67,7 +87,7 @@ const renderHero = (block: HeroBlock) => {
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;">
         <tr>
           <td bgcolor="${FALLBACK_COLORS.primary}" style="border-radius:6px;">
-            <a href="${escapeHtml(sanitizeUrl(block.props.href))}" style="display:inline-block; padding:14px 22px; font-size:14px; line-height:14px; font-weight:700; color:${FALLBACK_COLORS.primaryForeground}; text-decoration:none;">${escapeHtml(block.props.ctaLabel)}</a>
+            <a href="${escapeHtml(buildTrackedUrl(block.props.href, document))}" style="display:inline-block; padding:14px 22px; font-size:14px; line-height:14px; font-weight:700; color:${FALLBACK_COLORS.primaryForeground}; text-decoration:none;">${escapeHtml(block.props.ctaLabel)}</a>
           </td>
         </tr>
       </table>
@@ -105,16 +125,16 @@ const renderText = (block: TextBlock) =>
     `,
   );
 
-const renderImage = (block: ImageBlock) => {
+const renderImage = (block: ImageBlock, document: MailingDocument) => {
   const image = `<img src="${escapeHtml(block.props.src || "/placeholder.svg")}" alt="${escapeHtml(block.props.alt || "Imagen")}" width="100%" style="display:block; width:100%; height:auto; border:0;" />`;
   const content = block.props.href
-    ? `<a href="${escapeHtml(sanitizeUrl(block.props.href))}" style="text-decoration:none;">${image}</a>`
+    ? `<a href="${escapeHtml(buildTrackedUrl(block.props.href, document))}" style="text-decoration:none;">${image}</a>`
     : image;
 
   return wrapBlock(block, content);
 };
 
-const renderButton = (block: ButtonBlock) => {
+const renderButton = (block: ButtonBlock, document: MailingDocument) => {
   const align = block.props.align === "left" ? "left" : block.props.align === "right" ? "right" : "center";
   return wrapBlock(
     block,
@@ -125,7 +145,7 @@ const renderButton = (block: ButtonBlock) => {
             <table role="presentation" cellpadding="0" cellspacing="0" border="0">
               <tr>
                 <td bgcolor="${FALLBACK_COLORS.primary}" style="border-radius:6px;">
-                  <a href="${escapeHtml(sanitizeUrl(block.props.href))}" style="display:inline-block; padding:14px 22px; font-size:14px; line-height:14px; font-weight:700; color:${FALLBACK_COLORS.primaryForeground}; text-decoration:none;">${escapeHtml(block.props.label)}</a>
+                  <a href="${escapeHtml(buildTrackedUrl(block.props.href, document))}" style="display:inline-block; padding:14px 22px; font-size:14px; line-height:14px; font-weight:700; color:${FALLBACK_COLORS.primaryForeground}; text-decoration:none;">${escapeHtml(block.props.label)}</a>
                 </td>
               </tr>
             </table>
@@ -139,16 +159,18 @@ const renderButton = (block: ButtonBlock) => {
 const renderSpacer = (block: SpacerBlock) =>
   wrapBlock(block, `&nbsp;`, "transparent").replace("&nbsp;", `<div style="line-height:${block.props.height}px; height:${block.props.height}px;">&nbsp;</div>`);
 
-const renderBlock = (block: MailingBlock) => {
+export const resolveTrackedLink = (value: string | undefined, document: MailingDocument) => buildTrackedUrl(value, document);
+
+const renderBlock = (block: MailingBlock, document: MailingDocument) => {
   switch (block.type) {
     case "hero":
-      return renderHero(block);
+      return renderHero(block, document);
     case "text":
       return renderText(block);
     case "image":
-      return renderImage(block);
+      return renderImage(block, document);
     case "button":
-      return renderButton(block);
+      return renderButton(block, document);
     case "spacer":
       return renderSpacer(block);
     default:
@@ -176,7 +198,7 @@ export const renderMailingHtml = (document: MailingDocument) => {
       <tr>
         <td align="center">
           <table role="presentation" width="${document.settings.width}" cellpadding="0" cellspacing="0" border="0" style="width:${document.settings.width}px; max-width:${document.settings.width}px; background:${contentBackground}; margin:0 auto;">
-            ${document.blocks.map(renderBlock).join("\n")}
+            ${document.blocks.map((block) => renderBlock(block, document)).join("\n")}
           </table>
         </td>
       </tr>
