@@ -1,9 +1,11 @@
-import { Mail, MoveDown, MoveUp, Plus, Trash2, Copy } from "lucide-react";
+import { Mail, MoveDown, MoveUp, Plus, Trash2, Copy, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
 import { blockRegistry } from "../logic/registry/blockRegistry";
+import { renderMailingHtml } from "../logic/exporters/renderMailingHtml";
 import { useMailingBuilderStore } from "../hooks/useMailingBuilderStore";
 
 const CATEGORY_LABELS = {
@@ -14,8 +16,29 @@ const CATEGORY_LABELS = {
 
 export default function MailingBuilderPage() {
   const { document, selectedBlockId, selectBlock, addBlock, removeBlock, duplicateBlock, moveBlock } = useMailingBuilderStore();
+  const { toast } = useToast();
   const selectedBlock = document.blocks.find((block) => block.id === selectedBlockId) ?? null;
   const SelectedInspector = selectedBlock ? blockRegistry[selectedBlock.type].Inspector : null;
+
+  const exportHtml = () => renderMailingHtml(document);
+
+  const handleCopyHtml = async () => {
+    const html = exportHtml();
+    await navigator.clipboard.writeText(html);
+    toast({ title: "HTML copiado", description: "El mailing quedó listo para pegar o enviar a desarrollo." });
+  };
+
+  const handleDownloadHtml = () => {
+    const html = exportHtml();
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = window.document.createElement("a");
+    link.href = url;
+    link.download = `${document.name.trim().toLowerCase().replace(/\s+/g, "-") || "mailing"}.html`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "HTML descargado", description: "Se descargó una versión email-safe del mailing." });
+  };
 
   const updateSelectedBlock = (nextBlock: typeof selectedBlock extends null ? never : NonNullable<typeof selectedBlock>) => {
     useMailingBuilderStore.setState((state) => ({
@@ -35,13 +58,25 @@ export default function MailingBuilderPage() {
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-background">
       <div className="border-b border-border bg-card px-8 py-6">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Mail className="h-5 w-5" />
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Mail className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-foreground">Mailing Builder</h1>
+              <p className="text-sm text-muted-foreground">Base técnica del editor visual desacoplado sobre JSON estructurado.</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-foreground">Mailing Builder</h1>
-            <p className="text-sm text-muted-foreground">Base técnica del editor visual desacoplado sobre JSON estructurado.</p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => void handleCopyHtml()}>
+              <Copy className="mr-2 h-4 w-4" />
+              Copiar HTML
+            </Button>
+            <Button onClick={handleDownloadHtml}>
+              <Download className="mr-2 h-4 w-4" />
+              Descargar HTML
+            </Button>
           </div>
         </div>
       </div>
