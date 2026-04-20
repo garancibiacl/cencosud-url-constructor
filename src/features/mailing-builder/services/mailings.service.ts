@@ -21,6 +21,7 @@ export interface MailingVersionItem {
   versionNumber: number;
   note: string | null;
   createdAt: string;
+  snapshot: MailingDocument;
 }
 
 const normalizeMailing = (row: any): MailingListItem => ({
@@ -37,6 +38,7 @@ const normalizeVersion = (row: any): MailingVersionItem => ({
   versionNumber: row.version_number,
   note: row.note ?? null,
   createdAt: row.created_at,
+  snapshot: row.snapshot as MailingDocument,
 });
 
 export async function listMailings(): Promise<MailingListItem[]> {
@@ -56,7 +58,7 @@ export async function listMailings(): Promise<MailingListItem[]> {
 export async function listMailingVersions(mailingId: string): Promise<MailingVersionItem[]> {
   const { data, error } = await db
     .from("mailing_versions")
-    .select("id, version_number, note, created_at")
+    .select("id, version_number, note, created_at, snapshot")
     .eq("mailing_id", mailingId)
     .order("version_number", { ascending: false })
     .limit(8);
