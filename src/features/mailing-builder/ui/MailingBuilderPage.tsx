@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Mail, MoveDown, MoveUp, Plus, Trash2, Copy, Download, Save, History, Eye, PenSquare, CodeXml, RotateCcw } from "lucide-react";
+import { Mail, MoveDown, MoveUp, Plus, Trash2, Copy, Download, Save, History, Eye, PenSquare, CodeXml, RotateCcw, ImagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,8 @@ import { createDefaultMailing } from "../logic/builders/createDefaultMailing";
 import { useMailings } from "../hooks/useMailings";
 import { useMailingBuilderStore } from "../hooks/useMailingBuilderStore";
 import { mailingTemplates } from "../logic/templates/mailingTemplates";
+import { AssetPickerDialog } from "./AssetPickerDialog";
+import type { FileRecord } from "@/features/file-bank/logic/file-bank.types";
 
 const CATEGORY_LABELS = {
   content: "Contenido",
@@ -42,6 +44,7 @@ export default function MailingBuilderPage() {
   const [versionNote, setVersionNote] = useState("");
   const [previewMode, setPreviewMode] = useState<"canvas" | "split" | "html">("canvas");
   const [lastAutosaveAt, setLastAutosaveAt] = useState<string | null>(null);
+  const [assetPickerOpen, setAssetPickerOpen] = useState(false);
   const selectedBlock = document.blocks.find((block) => block.id === selectedBlockId) ?? null;
   const SelectedInspector = selectedBlock ? blockRegistry[selectedBlock.type].Inspector : null;
   const htmlPreview = useMemo(() => renderMailingHtml(document), [document]);
@@ -197,6 +200,34 @@ export default function MailingBuilderPage() {
         },
       },
     }));
+  };
+
+  const canPickImageAsset = selectedBlock?.type === "hero" || selectedBlock?.type === "image";
+
+  const handleSelectAsset = (file: FileRecord) => {
+    if (!selectedBlock) return;
+
+    if (selectedBlock.type === "hero") {
+      updateSelectedBlock({
+        ...selectedBlock,
+        props: {
+          ...selectedBlock.props,
+          imageUrl: file.file_url,
+        },
+      });
+      return;
+    }
+
+    if (selectedBlock.type === "image") {
+      updateSelectedBlock({
+        ...selectedBlock,
+        props: {
+          ...selectedBlock.props,
+          src: file.file_url,
+          alt: selectedBlock.props.alt || file.title,
+        },
+      });
+    }
   };
 
   return (
@@ -486,6 +517,12 @@ export default function MailingBuilderPage() {
                       <p className="text-muted-foreground">Tipo: {selectedBlock.type}</p>
                     </div>
                     <Separator />
+                    {canPickImageAsset ? (
+                      <Button type="button" variant="outline" onClick={() => setAssetPickerOpen(true)}>
+                        <ImagePlus className="mr-2 h-4 w-4" />
+                        Elegir desde Banco de Archivos
+                      </Button>
+                    ) : null}
                     {SelectedInspector ? <SelectedInspector block={selectedBlock} onChange={updateSelectedBlock} /> : null}
                   </>
                 ) : (
@@ -496,6 +533,8 @@ export default function MailingBuilderPage() {
           </div>
         </aside>
       </div>
+
+      <AssetPickerDialog open={assetPickerOpen} onOpenChange={setAssetPickerOpen} onSelect={handleSelectAsset} />
     </div>
   );
 }
