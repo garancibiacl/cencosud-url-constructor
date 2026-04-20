@@ -107,6 +107,83 @@ export type Database = {
         }
         Relationships: []
       }
+      mailing_versions: {
+        Row: {
+          created_at: string
+          id: string
+          mailing_id: string
+          note: string | null
+          snapshot: Json
+          user_id: string
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mailing_id: string
+          note?: string | null
+          snapshot: Json
+          user_id: string
+          version_number: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mailing_id?: string
+          note?: string | null
+          snapshot?: Json
+          user_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mailing_versions_mailing_id_fkey"
+            columns: ["mailing_id"]
+            isOneToOne: false
+            referencedRelation: "mailings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mailings: {
+        Row: {
+          created_at: string
+          current_version: number
+          document: Json
+          id: string
+          name: string
+          preheader: string | null
+          status: string
+          subject: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_version?: number
+          document?: Json
+          id?: string
+          name?: string
+          preheader?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_version?: number
+          document?: Json
+          id?: string
+          name?: string
+          preheader?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
