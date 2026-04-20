@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react";
-import { Mail, MoveDown, MoveUp, Plus, Trash2, Copy, Download, Save, History } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Mail, MoveDown, MoveUp, Plus, Trash2, Copy, Download, Save, History, Eye, PenSquare, CodeXml, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { blockRegistry } from "../logic/registry/blockRegistry";
+import { analyzeMailingHtml } from "../logic/exporters/analyzeMailingHtml";
 import { renderMailingHtml } from "../logic/exporters/renderMailingHtml";
 import { createDefaultMailing } from "../logic/builders/createDefaultMailing";
 import { useMailings } from "../hooks/useMailings";
@@ -34,10 +36,14 @@ export default function MailingBuilderPage() {
     setActiveMailingId,
   } = useMailingBuilderStore();
   const { toast } = useToast();
-  const { mailings, versions, loading, saving, refreshMailings, loadVersions, saveDraft, saveVersion } = useMailings();
+  const { mailings, versions, loading, saving, refreshMailings, loadVersions, saveDraft, saveVersion, scheduleAutosave, cancelAutosave } = useMailings();
   const [versionNote, setVersionNote] = useState("");
+  const [previewMode, setPreviewMode] = useState<"canvas" | "split" | "html">("canvas");
+  const [lastAutosaveAt, setLastAutosaveAt] = useState<string | null>(null);
   const selectedBlock = document.blocks.find((block) => block.id === selectedBlockId) ?? null;
   const SelectedInspector = selectedBlock ? blockRegistry[selectedBlock.type].Inspector : null;
+  const htmlPreview = useMemo(() => renderMailingHtml(document), [document]);
+  const compatibility = useMemo(() => analyzeMailingHtml(htmlPreview), [htmlPreview]);
 
   useEffect(() => {
     void refreshMailings();
@@ -47,7 +53,14 @@ export default function MailingBuilderPage() {
     void loadVersions(activeMailingId);
   }, [activeMailingId, loadVersions]);
 
-  const exportHtml = () => renderMailingHtml(document);
+  useEffect(() => {
+    if (!user) return;
+    scheduleAutosave({ mailingId: activeMailingId, userId: user.id, document, delay: 1500 });
+    setLastAutosaveAt(new Date().toISOString());
+    return () => cancelAutosave();
+  }, [activeMailingId, cancelAutosave, document, scheduleAutosave, user]);
+
+  const exportHtml = () => htmlPreview;
 
   const handleCopyHtml = async () => {
     const html = exportHtml();
@@ -80,6 +93,7 @@ export default function MailingBuilderPage() {
       return;
     }
     setActiveMailingId(result.savedId);
+    setLastAutosaveAt(new Date().toISOString());
     toast({ title: "Borrador guardado", description: "El mailing quedó almacenado en backend." });
   };
 
@@ -108,6 +122,13 @@ export default function MailingBuilderPage() {
     toast({ title: "Mailing cargado", description: "Se cargó el borrador seleccionado." });
   };
 
+  const handleRestoreVersion = (versionId: string) => {
+    const version = versions.find((item) => item.id === versionId);
+    if (!version || !activeMailingId) return;
+    replaceDocument(version.snapshot, activeMailingId);
+    toast({ title: `Versión v${version.versionNumber} restaurada`, description: "El canvas volvió al snapshot seleccionado." });
+  };
+
   const updateSelectedBlock = (nextBlock: typeof selectedBlock extends null ? never : NonNullable<typeof selectedBlock>) => {
     useMailingBuilderStore.setState((state) => ({
       document: {
@@ -134,6 +155,7 @@ export default function MailingBuilderPage() {
             <div>
               <h1 className="text-xl font-bold text-foreground">Mailing Builder</h1>
               <p className="text-sm text-muted-foreground">Base técnica del editor visual desacoplado sobre JSON estructurado.</p>
+              <p className="mt-1 text-xs text-muted-foreground">Autosave {lastAutosaveAt ? `activo · ${new Date(lastAutosaveAt).toLocaleTimeString("es-CL")}` : "pendiente"}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -196,7 +218,12 @@ export default function MailingBuilderPage() {
                           <p className="font-medium text-foreground">v{version.versionNumber}</p>
                           <p className="text-muted-foreground">{version.note || "Sin nota"}</p>
                         </div>
-                        <span className="text-muted-foreground">{new Date(version.createdAt).toLocaleDateString("es-CL")}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">{new Date(version.createdAt).toLocaleDateString("es-CL")}</span>
+                          <Button size="icon" variant="ghost" onClick={() => handleRestoreVersion(version.id)}>
+                            <RotateCcw className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -232,55 +259,99 @@ export default function MailingBuilderPage() {
         <section className="min-h-0 bg-secondary/35 px-8 py-6">
           <div className="mx-auto flex h-full max-w-[760px] flex-col rounded-lg border border-border bg-card shadow-[var(--shadow-card)]">
             <div className="border-b border-border px-6 py-4">
-              <p className="text-sm font-semibold text-foreground">Canvas visual</p>
-              <p className="text-xs text-muted-foreground">{document.name} · {document.blocks.length} bloques · {document.settings.width}px</p>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Canvas visual</p>
+                  <p className="text-xs text-muted-foreground">{document.name} · {document.blocks.length} bloques · {document.settings.width}px</p>
+                </div>
+                <Tabs value={previewMode} onValueChange={(value) => setPreviewMode(value as typeof previewMode)}>
+                  <TabsList>
+                    <TabsTrigger value="canvas"><PenSquare className="mr-2 h-4 w-4" />Canvas</TabsTrigger>
+                    <TabsTrigger value="split"><Eye className="mr-2 h-4 w-4" />Split</TabsTrigger>
+                    <TabsTrigger value="html"><CodeXml className="mr-2 h-4 w-4" />HTML</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
             </div>
 
             <ScrollArea className="h-full">
               <div className="p-6">
-                <div
-                  className="mx-auto min-h-full space-y-4 rounded-md border border-dashed border-border bg-background p-4"
-                  style={{ width: `${document.settings.width}px`, maxWidth: "100%" }}
-                >
-                {document.blocks.map((block, index) => {
-                  const isSelected = block.id === selectedBlockId;
-                  const BlockView = blockRegistry[block.type].View;
-
-                  return (
-                    <button
-                      key={block.id}
-                      type="button"
-                      onClick={() => selectBlock(block.id)}
-                      className={`w-full rounded-lg border p-3 text-left transition ${
-                        isSelected ? "border-primary bg-primary/5 shadow-[var(--shadow-card)]" : "border-border bg-background hover:border-primary/40"
-                      }`}
+                <div className={`grid gap-4 ${previewMode === "split" ? "lg:grid-cols-2" : "grid-cols-1"}`}>
+                  {previewMode !== "html" ? (
+                    <div
+                      className="mx-auto min-h-full w-full space-y-4 rounded-md border border-dashed border-border bg-background p-4"
+                      style={{ maxWidth: `${document.settings.width + 32}px` }}
                     >
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">{blockRegistry[block.type].label}</p>
-                          <p className="mt-1 text-xs text-muted-foreground">{block.type} · span {block.layout.colSpan}/12</p>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); moveBlock(index, Math.max(0, index - 1)); }} disabled={index === 0}>
-                            <MoveUp className="h-4 w-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); moveBlock(index, Math.min(document.blocks.length - 1, index + 1)); }} disabled={index === document.blocks.length - 1}>
-                            <MoveDown className="h-4 w-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); duplicateBlock(block.id); }}>
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); removeBlock(block.id); }}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                      <div className="mx-auto space-y-4" style={{ width: `${document.settings.width}px`, maxWidth: "100%" }}>
+                        {document.blocks.map((block, index) => {
+                          const isSelected = block.id === selectedBlockId;
+                          const BlockView = blockRegistry[block.type].View;
+
+                          return (
+                            <button
+                              key={block.id}
+                              type="button"
+                              onClick={() => selectBlock(block.id)}
+                              className={`w-full rounded-lg border p-3 text-left transition ${
+                                isSelected ? "border-primary bg-primary/5 shadow-[var(--shadow-card)]" : "border-border bg-background hover:border-primary/40"
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div>
+                                  <p className="text-sm font-semibold text-foreground">{blockRegistry[block.type].label}</p>
+                                  <p className="mt-1 text-xs text-muted-foreground">{block.type} · span {block.layout.colSpan}/12</p>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); moveBlock(index, Math.max(0, index - 1)); }} disabled={index === 0}>
+                                    <MoveUp className="h-4 w-4" />
+                                  </Button>
+                                  <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); moveBlock(index, Math.min(document.blocks.length - 1, index + 1)); }} disabled={index === document.blocks.length - 1}>
+                                    <MoveDown className="h-4 w-4" />
+                                  </Button>
+                                  <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); duplicateBlock(block.id); }}>
+                                    <Copy className="h-4 w-4" />
+                                  </Button>
+                                  <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); removeBlock(block.id); }}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                              <div className="mt-3">
+                                <BlockView block={block} isSelected={isSelected} onChange={updateSelectedBlock} />
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
-                      <div className="mt-3">
-                        <BlockView block={block} isSelected={isSelected} onChange={updateSelectedBlock} />
+                    </div>
+                  ) : null}
+
+                  {previewMode !== "canvas" ? (
+                    <div className="space-y-4">
+                      <div className="rounded-md border border-border bg-background">
+                        <iframe
+                          title="HTML preview"
+                          className="h-[520px] w-full rounded-md"
+                          srcDoc={htmlPreview}
+                        />
                       </div>
-                    </button>
-                  );
-                })}
+                      <div className="rounded-md border border-border bg-background p-4">
+                        <div className="mb-3 flex items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-foreground">Compatibilidad email</p>
+                          <span className="text-xs text-muted-foreground">Score {compatibility.score}/100</span>
+                        </div>
+                        <div className="space-y-2">
+                          {compatibility.issues.length ? compatibility.issues.map((issue) => (
+                            <div key={issue.id} className="rounded-md border border-border px-3 py-2 text-xs">
+                              <p className="font-medium text-foreground">{issue.severity === "warning" ? "Warning" : "Info"}</p>
+                              <p className="text-muted-foreground">{issue.message}</p>
+                            </div>
+                          )) : <p className="text-xs text-muted-foreground">No se detectaron alertas básicas de compatibilidad.</p>}
+                        </div>
+                        <pre className="mt-4 max-h-56 overflow-auto rounded-md border border-border bg-secondary/35 p-3 text-[11px] leading-5 text-foreground whitespace-pre-wrap">{htmlPreview}</pre>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </ScrollArea>

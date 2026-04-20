@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { MailingDocument } from "../logic/schema/mailing.types";
 import {
   createMailingVersion,
@@ -14,6 +14,7 @@ export function useMailings() {
   const [versions, setVersions] = useState<MailingVersionItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const autosaveRef = useRef<number | null>(null);
 
   const refreshMailings = useCallback(async () => {
     setLoading(true);
@@ -54,6 +55,23 @@ export function useMailings() {
     return { versionNumber, nextMailings };
   }, [loadVersions, refreshMailings]);
 
+  const scheduleAutosave = useCallback((params: { mailingId?: string | null; userId: string; document: MailingDocument; delay?: number }) => {
+    if (autosaveRef.current) {
+      window.clearTimeout(autosaveRef.current);
+    }
+
+    autosaveRef.current = window.setTimeout(() => {
+      void saveDraft({ mailingId: params.mailingId, userId: params.userId, document: params.document });
+    }, params.delay ?? 1200);
+  }, [saveDraft]);
+
+  const cancelAutosave = useCallback(() => {
+    if (autosaveRef.current) {
+      window.clearTimeout(autosaveRef.current);
+      autosaveRef.current = null;
+    }
+  }, []);
+
   return {
     mailings,
     versions,
@@ -63,5 +81,7 @@ export function useMailings() {
     loadVersions,
     saveDraft,
     saveVersion,
+    scheduleAutosave,
+    cancelAutosave,
   };
 }
