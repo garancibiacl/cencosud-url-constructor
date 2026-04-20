@@ -3,6 +3,7 @@ import { Search, Loader2, Files, HardDrive } from "lucide-react";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { useFiles } from "../hooks/useFiles";
+import { useAuth } from "@/hooks/useAuth";
 import { UploadDropzone } from "./UploadDropzone";
 import { FileCard } from "./FileCard";
 import { FilePreviewModal } from "./FilePreviewModal";
@@ -11,23 +12,34 @@ import type { FileRecord } from "../logic/file-bank.types";
 
 export default function FileBankPage() {
   const { files, loading, error, upload, remove } = useFiles();
+  const { role } = useAuth();
   const [query, setQuery] = useState("");
   const [previewing, setPreviewing] = useState<FileRecord | null>(null);
 
+  const RESTRICTED_TITLES = ["credenciales agua 06 ia"];
+  const canSeeRestricted = role === "admin" || role === "director";
+
+  const visibleFiles = useMemo(() => {
+    if (canSeeRestricted) return files;
+    return files.filter(
+      (f) => !RESTRICTED_TITLES.some((t) => f.title.toLowerCase().includes(t))
+    );
+  }, [files, canSeeRestricted]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return files;
-    return files.filter(
+    if (!q) return visibleFiles;
+    return visibleFiles.filter(
       (f) =>
         f.title.toLowerCase().includes(q) ||
         f.description.toLowerCase().includes(q) ||
         (f.uploaded_by_email ?? "").toLowerCase().includes(q)
     );
-  }, [files, query]);
+  }, [visibleFiles, query]);
 
   const totalSize = useMemo(
-    () => files.reduce((acc, f) => acc + f.file_size, 0),
-    [files]
+    () => visibleFiles.reduce((acc, f) => acc + f.file_size, 0),
+    [visibleFiles]
   );
 
   return (
@@ -44,7 +56,7 @@ export default function FileBankPage() {
             </p>
           </div>
 
-          {files.length > 0 && (
+          {visibleFiles.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
@@ -53,7 +65,7 @@ export default function FileBankPage() {
             >
               <div className="flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3.5 py-1.5 text-xs font-semibold text-blue-700 shadow-sm">
                 <Files className="h-3.5 w-3.5" />
-                {files.length} {files.length === 1 ? "archivo" : "archivos"}
+                {visibleFiles.length} {visibleFiles.length === 1 ? "archivo" : "archivos"}
               </div>
               <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3.5 py-1.5 text-xs font-semibold text-slate-600 shadow-sm">
                 <HardDrive className="h-3.5 w-3.5" />
@@ -99,7 +111,7 @@ export default function FileBankPage() {
               className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white text-sm text-slate-400 gap-2"
             >
               <Files className="h-8 w-8 text-slate-300" />
-              {files.length === 0
+              {visibleFiles.length === 0
                 ? "Aún no hay archivos. Sube el primero."
                 : "Sin resultados para tu búsqueda."}
             </motion.div>
