@@ -38,8 +38,8 @@ export default function FileBankPage() {
   }, [visibleFiles, query]);
 
   const totalSize = useMemo(
-    () => files.reduce((acc, f) => acc + f.file_size, 0),
-    [files]
+    () => visibleFiles.reduce((acc, f) => acc + f.file_size, 0),
+    [visibleFiles]
   );
 
   return (
