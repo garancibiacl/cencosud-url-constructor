@@ -123,7 +123,7 @@ export default function MailingBuilderPage() {
                         </div>
                       </div>
                       <div className="mt-3">
-                        <BlockView block={block} isSelected={isSelected} />
+                        <BlockView block={block} isSelected={isSelected} onChange={updateSelectedBlock} />
                       </div>
                     </button>
                   );

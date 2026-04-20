@@ -7,6 +7,7 @@ import { ButtonBlockView, HeroBlockView, ImageBlockView, SpacerBlockView, TextBl
 type BlockViewProps<TBlock extends MailingBlock = MailingBlock> = {
   block: TBlock;
   isSelected?: boolean;
+  onChange?: (nextBlock: TBlock) => void;
 };
 
 type BlockInspectorProps<TBlock extends MailingBlock = MailingBlock> = {
