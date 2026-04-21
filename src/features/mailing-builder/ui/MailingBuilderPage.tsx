@@ -34,6 +34,8 @@ import type { ScratchMode } from "./NewTemplateModal";
 import type { FileRecord } from "@/features/file-bank/logic/file-bank.types";
 import type { MailingBlock } from "../logic/schema/block.types";
 import type { ColumnPreset } from "../logic/schema/row.types";
+import type { BrandId } from "../logic/brands/brand.types";
+import { brandThemes } from "../logic/brands/brandThemes";
 
 const CATEGORY_LABELS = {
   content: "Contenido",
@@ -638,6 +640,39 @@ export default function MailingBuilderPage() {
                   <p className="text-xs text-muted-foreground">
                     {devicePreview === "mobile" ? "375px · móvil" : `${document.settings.width}px · escritorio`} · email-safe HTML
                   </p>
+                </div>
+                {/* Brand tabs — siempre visible, escalable: se genera desde brandThemes */}
+                <div className="flex items-center gap-0.5 rounded-lg border border-border bg-secondary/30 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => updateSettings("brand", undefined)}
+                    className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                      !document.settings.brand
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Genérico
+                  </button>
+                  {Object.values(brandThemes).map((theme) => {
+                    const isActive = document.settings.brand === theme.id;
+                    return (
+                      <button
+                        key={theme.id}
+                        type="button"
+                        onClick={() => updateSettings("brand", theme.id as BrandId)}
+                        className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                          isActive ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <span
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: theme.primaryColor }}
+                        />
+                        {theme.name}
+                      </button>
+                    );
+                  })}
                 </div>
                 <div className="flex items-center gap-2">
                   {/* Toggle desktop / mobile */}

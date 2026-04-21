@@ -23,6 +23,7 @@ import type {
   ImageBlock,
   MailingBlock,
   MailingBlockType,
+  ProductBlock,
   SpacerBlock,
   TextBlock,
 } from "../schema/block.types";
@@ -37,6 +38,7 @@ import {
   ButtonBlockInspector,
   HeroBlockInspector,
   ImageBlockInspector,
+  ProductBlockInspector,
   SpacerBlockInspector,
   TextBlockInspector,
 } from "../../ui/blocks/MailingBlockInspectors";
@@ -44,9 +46,12 @@ import {
   ButtonBlockView,
   HeroBlockView,
   ImageBlockView,
+  ProductBlockView,
   SpacerBlockView,
   TextBlockView,
 } from "../../ui/blocks/MailingBlockViews";
+import { productTemplate } from "../render/templates/block/product.template";
+import { brandThemes } from "../brands/brandThemes";
 
 // ---------------------------------------------------------------------------
 // Tipos del contrato de definición de bloque
@@ -271,5 +276,47 @@ export const blockRegistry: BlockRegistryMap = {
         `<div style="line-height:${block.props.height}px; height:${block.props.height}px;">&nbsp;</div>`,
         "transparent",
       ),
+  }),
+
+  // ── Product ───────────────────────────────────────────────────────────────
+  product: defineBlock<ProductBlock>({
+    type: "product",
+    label: "Producto",
+    category: "content",
+    defaultProps: {
+      imageUrl: "",
+      name: "Nombre del producto",
+      brand: "",
+      price: "$ 9.990",
+      unit: "c/u",
+      href: "",
+      ctaLabel: "Agregar",
+    },
+    defaultLayout: { colSpan: 4, padding: { top: 0, right: 0, bottom: 0, left: 0 } },
+    View: ProductBlockView,
+    Inspector: ProductBlockInspector,
+    renderHtml: (block, doc) => {
+      const brandId = doc.settings.brand;
+      const theme = brandId ? brandThemes[brandId] : undefined;
+      const padding = {
+        top:    block.layout.padding?.top    ?? 0,
+        right:  block.layout.padding?.right  ?? 0,
+        bottom: block.layout.padding?.bottom ?? 0,
+        left:   block.layout.padding?.left   ?? 0,
+      };
+      return productTemplate({
+        padding,
+        bgColor:          block.layout.backgroundColor ?? "transparent",
+        imageUrl:         escapeHtml(block.props.imageUrl || "/placeholder.svg"),
+        name:             escapeHtml(block.props.name),
+        brand:            escapeHtml(block.props.brand ?? ""),
+        price:            escapeHtml(block.props.price),
+        unit:             escapeHtml(block.props.unit ?? ""),
+        href:             escapeHtml(buildTrackedUrl(block.props.href, doc)),
+        ctaLabel:         escapeHtml(block.props.ctaLabel ?? "Agregar"),
+        primaryColor:     theme?.primaryColor          ?? FALLBACK_COLORS.primary,
+        primaryForeground: theme?.primaryForeground    ?? FALLBACK_COLORS.primaryForeground,
+      });
+    },
   }),
 };

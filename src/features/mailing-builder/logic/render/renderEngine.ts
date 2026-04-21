@@ -25,19 +25,26 @@ import {
   resolveColor,
 } from "./renderUtils";
 import { documentTemplate } from "./templates/document.template";
+import { brandThemes } from "../brands/brandThemes";
+import { brandShells } from "../brands/brandShells";
 import { rowTemplate, columnTemplate } from "./templates/row.template";
 import { heroTemplate } from "./templates/block/hero.template";
 import { textTemplate } from "./templates/block/text.template";
 import { imageTemplate } from "./templates/block/image.template";
 import { buttonTemplate } from "./templates/block/button.template";
 import { spacerTemplate } from "./templates/block/spacer.template";
-import type { HeroBlock, TextBlock, ImageBlock, ButtonBlock, SpacerBlock } from "../schema/block.types";
+import { productTemplate } from "./templates/block/product.template";
+import type { HeroBlock, TextBlock, ImageBlock, ButtonBlock, SpacerBlock, ProductBlock } from "../schema/block.types";
 
 // ---------------------------------------------------------------------------
 // Preparadores de datos por bloque (lógica ≠ template)
 // ---------------------------------------------------------------------------
 
-function prepareHero(block: HeroBlock, doc: MailingDocument): ReturnType<typeof heroTemplate> {
+function prepareHero(
+  block: HeroBlock,
+  doc: MailingDocument,
+  brandColors?: { primary: string; primaryForeground: string },
+): ReturnType<typeof heroTemplate> {
   return heroTemplate({
     padding:   getBlockPadding(block),
     bgColor:   resolveColor(block.layout.backgroundColor, "transparent"),
@@ -48,10 +55,10 @@ function prepareHero(block: HeroBlock, doc: MailingDocument): ReturnType<typeof 
     ctaLabel:  block.props.ctaLabel ? escapeHtml(block.props.ctaLabel) : "",
     ctaHref:   block.props.ctaLabel ? escapeHtml(buildTrackedUrl(block.props.href, doc)) : "#",
     colors: {
-      foreground:       FALLBACK_COLORS.foreground,
-      muted:            FALLBACK_COLORS.muted,
-      primary:          FALLBACK_COLORS.primary,
-      primaryForeground: FALLBACK_COLORS.primaryForeground,
+      foreground:        FALLBACK_COLORS.foreground,
+      muted:             FALLBACK_COLORS.muted,
+      primary:           brandColors?.primary          ?? FALLBACK_COLORS.primary,
+      primaryForeground: brandColors?.primaryForeground ?? FALLBACK_COLORS.primaryForeground,
     },
   });
 }
@@ -78,7 +85,11 @@ function prepareImage(block: ImageBlock, doc: MailingDocument): ReturnType<typeo
   });
 }
 
-function prepareButton(block: ButtonBlock, doc: MailingDocument): ReturnType<typeof buttonTemplate> {
+function prepareButton(
+  block: ButtonBlock,
+  doc: MailingDocument,
+  brandColors?: { primary: string; primaryForeground: string },
+): ReturnType<typeof buttonTemplate> {
   const raw = block.props.align ?? "center";
   const align = raw === "left" || raw === "right" ? raw : "center";
   return buttonTemplate({
@@ -88,14 +99,34 @@ function prepareButton(block: ButtonBlock, doc: MailingDocument): ReturnType<typ
     href:    escapeHtml(buildTrackedUrl(block.props.href, doc)),
     align,
     colors: {
-      primary:          FALLBACK_COLORS.primary,
-      primaryForeground: FALLBACK_COLORS.primaryForeground,
+      primary:           brandColors?.primary          ?? FALLBACK_COLORS.primary,
+      primaryForeground: brandColors?.primaryForeground ?? FALLBACK_COLORS.primaryForeground,
     },
   });
 }
 
 function prepareSpacer(block: SpacerBlock): ReturnType<typeof spacerTemplate> {
   return spacerTemplate({ height: block.props.height });
+}
+
+function prepareProduct(
+  block: ProductBlock,
+  doc: MailingDocument,
+  brandColors?: { primary: string; primaryForeground: string },
+): ReturnType<typeof productTemplate> {
+  return productTemplate({
+    padding:          getBlockPadding(block),
+    bgColor:          resolveColor(block.layout.backgroundColor, "transparent"),
+    imageUrl:         escapeHtml(block.props.imageUrl || "/placeholder.svg"),
+    name:             escapeHtml(block.props.name),
+    brand:            escapeHtml(block.props.brand ?? ""),
+    price:            escapeHtml(block.props.price),
+    unit:             escapeHtml(block.props.unit ?? ""),
+    href:             escapeHtml(buildTrackedUrl(block.props.href, doc)),
+    ctaLabel:         escapeHtml(block.props.ctaLabel ?? "Agregar"),
+    primaryColor:     brandColors?.primary          ?? FALLBACK_COLORS.primary,
+    primaryForeground: brandColors?.primaryForeground ?? FALLBACK_COLORS.primaryForeground,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -107,21 +138,31 @@ export class RenderEngine {
    * Renderiza un bloque individual a HTML email-safe.
    * Delega en el preparador de datos + template correspondiente.
    */
-  renderBlock(block: MailingBlock, doc: MailingDocument): string {
+  renderBlock(
+    block: MailingBlock,
+    doc: MailingDocument,
+    brandColors?: { primary: string; primaryForeground: string },
+  ): string {
     switch (block.type) {
-      case "hero":   return prepareHero(block, doc);
-      case "text":   return prepareText(block);
-      case "image":  return prepareImage(block, doc);
-      case "button": return prepareButton(block, doc);
-      case "spacer": return prepareSpacer(block);
+      case "hero":    return prepareHero(block, doc, brandColors);
+      case "text":    return prepareText(block);
+      case "image":   return prepareImage(block, doc);
+      case "button":  return prepareButton(block, doc, brandColors);
+      case "spacer":  return prepareSpacer(block);
+      case "product": return prepareProduct(block, doc, brandColors);
       default:
         return "";
     }
   }
 
   /** Renderiza una columna con sus bloques. */
-  private renderColumn(col: MailingColumn, doc: MailingDocument, columnWidth: number): string {
-    const blocksHtml = col.blocks.map((b) => this.renderBlock(b, doc)).join("\n");
+  private renderColumn(
+    col: MailingColumn,
+    doc: MailingDocument,
+    columnWidth: number,
+    brandColors?: { primary: string; primaryForeground: string },
+  ): string {
+    const blocksHtml = col.blocks.map((b) => this.renderBlock(b, doc, brandColors)).join("\n");
     const colPad     = col.meta?.padding;
     return columnTemplate({
       columnWidth,
@@ -134,12 +175,17 @@ export class RenderEngine {
   }
 
   /** Renderiza una fila con sus columnas. */
-  private renderRow(row: MailingRow, doc: MailingDocument, totalWidth: number): string {
+  private renderRow(
+    row: MailingRow,
+    doc: MailingDocument,
+    totalWidth: number,
+    brandColors?: { primary: string; primaryForeground: string },
+  ): string {
     const totalSpans = row.columns.reduce((s, c) => s + c.colSpan, 0);
     const columnsHtml = row.columns
       .map((col) => {
         const colWidth = Math.round((col.colSpan / totalSpans) * totalWidth);
-        return this.renderColumn(col, doc, colWidth);
+        return this.renderColumn(col, doc, colWidth, brandColors);
       })
       .join("\n");
 
@@ -161,17 +207,31 @@ export class RenderEngine {
    * mismo output, sin divergencias.
    */
   render(doc: MailingDocument): string {
-    const width     = doc.settings.width;
-    const rowsHtml  = doc.rows.map((row) => this.renderRow(row, doc, width)).join("\n");
+    const width = doc.settings.width;
+
+    // Resolver brand si está configurado
+    const brandId = doc.settings.brand;
+    const theme = brandId ? brandThemes[brandId] : undefined;
+    const shell = brandId ? brandShells[brandId] : undefined;
+
+    const brandColors = theme
+      ? { primary: theme.primaryColor, primaryForeground: theme.primaryForeground }
+      : undefined;
+
+    const rowsHtml = doc.rows.map((row) => this.renderRow(row, doc, width, brandColors)).join("\n");
 
     return documentTemplate({
-      subject:    escapeHtml(doc.settings.subject || doc.name),
-      preheader:  escapeHtml(doc.settings.preheader || ""),
-      fontFamily: doc.settings.fontFamily,
-      bodyBg:     resolveColor(doc.settings.backgroundColor,        FALLBACK_COLORS.background),
-      contentBg:  resolveColor(doc.settings.contentBackgroundColor, FALLBACK_COLORS.content),
+      subject:       escapeHtml(doc.settings.subject || doc.name),
+      preheader:     escapeHtml(doc.settings.preheader || ""),
+      fontFamily:    theme?.fontFamily ?? doc.settings.fontFamily,
+      bodyBg:        resolveColor(doc.settings.backgroundColor,        FALLBACK_COLORS.background),
+      contentBg:     resolveColor(doc.settings.contentBackgroundColor, FALLBACK_COLORS.content),
       width,
       rowsHtml,
+      brandCss:      shell?.css,
+      brandHeader:   shell?.header,
+      brandFooter:   shell?.footer,
+      sfmcTracking:  shell?.sfmc,
     });
   }
 }

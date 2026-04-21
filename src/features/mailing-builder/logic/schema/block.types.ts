@@ -1,6 +1,6 @@
 import type { BlockLayout } from "./layout.types";
 
-export type MailingBlockType = "hero" | "text" | "image" | "button" | "spacer";
+export type MailingBlockType = "hero" | "text" | "image" | "button" | "spacer" | "product";
 
 export interface BaseBlock<TType extends MailingBlockType, TProps> {
   id: string;
@@ -45,4 +45,14 @@ export interface SpacerBlock extends BaseBlock<"spacer", {
   height: number;
 }> {}
 
-export type MailingBlock = HeroBlock | TextBlock | ImageBlock | ButtonBlock | SpacerBlock;
+export interface ProductBlock extends BaseBlock<"product", {
+  imageUrl: string;
+  name: string;
+  brand?: string;
+  price: string;
+  unit?: string;
+  href: string;
+  ctaLabel?: string;
+}> {}
+
+export type MailingBlock = HeroBlock | TextBlock | ImageBlock | ButtonBlock | SpacerBlock | ProductBlock;

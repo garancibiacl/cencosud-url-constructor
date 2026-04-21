@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type {
-  ButtonBlock, HeroBlock, ImageBlock, SpacerBlock, TextBlock,
+  ButtonBlock, HeroBlock, ImageBlock, ProductBlock, SpacerBlock, TextBlock,
 } from "../../logic/schema/block.types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -813,6 +813,120 @@ export function ButtonBlockInspector({ block, onChange }: SharedProps<ButtonBloc
 
       <InspSection title="Fondo">
         <InspRow label="Color del bloque">
+          <ColorSwatch
+            value={block.layout.backgroundColor}
+            onChange={(v) => onChange({ ...block, layout: { ...block.layout, backgroundColor: v } })}
+          />
+        </InspRow>
+      </InspSection>
+
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ProductBlockInspector
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function ProductBlockInspector({ block, onChange }: SharedProps<ProductBlock>) {
+  const setProps = (patch: Partial<typeof block.props>) =>
+    onChange({ ...block, props: { ...block.props, ...patch } });
+
+  return (
+    <div className="space-y-3">
+
+      <InspSection title="Visual">
+        {block.props.imageUrl && (
+          <div className="overflow-hidden rounded-md border border-border bg-secondary/30">
+            <img src={block.props.imageUrl} alt="preview" className="h-24 w-full object-contain" />
+          </div>
+        )}
+        <div className="space-y-1">
+          <span className="text-xs text-foreground/60">URL de imagen</span>
+          <Input
+            value={block.props.imageUrl ?? ""}
+            onChange={(e) => setProps({ imageUrl: e.target.value })}
+            placeholder="https://..."
+            className="h-7 text-xs"
+            autoFocus
+          />
+        </div>
+      </InspSection>
+
+      <InspSection title="Producto">
+        <div className="space-y-1">
+          <span className="text-xs text-foreground/60">Nombre</span>
+          <Input
+            value={block.props.name}
+            onChange={(e) => setProps({ name: e.target.value })}
+            placeholder="Nombre del producto"
+            className="h-7 text-xs"
+          />
+        </div>
+        <div className="space-y-1">
+          <span className="text-xs text-foreground/60">Marca / variante</span>
+          <Input
+            value={block.props.brand ?? ""}
+            onChange={(e) => setProps({ brand: e.target.value })}
+            placeholder="Ej: Paris, Nestle, 500g..."
+            className="h-7 text-xs"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <span className="text-xs text-foreground/60">Precio</span>
+            <Input
+              value={block.props.price}
+              onChange={(e) => setProps({ price: e.target.value })}
+              placeholder="$ 9.990"
+              className="h-7 text-xs"
+            />
+          </div>
+          <div className="space-y-1">
+            <span className="text-xs text-foreground/60">Unidad</span>
+            <Input
+              value={block.props.unit ?? ""}
+              onChange={(e) => setProps({ unit: e.target.value })}
+              placeholder="c/u, kg..."
+              className="h-7 text-xs"
+            />
+          </div>
+        </div>
+      </InspSection>
+
+      <InspSection title="Enlace">
+        <div className="space-y-1">
+          <span className="text-xs text-foreground/60">URL del producto</span>
+          <div className="flex items-center gap-1.5">
+            <Link2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40" />
+            <Input
+              value={block.props.href}
+              onChange={(e) => setProps({ href: e.target.value })}
+              placeholder="https://..."
+              className="h-7 text-xs"
+            />
+          </div>
+        </div>
+        <div className="space-y-1">
+          <span className="text-xs text-foreground/60">Texto del botón CTA</span>
+          <Input
+            value={block.props.ctaLabel ?? ""}
+            onChange={(e) => setProps({ ctaLabel: e.target.value })}
+            placeholder="Agregar"
+            className="h-7 text-xs"
+          />
+        </div>
+      </InspSection>
+
+      <InspSection title="Espaciado">
+        <PaddingEditor
+          value={padVal(block)}
+          onChange={(padding) => onChange({ ...block, layout: { ...block.layout, padding } })}
+        />
+      </InspSection>
+
+      <InspSection title="Fondo">
+        <InspRow label="Color">
           <ColorSwatch
             value={block.layout.backgroundColor}
             onChange={(v) => onChange({ ...block, layout: { ...block.layout, backgroundColor: v } })}

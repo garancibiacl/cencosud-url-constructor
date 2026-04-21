@@ -489,7 +489,7 @@ const BlockItem = memo(function BlockItem({
   );
 
   return (
-    <div className="relative">
+    <div className="relative" data-mailing-block="true">
       {/* Pill flotante — solo visible cuando está seleccionado */}
       {isSelected && (
         <div className="absolute -top-5 left-1/2 z-30 -translate-x-1/2">

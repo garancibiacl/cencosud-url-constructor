@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { ImageIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import type { ButtonBlock, HeroBlock, ImageBlock, MailingBlock, SpacerBlock, TextBlock } from "../../logic/schema/block.types";
+import type { ButtonBlock, HeroBlock, ImageBlock, MailingBlock, ProductBlock, SpacerBlock, TextBlock } from "../../logic/schema/block.types";
 
 const getPaddingStyle = (block: MailingBlock): CSSProperties => ({
   paddingTop: block.layout.padding?.top ?? 0,
@@ -310,6 +310,61 @@ export function SpacerBlockView({ block, isSelected }: { block: SpacerBlock; isS
         <span>{block.props.height}px</span>
       </div>
       <div className="bg-secondary/40" style={{ height: block.props.height }} />
+    </article>
+  );
+}
+
+export function ProductBlockView({ block, isSelected, onChange }: { block: ProductBlock; isSelected?: boolean; onChange?: (nextBlock: ProductBlock) => void }) {
+  return (
+    <article className={canvasShell(isSelected)} style={getPaddingStyle(block)}>
+      <div className="flex flex-col border border-border/60 bg-white font-sans" style={{ borderBottom: "1px solid #e5e7eb" }}>
+        {/* Product image */}
+        <div className="relative flex h-[200px] items-center justify-center bg-white group/img px-4 py-3">
+          <img
+            src={block.props.imageUrl || "/placeholder.svg"}
+            alt={block.props.name}
+            className="max-h-full max-w-[152px] object-contain"
+            loading="lazy"
+          />
+          {isSelected && onChange && (
+            <ImageEditOverlay
+              src={block.props.imageUrl ?? ""}
+              onChange={(imageUrl) => onChange({ ...block, props: { ...block.props, imageUrl } })}
+            />
+          )}
+        </div>
+
+        {/* Price */}
+        <div className="px-4 pt-1">
+          <div className="text-sm font-bold text-[#333333]">{block.props.price || "$ 0"}</div>
+        </div>
+
+        {/* Unit badge */}
+        {block.props.unit && (
+          <div className="px-4 pt-1">
+            <span className="inline-block rounded-full bg-[#f3f4f6] px-1.5 py-0.5 text-[11px] text-black">
+              {block.props.unit}
+            </span>
+          </div>
+        )}
+
+        {/* Brand */}
+        <div className="flex h-9 items-center px-4 text-[14px] text-[#6b7280]">
+          {block.props.brand || <span className="text-[#d1d5db]">Marca / variante</span>}
+        </div>
+
+        {/* Product name */}
+        <div className="h-[60px] overflow-hidden px-4">
+          <p className="text-[14px] font-normal leading-[18px] text-black">{block.props.name || "Nombre del producto"}</p>
+        </div>
+
+        {/* CTA button */}
+        <div className="px-4 pb-4 pt-3">
+          <div className="flex h-9 w-40 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
+            {block.props.ctaLabel || "Agregar"}
+          </div>
+        </div>
+      </div>
     </article>
   );
 }
