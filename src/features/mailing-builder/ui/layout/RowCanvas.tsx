@@ -12,7 +12,7 @@
  */
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { Copy, GripVertical, MoveDown, MoveUp, Plus, Settings2, Trash2 } from "lucide-react";
+import { Bookmark, Copy, GripHorizontal, MoveDown, MoveUp, Plus, Settings2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { blockRegistry } from "../../logic/registry/blockRegistry";
 import type { ColumnPreset, MailingColumn, MailingRow } from "../../logic/schema/row.types";
@@ -464,13 +464,85 @@ const BlockItem = memo(function BlockItem({
 
   return (
     <div className="relative">
+      {/* Pill flotante — solo visible cuando está seleccionado */}
+      {isSelected && (
+        <div className="absolute -top-5 left-1/2 z-30 -translate-x-1/2">
+          <div className="flex items-center gap-0.5 rounded-full border border-border bg-card px-2 py-1 shadow-lg">
+            {/* Arrastrar */}
+            <span
+              draggable
+              onDragStart={handleDragStart}
+              className="flex h-6 w-6 cursor-grab items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground active:cursor-grabbing"
+              title="Arrastrar"
+            >
+              <GripHorizontal className="h-3.5 w-3.5" />
+            </span>
+
+            <div className="mx-0.5 h-3.5 w-px bg-border/60" />
+
+            {/* Subir */}
+            <button
+              type="button"
+              disabled={index === 0}
+              onClick={handleMoveUp}
+              title="Mover arriba"
+              className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground disabled:opacity-30"
+            >
+              <MoveUp className="h-3.5 w-3.5" />
+            </button>
+
+            {/* Bajar */}
+            <button
+              type="button"
+              disabled={index === totalInCol - 1}
+              onClick={handleMoveDown}
+              title="Mover abajo"
+              className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground disabled:opacity-30"
+            >
+              <MoveDown className="h-3.5 w-3.5" />
+            </button>
+
+            <div className="mx-0.5 h-3.5 w-px bg-border/60" />
+
+            {/* Duplicar */}
+            <button
+              type="button"
+              onClick={handleDuplicate}
+              title="Duplicar"
+              className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+            >
+              <Copy className="h-3.5 w-3.5" />
+            </button>
+
+            {/* Guardar */}
+            <button
+              type="button"
+              title="Guardar bloque"
+              className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+            >
+              <Bookmark className="h-3.5 w-3.5" />
+            </button>
+
+            {/* Eliminar */}
+            <button
+              type="button"
+              onClick={handleRemove}
+              title="Eliminar"
+              className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition hover:bg-red-50 hover:text-destructive"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div
         ref={blockRef}
         data-mailing-block="true"
-        className={`group/block relative rounded border transition-all ${
+        className={`group/block relative rounded-lg border transition-all ${
           isSelected
             ? "border-primary bg-primary/5 shadow-sm"
-            : "border-transparent bg-card hover:border-border"
+            : "border-transparent bg-card hover:border-border/60"
         } ${dropHalf ? "ring-2 ring-primary/40" : ""}`}
         onClick={handleSelect}
         onDragOver={handleBlockDragOver}
@@ -484,68 +556,9 @@ const BlockItem = memo(function BlockItem({
         {dropHalf === "bottom" && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-0.5 rounded-full bg-primary shadow-[0_0_6px_2px_rgba(var(--primary)/0.4)]" />
         )}
-        {/* Toolbar flotante de bloque */}
-        <div
-          className={`absolute right-1 top-1 z-10 flex items-center gap-0.5 rounded-md border border-border bg-card/95 px-1 py-0.5 shadow-md backdrop-blur-sm transition-opacity ${
-            isSelected ? "opacity-100" : "opacity-0 group-hover/block:opacity-100"
-          }`}
-        >
-          {/* Tipo de bloque */}
-          <span className="select-none pr-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/60">
-            {blockRegistry[block.type].label}
-          </span>
-          <div className="h-3 w-px bg-border/60" />
-
-          <span
-            draggable
-            onDragStart={handleDragStart}
-            className="cursor-grab px-0.5 text-muted-foreground/50 hover:text-muted-foreground active:cursor-grabbing"
-            title="Arrastrar bloque"
-          >
-            <GripVertical className="h-3 w-3" />
-          </span>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-5 w-5"
-            disabled={index === 0}
-            onClick={handleMoveUp}
-            title="Mover arriba"
-          >
-            <MoveUp className="h-2.5 w-2.5" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-5 w-5"
-            disabled={index === totalInCol - 1}
-            onClick={handleMoveDown}
-            title="Mover abajo"
-          >
-            <MoveDown className="h-2.5 w-2.5" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-5 w-5"
-            onClick={handleDuplicate}
-            title="Duplicar"
-          >
-            <Copy className="h-2.5 w-2.5" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-5 w-5 text-destructive/70 hover:text-destructive"
-            onClick={handleRemove}
-            title="Eliminar"
-          >
-            <Trash2 className="h-2.5 w-2.5" />
-          </Button>
-        </div>
 
         {/* Vista del bloque */}
-        <div className="p-1.5 pt-6">
+        <div className="p-1.5">
           <BlockView
             block={block}
             isSelected={isSelected}
