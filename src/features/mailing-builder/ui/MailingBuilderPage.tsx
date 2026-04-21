@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle, CheckCircle2, CodeXml, Copy, Download, Eye, FileDown, GripVertical,
-  History, Image as ImageIcon, ImagePlus, Loader2, Mail, MoreHorizontal,
+  History, Image as ImageIcon, ImagePlus, Loader2, Mail, Monitor, MoreHorizontal,
   MousePointerClick, PenSquare, Plus, RectangleHorizontal, RotateCcw, Save,
-  Settings2, Type, X,
+  Settings2, Smartphone, Type, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -191,6 +191,7 @@ export default function MailingBuilderPage() {
   const { mailings, versions, loading, saving, refreshMailings, loadVersions, saveDraft, saveVersion, scheduleAutosave, cancelAutosave } = useMailings();
   const [versionNote, setVersionNote] = useState("");
   const [previewMode, setPreviewMode] = useState<"canvas" | "split" | "html">("canvas");
+  const [devicePreview, setDevicePreview] = useState<"desktop" | "mobile">("desktop");
   const [lastAutosaveAt, setLastAutosaveAt] = useState<string | null>(null);
   const [assetPickerOpen, setAssetPickerOpen] = useState(false);
   const [showGlobalInspector, setShowGlobalInspector] = useState(false);
@@ -634,9 +635,39 @@ export default function MailingBuilderPage() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-foreground">{document.name || "Sin nombre"}</p>
-                  <p className="text-xs text-muted-foreground">{document.settings.width}px · email-safe HTML</p>
+                  <p className="text-xs text-muted-foreground">
+                    {devicePreview === "mobile" ? "375px · móvil" : `${document.settings.width}px · escritorio`} · email-safe HTML
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
+                  {/* Toggle desktop / mobile */}
+                  <div className="flex items-center rounded-md border border-border bg-secondary/40 p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setDevicePreview("desktop")}
+                      className={`flex items-center justify-center rounded px-2 py-1 transition-colors ${
+                        devicePreview === "desktop"
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                      title="Vista escritorio"
+                    >
+                      <Monitor className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDevicePreview("mobile")}
+                      className={`flex items-center justify-center rounded px-2 py-1 transition-colors ${
+                        devicePreview === "mobile"
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                      title="Vista móvil"
+                    >
+                      <Smartphone className="h-4 w-4" />
+                    </button>
+                  </div>
+
                   <Button
                     ref={globalInspectorButtonRef}
                     type="button"
@@ -665,10 +696,17 @@ export default function MailingBuilderPage() {
                   {/* Canvas de edición */}
                   {previewMode !== "html" ? (
                     <div
-                      className="mx-auto min-h-full w-full rounded-md border border-dashed border-border bg-background p-3"
-                      style={{ maxWidth: `${document.settings.width + 32}px` }}
+                      className={`mx-auto min-h-full w-full rounded-md border border-dashed border-border bg-background p-3 transition-all duration-300 ${
+                        devicePreview === "mobile" ? "rounded-[2rem] border-2" : ""
+                      }`}
+                      style={{ maxWidth: devicePreview === "mobile" ? "407px" : `${document.settings.width + 32}px` }}
                     >
-                      <div className="mx-auto" style={{ width: `${document.settings.width}px`, maxWidth: "100%" }}>
+                      {devicePreview === "mobile" && (
+                        <div className="mb-2 flex justify-center">
+                          <div className="h-1 w-12 rounded-full bg-border" />
+                        </div>
+                      )}
+                      <div className="mx-auto" style={{ width: devicePreview === "mobile" ? "375px" : `${document.settings.width}px`, maxWidth: "100%" }}>
 
                         {/* Empty state o filas */}
                         {document.rows.length === 0 ? (
@@ -717,8 +755,20 @@ export default function MailingBuilderPage() {
                   {/* Preview HTML */}
                   {previewMode !== "canvas" ? (
                     <div className="space-y-4">
-                      <div className="rounded-md border border-border bg-background">
-                        <iframe title="HTML preview" className="h-[520px] w-full rounded-md" srcDoc={htmlPreview} />
+                      <div className={`mx-auto rounded-md border border-border bg-background transition-all duration-300 ${
+                        devicePreview === "mobile" ? "max-w-[407px] rounded-[2rem] border-2 p-2" : "w-full"
+                      }`}>
+                        {devicePreview === "mobile" && (
+                          <div className="mb-2 flex justify-center pt-1">
+                            <div className="h-1 w-12 rounded-full bg-border" />
+                          </div>
+                        )}
+                        <iframe
+                          title="HTML preview"
+                          className="h-[520px] w-full rounded-md"
+                          style={{ maxWidth: devicePreview === "mobile" ? "375px" : "100%" }}
+                          srcDoc={htmlPreview}
+                        />
                       </div>
                       <div className="rounded-md border border-border bg-background p-4">
                         <div className="mb-3 flex items-center justify-between gap-2">
