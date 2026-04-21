@@ -402,8 +402,9 @@ const BlockItem = memo(function BlockItem({
   onDrop,
 }: BlockItemProps) {
   const BlockView = blockRegistry[block.type].View;
+  const blockRef = useRef<HTMLDivElement>(null);
+  const [dropHalf, setDropHalf] = useState<"top" | "bottom" | null>(null);
 
-  // Handlers internos estables — recrean solo cuando cambia la posición del bloque
   const handleSelect = useCallback(
     (e: React.MouseEvent) => { e.stopPropagation(); onSelectBlock(block.id, rowId, colId); },
     [block.id, rowId, colId, onSelectBlock],
@@ -434,16 +435,25 @@ const BlockItem = memo(function BlockItem({
     [block, colId, index, onBlockDragStart],
   );
 
-  // Zona de drop encima de este bloque
-  const handleDropAbove = useCallback(
-    (e: React.DragEvent) => onDrop(e, colId, index),
-    [onDrop, colId, index],
-  );
+  const handleBlockDragOver = useCallback((e: React.DragEvent) => {
+    e.stopPropagation();
+    onDragOver(e, colId);
+    if (!blockRef.current) return;
+    const rect = blockRef.current.getBoundingClientRect();
+    setDropHalf(e.clientY < rect.top + rect.height / 2 ? "top" : "bottom");
+  }, [onDragOver, colId]);
 
-  const handleDragOverAbove = useCallback(
-    (e: React.DragEvent) => onDragOver(e, colId),
-    [onDragOver, colId],
-  );
+  const handleBlockDragLeave = useCallback(() => {
+    setDropHalf(null);
+    onDragLeave();
+  }, [onDragLeave]);
+
+  const handleBlockDrop = useCallback((e: React.DragEvent) => {
+    e.stopPropagation();
+    const half = dropHalf ?? "bottom";
+    setDropHalf(null);
+    onDrop(e, colId, half === "top" ? index : index + 1);
+  }, [dropHalf, onDrop, colId, index]);
 
   // BlockView onChange — estable mientras onUpdateBlock sea estable (acción Zustand)
   const handleChange = useCallback(
@@ -453,22 +463,26 @@ const BlockItem = memo(function BlockItem({
 
   return (
     <div className="relative">
-      {/* Drop zone encima del bloque */}
-      <BlockDropZone
-        onDrop={handleDropAbove}
-        onDragOver={handleDragOverAbove}
-        onDragLeave={onDragLeave}
-      />
-
       <div
+        ref={blockRef}
         data-mailing-block="true"
         className={`group/block relative rounded border transition-all ${
           isSelected
             ? "border-primary bg-primary/5 shadow-sm"
             : "border-transparent bg-card hover:border-border"
-        }`}
+        } ${dropHalf ? "ring-2 ring-primary/40" : ""}`}
         onClick={handleSelect}
+        onDragOver={handleBlockDragOver}
+        onDragLeave={handleBlockDragLeave}
+        onDrop={handleBlockDrop}
       >
+        {/* Indicador de posición de drop */}
+        {dropHalf === "top" && (
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-0.5 rounded-full bg-primary shadow-[0_0_6px_2px_rgba(var(--primary)/0.4)]" />
+        )}
+        {dropHalf === "bottom" && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-0.5 rounded-full bg-primary shadow-[0_0_6px_2px_rgba(var(--primary)/0.4)]" />
+        )}
         {/* Toolbar flotante de bloque */}
         <div
           className={`absolute right-1 top-1 z-10 flex items-center gap-0.5 rounded-md border border-border bg-card/95 px-1 py-0.5 shadow-md backdrop-blur-sm transition-opacity ${
