@@ -1,14 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlertCircle, CheckCircle2, CodeXml, Copy, Download, Eye, GripVertical, History,
-  Image as ImageIcon, ImagePlus, Loader2, Mail, MousePointerClick,
-  PenSquare, Plus, RectangleHorizontal, RotateCcw, Save, Settings2,
-  Type, X,
+  AlertCircle, CheckCircle2, CodeXml, Copy, Download, Eye, FileDown, GripVertical,
+  History, Image as ImageIcon, ImagePlus, Loader2, Mail, MoreHorizontal,
+  MousePointerClick, PenSquare, Plus, RectangleHorizontal, RotateCcw, Save,
+  Settings2, Type, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -285,6 +292,10 @@ export default function MailingBuilderPage() {
     toast({ title: "HTML descargado", description: "Se descargó una versión email-safe del mailing." });
   };
 
+  const handleSaveAsPdf = () => {
+    window.print();
+  };
+
   // ── Handlers de documento ────────────────────────────────────────────────
 
   const handleNewDraft = () => setShowNewModal(true);
@@ -445,18 +456,35 @@ export default function MailingBuilderPage() {
             <Button variant="outline" onClick={handleNewDraft}>
               <Plus className="mr-2 h-4 w-4" />Nuevo
             </Button>
-            <Button variant="outline" onClick={() => void handleSaveDraft()} disabled={!user || saving}>
-              <Save className="mr-2 h-4 w-4" />Guardar draft
-            </Button>
-            <Button variant="outline" onClick={() => void handleSaveVersion()} disabled={!user || saving}>
-              <History className="mr-2 h-4 w-4" />Versión
-            </Button>
             <Button variant="outline" onClick={() => void handleCopyHtml()}>
               <Copy className="mr-2 h-4 w-4" />Copiar HTML
             </Button>
             <Button onClick={handleDownloadHtml}>
               <Download className="mr-2 h-4 w-4" />Descargar HTML
             </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onClick={() => void handleSaveVersion()} disabled={!user || saving}>
+                  <History className="mr-2 h-4 w-4" />Historial de versiones
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPreviewMode("html")}>
+                  <CodeXml className="mr-2 h-4 w-4" />Modo de desarrollador
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => void handleSaveDraft()} disabled={!user || saving}>
+                  <Save className="mr-2 h-4 w-4" />Guardar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSaveAsPdf}>
+                  <FileDown className="mr-2 h-4 w-4" />Guardar como pdf
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
