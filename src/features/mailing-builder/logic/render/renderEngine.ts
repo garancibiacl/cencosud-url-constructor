@@ -17,8 +17,6 @@
 import type { MailingDocument } from "../schema/mailing.types";
 import type { MailingBlock } from "../schema/block.types";
 import type { MailingColumn, MailingRow } from "../schema/row.types";
-import type { BlockDefinition } from "../registry/blockRegistry";
-import { blockRegistry } from "../registry/blockRegistry";
 import {
   FALLBACK_COLORS,
   buildTrackedUrl,
@@ -116,11 +114,8 @@ export class RenderEngine {
       case "image":  return prepareImage(block, doc);
       case "button": return prepareButton(block, doc);
       case "spacer": return prepareSpacer(block);
-      default: {
-        // Tipo desconocido: delega al registry si existe, o retorna vacío
-        const def = (blockRegistry as Record<string, BlockDefinition>)[block.type];
-        return def ? def.renderHtml(block, doc) : "";
-      }
+      default:
+        return "";
     }
   }
 
