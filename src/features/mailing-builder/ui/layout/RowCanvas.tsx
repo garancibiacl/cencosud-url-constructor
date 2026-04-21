@@ -436,6 +436,7 @@ const BlockItem = memo(function BlockItem({
   );
 
   const handleBlockDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     onDragOver(e, colId);
     if (!blockRef.current) return;

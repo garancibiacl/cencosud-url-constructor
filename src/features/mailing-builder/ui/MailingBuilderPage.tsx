@@ -509,7 +509,7 @@ export default function MailingBuilderPage() {
                             onDragStart={(e) => {
                               dragRef.current = null;
                               e.dataTransfer.setData("text/plain", `new:${definition.type}`);
-                              e.dataTransfer.effectAllowed = "copy";
+                              e.dataTransfer.effectAllowed = "all";
                             }}
                             onClick={() => { insertBlock(definition.type); setShowGlobalInspector(false); }}
                             className="group relative flex cursor-grab flex-col gap-1.5 rounded-lg border border-border bg-card p-2 text-left transition hover:border-primary/50 hover:bg-primary/5 hover:shadow-sm active:cursor-grabbing active:scale-[0.97]"
