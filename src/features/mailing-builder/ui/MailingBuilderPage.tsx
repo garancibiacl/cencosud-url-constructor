@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlertCircle, CheckCircle2, CodeXml, Copy, Download, Eye, History,
+  AlertCircle, CheckCircle2, CodeXml, Copy, Download, Eye, GripVertical, History,
   Image as ImageIcon, ImagePlus, Loader2, Mail, MousePointerClick,
   PenSquare, Plus, RectangleHorizontal, RotateCcw, Save, Settings2,
   Type, X,
@@ -512,9 +512,10 @@ export default function MailingBuilderPage() {
                               e.dataTransfer.effectAllowed = "copy";
                             }}
                             onClick={() => { insertBlock(definition.type); setShowGlobalInspector(false); }}
-                            className="group flex flex-col gap-1.5 rounded-lg border border-border bg-card p-2 text-left transition hover:border-primary/50 hover:bg-primary/5 hover:shadow-sm active:scale-[0.97]"
-                            title={`Insertar ${definition.label}`}
+                            className="group relative flex cursor-grab flex-col gap-1.5 rounded-lg border border-border bg-card p-2 text-left transition hover:border-primary/50 hover:bg-primary/5 hover:shadow-sm active:cursor-grabbing active:scale-[0.97]"
+                            title={`Arrastra o haz clic para insertar ${definition.label}`}
                           >
+                            <GripVertical className="absolute right-1.5 top-1.5 h-3 w-3 text-muted-foreground/30 group-hover:text-muted-foreground/60" />
                             <BlockMiniThumb type={definition.type} />
                             <span className="text-xs font-medium leading-tight text-foreground">{definition.label}</span>
                           </button>
