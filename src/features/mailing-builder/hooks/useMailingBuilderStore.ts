@@ -45,6 +45,8 @@ interface MailingBuilderState {
    * - Si no: crea una Row full-width al final del documento.
    */
   insertBlock: (type: MailingBlockType) => void;
+  /** Inserta un bloque nuevo en una columna y posición específicas (drag & drop desde panel). */
+  insertBlockAtColumn: (type: MailingBlockType, rowId: string, colId: string, index: number) => void;
   removeBlock: (blockId: string) => void;
   duplicateBlock: (blockId: string) => void;
   /** Mueve un bloque dentro de la misma columna. */
@@ -264,6 +266,23 @@ export const useMailingBuilderStore = create<MailingBuilderState>((set, get) => 
       selectedBlockId: newBlock.id,
       selectedRowId: newRow.id,
       selectedColId: newRow.columns[0].id,
+    };
+  }),
+
+  insertBlockAtColumn: (type, rowId, colId, index) => set((state) => {
+    const newBlock = blockRegistry[type].create();
+    const rows = mapRows(state.document.rows, rowId, (row) =>
+      mapColumns(row, colId, (col) => {
+        const blocks = [...col.blocks];
+        blocks.splice(index, 0, newBlock);
+        return { ...col, blocks };
+      }),
+    );
+    return {
+      document: { ...state.document, rows },
+      selectedBlockId: newBlock.id,
+      selectedRowId: rowId,
+      selectedColId: colId,
     };
   }),
 

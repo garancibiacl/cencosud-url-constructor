@@ -47,6 +47,7 @@ export interface RowCanvasProps {
   onDuplicateRow: (rowId: string) => void;
   onRemoveRow: (rowId: string) => void;
   onSetRowPreset: (rowId: string, preset: ColumnPreset) => void;
+  onInsertBlock: (type: MailingBlockType, rowId: string, colId: string, index: number) => void;
   dragRef: React.MutableRefObject<DragSource | null>;
 }
 
@@ -71,6 +72,7 @@ export const RowCanvas = memo(function RowCanvas({
   onDuplicateRow,
   onRemoveRow,
   onSetRowPreset,
+  onInsertBlock,
   dragRef,
 }: RowCanvasProps) {
   const [showPresetPicker, setShowPresetPicker] = useState(false);
@@ -98,24 +100,31 @@ export const RowCanvas = memo(function RowCanvas({
   }, [dragRef]);
 
   const handleColDragOver = useCallback((e: React.DragEvent, colId: string) => {
-    if (!dragRef.current) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
     setDropTargetColId(colId);
-  }, [dragRef]);
+  }, []);
 
   const handleColDragLeave = useCallback(() => setDropTargetColId(null), []);
 
   const handleColDrop = useCallback((e: React.DragEvent, toColId: string, toIndex?: number) => {
     e.preventDefault();
     setDropTargetColId(null);
-    const src = dragRef.current;
-    if (!src) return;
 
-    // Leer row actual desde ref (no recrea el callback cuando row.columns cambia)
+    const data = e.dataTransfer.getData("text/plain");
     const currentRow = rowRef.current;
     const col = currentRow.columns.find((c) => c.id === toColId);
     const insertAt = toIndex ?? col?.blocks.length ?? 0;
+
+    if (data.startsWith("new:")) {
+      const type = data.slice(4) as MailingBlockType;
+      onInsertBlock(type, currentRow.id, toColId, insertAt);
+      dragRef.current = null;
+      return;
+    }
+
+    const src = dragRef.current;
+    if (!src) return;
 
     if (src.srcRowId === currentRow.id && src.srcColId === toColId) {
       onMoveBlockWithinColumn(currentRow.id, toColId, src.srcIndex, insertAt);
@@ -123,7 +132,7 @@ export const RowCanvas = memo(function RowCanvas({
       onMoveBlockToColumn(src.blockId, currentRow.id, toColId, insertAt);
     }
     dragRef.current = null;
-  }, [dragRef, onMoveBlockWithinColumn, onMoveBlockToColumn]);
+  }, [dragRef, onInsertBlock, onMoveBlockWithinColumn, onMoveBlockToColumn]);
 
   // ── Render ────────────────────────────────────────────────────────────────
 

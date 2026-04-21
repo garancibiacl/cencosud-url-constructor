@@ -8,8 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -168,6 +167,7 @@ export default function MailingBuilderPage() {
     duplicateRow,
     setRowPreset,
     insertBlock,
+    insertBlockAtColumn,
     removeBlock,
     duplicateBlock,
     moveBlockWithinColumn,
@@ -468,102 +468,132 @@ export default function MailingBuilderPage() {
       >
 
         {/* ── Panel izquierdo ─────────────────────────────────────────────── */}
-        <aside className="border-r border-border bg-card">
-          <ScrollArea className="h-full">
-            <div className="space-y-6 p-4">
+        <aside className="flex h-full flex-col border-r border-border bg-card">
+          <Tabs defaultValue="bloques" className="flex h-full min-h-0 flex-col">
+            <TabsList className="h-10 w-full shrink-0 rounded-none border-b border-border bg-card p-0">
+              <TabsTrigger
+                value="bloques"
+                className="h-full flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none"
+              >
+                Bloques
+              </TabsTrigger>
+              <TabsTrigger
+                value="secciones"
+                className="h-full flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none"
+              >
+                Secciones
+              </TabsTrigger>
+              <TabsTrigger
+                value="guardado"
+                className="h-full flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none"
+              >
+                Guardado
+              </TabsTrigger>
+            </TabsList>
 
-              {/* Bloques — visual cards */}
-              {Object.entries(groupedBlocks).map(([category, items]) => (
-                <section key={category} className="space-y-2.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
-                    {CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS]}
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {items.map((definition) => (
-                      <button
-                        key={definition.type}
-                        type="button"
-                        onClick={() => { insertBlock(definition.type); setShowGlobalInspector(false); }}
-                        className="group flex flex-col gap-1.5 rounded-lg border border-border bg-card p-2 text-left transition hover:border-primary/50 hover:bg-primary/5 hover:shadow-sm active:scale-[0.97]"
-                        title={`Insertar ${definition.label}`}
-                      >
-                        <BlockMiniThumb type={definition.type} />
-                        <span className="text-xs font-medium leading-tight text-foreground">{definition.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              ))}
+            {/* Tab Bloques */}
+            <TabsContent value="bloques" className="m-0 min-h-0 flex-1">
+              <ScrollArea className="h-full">
+                <div className="space-y-4 p-4">
+                  {Object.entries(groupedBlocks).map(([category, items]) => (
+                    <section key={category} className="space-y-2.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
+                        {CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS]}
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {items.map((definition) => (
+                          <button
+                            key={definition.type}
+                            type="button"
+                            draggable
+                            onDragStart={(e) => {
+                              dragRef.current = null;
+                              e.dataTransfer.setData("text/plain", `new:${definition.type}`);
+                              e.dataTransfer.effectAllowed = "copy";
+                            }}
+                            onClick={() => { insertBlock(definition.type); setShowGlobalInspector(false); }}
+                            className="group flex flex-col gap-1.5 rounded-lg border border-border bg-card p-2 text-left transition hover:border-primary/50 hover:bg-primary/5 hover:shadow-sm active:scale-[0.97]"
+                            title={`Insertar ${definition.label}`}
+                          >
+                            <BlockMiniThumb type={definition.type} />
+                            <span className="text-xs font-medium leading-tight text-foreground">{definition.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  ))}
+                </div>
+              </ScrollArea>
+            </TabsContent>
 
-              {/* Separador */}
-              <Separator />
-
-              {/* Templates */}
-              <section className="space-y-2.5">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">Templates</p>
-                <div className="grid gap-2">
+            {/* Tab Secciones */}
+            <TabsContent value="secciones" className="m-0 min-h-0 flex-1">
+              <ScrollArea className="h-full">
+                <div className="space-y-3 p-4">
                   {mailingTemplates.map((template) => (
                     <button
                       key={template.id}
                       type="button"
                       onClick={() => handleApplyTemplate(template.id)}
-                      className="rounded-md border border-border px-3 py-2 text-left transition hover:border-primary/40 hover:bg-primary/5"
+                      className="w-full rounded-md border border-border px-3 py-2 text-left transition hover:border-primary/40 hover:bg-primary/5"
                     >
                       <p className="text-sm font-medium text-foreground">{template.label}</p>
                       <p className="text-xs text-muted-foreground">{template.description}</p>
                     </button>
                   ))}
                 </div>
-              </section>
+              </ScrollArea>
+            </TabsContent>
 
-              {/* Guardado */}
-              <section className="space-y-2.5">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">Borradores guardados</p>
-                <Input value={versionNote} onChange={(e) => setVersionNote(e.target.value)} placeholder="Nota para la versión" />
-                <div className="grid gap-1.5">
-                  {loading ? <p className="text-xs text-muted-foreground">Cargando…</p> : null}
-                  {mailings.slice(0, 6).map((mailing) => (
-                    <button
-                      key={mailing.id}
-                      type="button"
-                      onClick={() => void handleLoadMailing(mailing.id)}
-                      className={`rounded-md border px-3 py-2 text-left transition ${
-                        activeMailingId === mailing.id
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/40"
-                      }`}
-                    >
-                      <p className="text-sm font-medium text-foreground">{mailing.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        v{mailing.currentVersion} · {new Date(mailing.updatedAt).toLocaleDateString("es-CL")}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-
-                {versions.length > 0 && (
-                  <div className="space-y-2 rounded-md border border-border p-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">Historial</p>
-                    {versions.map((version) => (
-                      <div key={version.id} className="flex items-start justify-between gap-2 text-xs">
-                        <div>
-                          <p className="font-medium text-foreground">v{version.versionNumber}</p>
-                          <p className="text-muted-foreground">{version.note || "Sin nota"}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground">{new Date(version.createdAt).toLocaleDateString("es-CL")}</span>
-                          <Button size="icon" variant="ghost" onClick={() => handleRestoreVersion(version.id)}>
-                            <RotateCcw className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
+            {/* Tab Guardado */}
+            <TabsContent value="guardado" className="m-0 min-h-0 flex-1">
+              <ScrollArea className="h-full">
+                <div className="space-y-4 p-4">
+                  <Input value={versionNote} onChange={(e) => setVersionNote(e.target.value)} placeholder="Nota para la versión" />
+                  <div className="grid gap-1.5">
+                    {loading ? <p className="text-xs text-muted-foreground">Cargando…</p> : null}
+                    {mailings.slice(0, 6).map((mailing) => (
+                      <button
+                        key={mailing.id}
+                        type="button"
+                        onClick={() => void handleLoadMailing(mailing.id)}
+                        className={`rounded-md border px-3 py-2 text-left transition ${
+                          activeMailingId === mailing.id
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/40"
+                        }`}
+                      >
+                        <p className="text-sm font-medium text-foreground">{mailing.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          v{mailing.currentVersion} · {new Date(mailing.updatedAt).toLocaleDateString("es-CL")}
+                        </p>
+                      </button>
                     ))}
                   </div>
-                )}
-              </section>
 
-            </div>
-          </ScrollArea>
+                  {versions.length > 0 && (
+                    <div className="space-y-2 rounded-md border border-border p-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">Historial</p>
+                      {versions.map((version) => (
+                        <div key={version.id} className="flex items-start justify-between gap-2 text-xs">
+                          <div>
+                            <p className="font-medium text-foreground">v{version.versionNumber}</p>
+                            <p className="text-muted-foreground">{version.note || "Sin nota"}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">{new Date(version.createdAt).toLocaleDateString("es-CL")}</span>
+                            <Button size="icon" variant="ghost" onClick={() => handleRestoreVersion(version.id)}>
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+          </Tabs>
         </aside>
 
         {/* ── Canvas central ──────────────────────────────────────────────── */}
@@ -639,6 +669,7 @@ export default function MailingBuilderPage() {
                                 onDuplicateRow={duplicateRow}
                                 onRemoveRow={removeRow}
                                 onSetRowPreset={setRowPreset}
+                                onInsertBlock={insertBlockAtColumn}
                               />
                             ))}
                           </div>
@@ -753,7 +784,7 @@ export default function MailingBuilderPage() {
 
                       {/* Inspector específico del bloque */}
                       {SelectedInspector && (
-                        <SelectedInspector block={selectedBlock} onChange={updateBlock} />
+                        <SelectedInspector block={selectedBlock as never} onChange={updateBlock} />
                       )}
                     </>
                   ) : (
