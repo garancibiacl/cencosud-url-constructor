@@ -19,4 +19,8 @@ export interface BlockLayout {
   blockAlign?: "left" | "center" | "right";
   width?: number;
   widthUnit?: "px" | "%";
+  marginTop?: number;
+  marginRight?: number;
+  marginBottom?: number;
+  marginLeft?: number;
 }

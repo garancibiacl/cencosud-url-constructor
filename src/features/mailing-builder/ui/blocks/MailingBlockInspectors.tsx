@@ -310,9 +310,6 @@ function PaddingEditor({
   const setSide = (side: keyof PaddingValue, v: number) =>
     onChange({ ...value, [side]: v });
 
-  const inputBase =
-    "w-full bg-transparent text-center text-xs text-foreground focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
-
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -327,26 +324,14 @@ function PaddingEditor({
       {linked ? (
         <div className="grid grid-cols-2 gap-2">
           {/* Vertical (top + bottom) */}
-          <div className="flex h-7 items-center gap-1 overflow-hidden rounded-md border border-border bg-card pl-2">
+          <div className="flex items-center gap-1">
             <ArrowUpDown className="h-3 w-3 shrink-0 text-muted-foreground/50" />
-            <input
-              type="number"
-              value={value.top}
-              onChange={(e) => setVertical(Number(e.target.value) || 0)}
-              className={inputBase}
-            />
-            <span className="pr-1 text-[10px] select-none text-muted-foreground/40">px</span>
+            <PxStepper value={value.top} onChange={setVertical} min={0} max={200} />
           </div>
           {/* Horizontal (left + right) */}
-          <div className="flex h-7 items-center gap-1 overflow-hidden rounded-md border border-border bg-card pl-2">
+          <div className="flex items-center gap-1">
             <ArrowLeftRight className="h-3 w-3 shrink-0 text-muted-foreground/50" />
-            <input
-              type="number"
-              value={value.left}
-              onChange={(e) => setHorizontal(Number(e.target.value) || 0)}
-              className={inputBase}
-            />
-            <span className="pr-1 text-[10px] select-none text-muted-foreground/40">px</span>
+            <PxStepper value={value.left} onChange={setHorizontal} min={0} max={200} />
           </div>
         </div>
       ) : (
@@ -359,17 +344,9 @@ function PaddingEditor({
               { side: "left"   as const, icon: <ArrowLeft  className="h-3 w-3 shrink-0 text-muted-foreground/50" /> },
             ] as const
           ).map(({ side, icon }) => (
-            <div
-              key={side}
-              className="flex h-7 items-center gap-1 overflow-hidden rounded-md border border-border bg-card pl-2"
-            >
+            <div key={side} className="flex items-center gap-1">
               {icon}
-              <input
-                type="number"
-                value={value[side]}
-                onChange={(e) => setSide(side, Number(e.target.value) || 0)}
-                className={inputBase}
-              />
+              <PxStepper value={value[side]} onChange={(v) => setSide(side, v)} min={0} max={200} />
             </div>
           ))}
         </div>
@@ -569,6 +546,29 @@ export function TextBlockInspector({ block, onChange }: SharedProps<TextBlock>) 
           value={padVal(block)}
           onChange={(padding) => setLayout({ padding })}
         />
+        <div className="space-y-2">
+          <span className="text-xs text-foreground/70">Margen</span>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-center gap-1">
+              <ArrowUpDown className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+              <PxStepper
+                value={Math.max(block.layout.marginTop ?? 0, block.layout.marginBottom ?? 0)}
+                onChange={(v) => setLayout({ marginTop: v, marginBottom: v })}
+                min={0}
+                max={200}
+              />
+            </div>
+            <div className="flex items-center gap-1">
+              <ArrowLeftRight className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+              <PxStepper
+                value={Math.max(block.layout.marginLeft ?? 0, block.layout.marginRight ?? 0)}
+                onChange={(v) => setLayout({ marginLeft: v, marginRight: v })}
+                min={0}
+                max={200}
+              />
+            </div>
+          </div>
+        </div>
       </InspSection>
 
       {/* ── Fondo ──────────────────────────────────────────────────────────── */}
