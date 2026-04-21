@@ -24,7 +24,7 @@ export interface HeroBlock extends BaseBlock<"hero", {
 
 export interface TextBlock extends BaseBlock<"text", {
   html: string;
-  align?: "left" | "center" | "right";
+  align?: "left" | "center" | "right" | "justify";
   fontSize?: number;
   lineHeight?: number;
 }> {}

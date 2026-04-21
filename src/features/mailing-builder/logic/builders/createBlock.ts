@@ -1,64 +1,12 @@
 import type { MailingBlock, MailingBlockType } from "../schema/block.types";
+import { blockRegistry } from "../registry/blockRegistry";
 
-const createId = (prefix: string) => `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
-
+/**
+ * Crea un bloque nuevo del tipo indicado con sus props y layout por defecto.
+ *
+ * Los defaults viven en blockRegistry — esta función no tiene switch.
+ * Agregar un nuevo tipo de bloque NO requiere modificar este archivo.
+ */
 export function createBlock(type: MailingBlockType): MailingBlock {
-  switch (type) {
-    case "hero":
-      return {
-        id: createId("hero"),
-        type: "hero",
-        layout: { colSpan: 12, padding: { bottom: 16 } },
-        props: {
-          title: "Nuevo Hero",
-          subtitle: "Describe la campaña principal",
-          imageUrl: "",
-          ctaLabel: "Ver más",
-          href: "",
-        },
-      };
-    case "text":
-      return {
-        id: createId("text"),
-        type: "text",
-        layout: { colSpan: 12, padding: { top: 12, right: 24, bottom: 12, left: 24 } },
-        props: {
-          html: "<p>Escribe tu contenido aquí</p>",
-          align: "left",
-          fontSize: 16,
-          lineHeight: 24,
-        },
-      };
-    case "image":
-      return {
-        id: createId("image"),
-        type: "image",
-        layout: { colSpan: 12, padding: { bottom: 16 } },
-        props: {
-          src: "",
-          alt: "",
-          href: "",
-        },
-      };
-    case "button":
-      return {
-        id: createId("button"),
-        type: "button",
-        layout: { colSpan: 12, padding: { top: 8, right: 24, bottom: 8, left: 24 } },
-        props: {
-          label: "Botón CTA",
-          href: "",
-          align: "center",
-        },
-      };
-    case "spacer":
-      return {
-        id: createId("spacer"),
-        type: "spacer",
-        layout: { colSpan: 12 },
-        props: {
-          height: 24,
-        },
-      };
-  }
+  return blockRegistry[type].create();
 }

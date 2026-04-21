@@ -1,11 +1,12 @@
 import type { MailingDocument } from "../schema/mailing.types";
 import { createBlock } from "./createBlock";
+import { fullWidthRow } from "./createRow";
 
 export function createDefaultMailing(): MailingDocument {
   return {
     id: crypto.randomUUID(),
     name: "Nuevo Mailing",
-    version: "0.1.0",
+    version: "1.0.0",
     locale: "es-CL",
     settings: {
       width: 600,
@@ -26,6 +27,10 @@ export function createDefaultMailing(): MailingDocument {
       utm_source: "email",
       utm_medium: "mailing",
     },
-    blocks: [createBlock("hero"), createBlock("text"), createBlock("button")],
+    rows: [
+      fullWidthRow(createBlock("hero")),
+      fullWidthRow(createBlock("text")),
+      fullWidthRow(createBlock("button")),
+    ],
   };
 }

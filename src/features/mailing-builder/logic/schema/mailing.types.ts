@@ -1,4 +1,4 @@
-import type { MailingBlock } from "./block.types";
+import type { MailingRow } from "./row.types";
 
 export interface MailingSettings {
   width: number;
@@ -19,9 +19,11 @@ export interface MailingSettings {
 export interface MailingDocument {
   id: string;
   name: string;
+  /** Semver del schema. Aumentar al hacer breaking changes. */
   version: string;
   locale: "es-CL";
   settings: MailingSettings;
   variables: Record<string, string>;
-  blocks: MailingBlock[];
+  /** Sistema de layout Row → Column → Block. */
+  rows: MailingRow[];
 }
