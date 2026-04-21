@@ -361,14 +361,13 @@ function PaddingEditor({
 
 function InspSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/55">
+    <div className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
+      <div className="border-b border-border/50 bg-secondary/30 px-4 py-2.5">
+        <span className="text-[13px] font-bold tracking-tight text-foreground">
           {title}
         </span>
-        <div className="h-px flex-1 bg-border/60" />
       </div>
-      <div className="space-y-2.5">{children}</div>
+      <div className="space-y-3 p-4">{children}</div>
     </div>
   );
 }
@@ -379,8 +378,8 @@ function InspSection({ title, children }: { title: string; children: ReactNode }
 
 function InspRow({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex min-h-[28px] items-center justify-between gap-3">
-      <span className="shrink-0 text-xs text-foreground/70">{label}</span>
+    <div className="flex min-h-[32px] items-center justify-between gap-3">
+      <span className="shrink-0 text-[12px] font-medium text-foreground/80">{label}</span>
       <div className="shrink-0">{children}</div>
     </div>
   );
@@ -392,8 +391,8 @@ function InspRow({ label, children }: { label: string; children: ReactNode }) {
 
 function InlineEditHint({ children }: { children: ReactNode }) {
   return (
-    <div className="flex items-center gap-1.5 rounded-md bg-primary/5 px-2.5 py-2 text-xs text-primary/70">
-      <PenLine className="h-3 w-3 shrink-0" />
+    <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 text-[12px] font-medium text-primary/80">
+      <PenLine className="h-3.5 w-3.5 shrink-0" />
       {children}
     </div>
   );
@@ -418,7 +417,7 @@ function padVal(block: { layout: { padding?: Partial<PaddingValue> } }): Padding
 
 export function HeroBlockInspector({ block, onChange }: SharedProps<HeroBlock>) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
 
       <InspSection title="Imagen">
         {block.props.imageUrl && (
@@ -484,7 +483,7 @@ export function TextBlockInspector({ block, onChange }: SharedProps<TextBlock>) 
     onChange({ ...block, props: { ...block.props, ...patch } });
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
 
       {/* ── Diseño ─────────────────────────────────────────────────────────── */}
       <InspSection title="Diseño">
@@ -701,7 +700,7 @@ export function TextBlockInspector({ block, onChange }: SharedProps<TextBlock>) 
 
 export function ImageBlockInspector({ block, onChange }: SharedProps<ImageBlock>) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
 
       <InspSection title="Visual">
         {block.props.src && (
@@ -774,7 +773,7 @@ export function ImageBlockInspector({ block, onChange }: SharedProps<ImageBlock>
 
 export function ButtonBlockInspector({ block, onChange }: SharedProps<ButtonBlock>) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
 
       <InspSection title="Contenido">
         <InlineEditHint>Haz clic en el botón para editar su texto</InlineEditHint>
@@ -831,7 +830,7 @@ export function ButtonBlockInspector({ block, onChange }: SharedProps<ButtonBloc
 
 export function SpacerBlockInspector({ block, onChange }: SharedProps<SpacerBlock>) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       <InspSection title="Altura">
         <InspRow label="Altura del espacio">
           <PxStepper
