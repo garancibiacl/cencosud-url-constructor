@@ -248,6 +248,8 @@ export const RowCanvas = memo(function RowCanvas({
             key={col.id}
             col={col}
             rowId={row.id}
+            rowIndex={rowIndex}
+            totalRows={totalRows}
             isDropTarget={dropTargetColId === col.id}
             selectedBlockId={selectedBlockId}
             selectedColId={selectedColId}
@@ -256,6 +258,7 @@ export const RowCanvas = memo(function RowCanvas({
             onRemoveBlock={onRemoveBlock}
             onDuplicateBlock={onDuplicateBlock}
             onMoveBlockWithinColumn={onMoveBlockWithinColumn}
+            onMoveRow={onMoveRow}
             onBlockDragStart={handleBlockDragStart}
             onDragOver={handleColDragOver}
             onDragLeave={handleColDragLeave}
@@ -274,6 +277,8 @@ export const RowCanvas = memo(function RowCanvas({
 interface ColumnCanvasProps {
   col: MailingColumn;
   rowId: string;
+  rowIndex: number;
+  totalRows: number;
   isDropTarget: boolean;
   selectedBlockId: string | null;
   selectedColId: string | null;
@@ -282,6 +287,7 @@ interface ColumnCanvasProps {
   onRemoveBlock: (blockId: string) => void;
   onDuplicateBlock: (blockId: string) => void;
   onMoveBlockWithinColumn: (rowId: string, colId: string, from: number, to: number) => void;
+  onMoveRow: (from: number, to: number) => void;
   onBlockDragStart: (e: React.DragEvent, block: MailingBlock, colId: string, index: number) => void;
   onDragOver: (e: React.DragEvent, colId: string) => void;
   onDragLeave: () => void;
@@ -291,6 +297,8 @@ interface ColumnCanvasProps {
 const ColumnCanvas = memo(function ColumnCanvas({
   col,
   rowId,
+  rowIndex,
+  totalRows,
   isDropTarget,
   selectedBlockId,
   selectedColId,
@@ -299,6 +307,7 @@ const ColumnCanvas = memo(function ColumnCanvas({
   onRemoveBlock,
   onDuplicateBlock,
   onMoveBlockWithinColumn,
+  onMoveRow,
   onBlockDragStart,
   onDragOver,
   onDragLeave,
@@ -332,12 +341,15 @@ const ColumnCanvas = memo(function ColumnCanvas({
           totalInCol={col.blocks.length}
           colId={col.id}
           rowId={rowId}
+          rowIndex={rowIndex}
+          totalRows={totalRows}
           isSelected={block.id === selectedBlockId}
           onSelectBlock={onSelectBlock}
           onUpdateBlock={onUpdateBlock}
           onRemoveBlock={onRemoveBlock}
           onDuplicateBlock={onDuplicateBlock}
           onMoveBlockWithinColumn={onMoveBlockWithinColumn}
+          onMoveRow={onMoveRow}
           onBlockDragStart={onBlockDragStart}
           onDragOver={onDragOver}
           onDragLeave={onDragLeave}
@@ -372,12 +384,15 @@ interface BlockItemProps {
   totalInCol: number;
   colId: string;
   rowId: string;
+  rowIndex: number;
+  totalRows: number;
   isSelected: boolean;
   onSelectBlock: (blockId: string, rowId: string, colId: string) => void;
   onUpdateBlock: (nextBlock: MailingBlock) => void;
   onRemoveBlock: (blockId: string) => void;
   onDuplicateBlock: (blockId: string) => void;
   onMoveBlockWithinColumn: (rowId: string, colId: string, from: number, to: number) => void;
+  onMoveRow: (from: number, to: number) => void;
   onBlockDragStart: (e: React.DragEvent, block: MailingBlock, colId: string, index: number) => void;
   onDragOver: (e: React.DragEvent, colId: string) => void;
   onDragLeave: () => void;
@@ -390,12 +405,15 @@ const BlockItem = memo(function BlockItem({
   totalInCol,
   colId,
   rowId,
+  rowIndex,
+  totalRows,
   isSelected,
   onSelectBlock,
   onUpdateBlock,
   onRemoveBlock,
   onDuplicateBlock,
   onMoveBlockWithinColumn,
+  onMoveRow,
   onBlockDragStart,
   onDragOver,
   onDragLeave,
@@ -411,13 +429,21 @@ const BlockItem = memo(function BlockItem({
   );
 
   const handleMoveUp = useCallback(
-    (e: React.MouseEvent) => { e.stopPropagation(); onMoveBlockWithinColumn(rowId, colId, index, index - 1); },
-    [rowId, colId, index, onMoveBlockWithinColumn],
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (index > 0) onMoveBlockWithinColumn(rowId, colId, index, index - 1);
+      else onMoveRow(rowIndex, rowIndex - 1);
+    },
+    [rowId, colId, index, rowIndex, onMoveBlockWithinColumn, onMoveRow],
   );
 
   const handleMoveDown = useCallback(
-    (e: React.MouseEvent) => { e.stopPropagation(); onMoveBlockWithinColumn(rowId, colId, index, index + 1); },
-    [rowId, colId, index, onMoveBlockWithinColumn],
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (index < totalInCol - 1) onMoveBlockWithinColumn(rowId, colId, index, index + 1);
+      else onMoveRow(rowIndex, rowIndex + 1);
+    },
+    [rowId, colId, index, totalInCol, rowIndex, onMoveBlockWithinColumn, onMoveRow],
   );
 
   const handleDuplicate = useCallback(
@@ -483,7 +509,7 @@ const BlockItem = memo(function BlockItem({
             {/* Subir */}
             <button
               type="button"
-              disabled={index === 0}
+              disabled={index === 0 && rowIndex === 0}
               onClick={handleMoveUp}
               title="Mover arriba"
               className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground disabled:opacity-30"
@@ -494,7 +520,7 @@ const BlockItem = memo(function BlockItem({
             {/* Bajar */}
             <button
               type="button"
-              disabled={index === totalInCol - 1}
+              disabled={index === totalInCol - 1 && rowIndex === totalRows - 1}
               onClick={handleMoveDown}
               title="Mover abajo"
               className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground disabled:opacity-30"

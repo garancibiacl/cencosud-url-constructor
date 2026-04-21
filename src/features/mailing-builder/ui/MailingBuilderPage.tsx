@@ -690,13 +690,20 @@ export default function MailingBuilderPage() {
             </div>
 
             <ScrollArea className="h-full">
-              <div className="p-6">
+              <div
+                className="p-6"
+                style={{
+                  backgroundColor: "hsl(var(--muted) / 0.4)",
+                  backgroundImage: "radial-gradient(circle, hsl(var(--border) / 0.9) 1px, transparent 1px)",
+                  backgroundSize: "20px 20px",
+                }}
+              >
                 <div className="grid-cols-1">
 
                   {/* Canvas de edición */}
                   {previewMode === "canvas" ? (
                     <div
-                      className={`mx-auto min-h-full w-full rounded-md border border-dashed border-border bg-background p-3 transition-all duration-300 ${
+                      className={`mx-auto min-h-full w-full rounded-xl border border-border/60 bg-card p-3 shadow-sm transition-all duration-300 ${
                         devicePreview === "mobile" ? "rounded-[2rem] border-2" : ""
                       }`}
                       style={{ maxWidth: devicePreview === "mobile" ? "407px" : `${document.settings.width + 32}px` }}
