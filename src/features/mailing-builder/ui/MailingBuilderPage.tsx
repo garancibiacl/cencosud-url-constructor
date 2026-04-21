@@ -681,7 +681,7 @@ export default function MailingBuilderPage() {
                   <Tabs value={previewMode} onValueChange={(v) => setPreviewMode(v as typeof previewMode)}>
                     <TabsList>
                       <TabsTrigger value="canvas"><PenSquare className="mr-2 h-4 w-4" />Canvas</TabsTrigger>
-                      <TabsTrigger value="split"><Eye className="mr-2 h-4 w-4" />Split</TabsTrigger>
+                      <TabsTrigger value="split"><Eye className="mr-2 h-4 w-4" />Vista previa</TabsTrigger>
                       <TabsTrigger value="html"><CodeXml className="mr-2 h-4 w-4" />HTML</TabsTrigger>
                     </TabsList>
                   </Tabs>
@@ -691,10 +691,10 @@ export default function MailingBuilderPage() {
 
             <ScrollArea className="h-full">
               <div className="p-6">
-                <div className={`grid gap-4 ${previewMode === "split" ? "lg:grid-cols-2" : "grid-cols-1"}`}>
+                <div className="grid-cols-1">
 
                   {/* Canvas de edición */}
-                  {previewMode !== "html" ? (
+                  {previewMode === "canvas" ? (
                     <div
                       className={`mx-auto min-h-full w-full rounded-md border border-dashed border-border bg-background p-3 transition-all duration-300 ${
                         devicePreview === "mobile" ? "rounded-[2rem] border-2" : ""
@@ -752,24 +752,30 @@ export default function MailingBuilderPage() {
                     </div>
                   ) : null}
 
-                  {/* Preview HTML */}
-                  {previewMode !== "canvas" ? (
+                  {/* Vista previa — solo iframe renderizado */}
+                  {previewMode === "split" ? (
+                    <div className={`mx-auto transition-all duration-300 ${
+                      devicePreview === "mobile"
+                        ? "w-[407px] rounded-[2rem] border-2 border-border bg-background p-2"
+                        : "w-full"
+                    }`}>
+                      {devicePreview === "mobile" && (
+                        <div className="mb-2 flex justify-center pt-1">
+                          <div className="h-1 w-12 rounded-full bg-border" />
+                        </div>
+                      )}
+                      <iframe
+                        title="Vista previa"
+                        className="h-[600px] w-full rounded-md border-0 bg-white"
+                        style={{ maxWidth: devicePreview === "mobile" ? "375px" : "100%" }}
+                        srcDoc={htmlPreview}
+                      />
+                    </div>
+                  ) : null}
+
+                  {/* HTML + compatibilidad */}
+                  {previewMode === "html" ? (
                     <div className="space-y-4">
-                      <div className={`mx-auto rounded-md border border-border bg-background transition-all duration-300 ${
-                        devicePreview === "mobile" ? "max-w-[407px] rounded-[2rem] border-2 p-2" : "w-full"
-                      }`}>
-                        {devicePreview === "mobile" && (
-                          <div className="mb-2 flex justify-center pt-1">
-                            <div className="h-1 w-12 rounded-full bg-border" />
-                          </div>
-                        )}
-                        <iframe
-                          title="HTML preview"
-                          className="h-[520px] w-full rounded-md"
-                          style={{ maxWidth: devicePreview === "mobile" ? "375px" : "100%" }}
-                          srcDoc={htmlPreview}
-                        />
-                      </div>
                       <div className="rounded-md border border-border bg-background p-4">
                         <div className="mb-3 flex items-center justify-between gap-2">
                           <p className="text-sm font-semibold text-foreground">Compatibilidad email</p>
