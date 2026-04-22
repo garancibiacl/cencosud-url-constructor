@@ -1,14 +1,20 @@
-import { useState, useMemo, useEffect, createContext, useContext, useCallback, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { ReactNode } from "react";
 import {
   AlignCenter, AlignJustify, AlignLeft, AlignRight,
   ArrowDown, ArrowLeft, ArrowRight, ArrowUp,
   ArrowLeftRight, ArrowUpDown,
-  Check, Image as ImageIcon, Link2, Maximize2, Minimize2, Monitor,
+  AlertCircle, Check, ChevronRight, ChevronsUpDown, ClipboardPaste,
+  Image as ImageIcon, Link2, Monitor,
   MonitorSmartphone, PenLine, Plus, Settings2, Smartphone,
-  X as XIcon, Zap,
+  Zap,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from "@/components/ui/command";
 import {
   Dialog,
   DialogContent,
@@ -16,7 +22,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { BRAND_CONFIGS, BRAND_LIST } from "@/features/ampscript-builder/logic/ampscript.brands";
-import { parseUrl, generateSlug, buildAMPscript } from "@/features/ampscript-builder/logic/ampscript.engine";
+import { parseUrl, generateSlug, generateAMPscript } from "@/features/ampscript-builder/logic/ampscript.engine";
+import { parseSingleWebSpreadsheetPaste } from "@/lib/title-url-app";
 import type { BrandId } from "@/features/ampscript-builder/logic/ampscript.types";
 import type {
   ButtonBlock, HeroBlock, ImageBlock, ProductBlock, SpacerBlock, TextBlock,
@@ -31,14 +38,114 @@ const CAMPAIGN_OPTIONS = [
   { value: "lo-mejor-de-la-semana", label: "Lo mejor de la semana" },
   { value: "fondo-surtido",         label: "Fondo surtido" },
   { value: "super-ofertas-online",  label: "Super Ofertas Online" },
+  { value: "torta-del-mes",         label: "Torta del mes" },
   { value: "ofertas-tc",            label: "Ofertas TC" },
   { value: "avance",                label: "Avance" },
+  { value: "puntos",                label: "Puntos" },
+  { value: "cencopay",              label: "Cencopay" },
+  { value: "lpm",                   label: "LPM" },
+  { value: "tarjeta",               label: "Tarjeta" },
+  { value: "retiro",                label: "Retiro" },
+  { value: "especial",              label: "Especial" },
+  { value: "proveedor",             label: "Proveedor" },
+  { value: "exclusivas",            label: "Exclusivas" },
+  { value: "semanasanta",           label: "Semana Santa" },
   { value: "cyber-day",             label: "Cyber Day" },
   { value: "black-friday",          label: "Black Friday" },
   { value: "navidad",               label: "Navidad" },
   { value: "aniversario",           label: "Aniversario" },
-  { value: "especial",              label: "Especial" },
+  { value: "oferta-semanal",        label: "Oferta Semanal" },
 ];
+
+function CampaignComboField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const selectedLabel = CAMPAIGN_OPTIONS.find((o) => o.value === value)?.label;
+
+  function applyCustom() {
+    const next = search.trim().toLowerCase().replace(/\s+/g, "-");
+    if (!next) return;
+    onChange(next);
+    setSearch("");
+    setOpen(false);
+  }
+
+  return (
+    <div className="space-y-1">
+      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Campaña</span>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="flex h-8 w-full items-center justify-between rounded-md border border-border bg-card px-3 text-left text-xs text-foreground transition hover:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-400"
+          >
+            <span className={value ? "text-foreground" : "text-muted-foreground/60"}>
+              {selectedLabel ?? value ?? "Seleccionar campaña"}
+            </span>
+            <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-64 rounded-lg border border-border p-0 shadow-lg"
+          align="start"
+          side="bottom"
+        >
+          <Command>
+            <CommandInput placeholder="Buscar o escribir..." value={search} onValueChange={setSearch} />
+            <CommandList>
+              <CommandEmpty>
+                <button
+                  type="button"
+                  onClick={applyCustom}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-xs text-muted-foreground transition hover:text-foreground"
+                >
+                  <Plus className="h-3 w-3" />
+                  Usar "{search}" como valor
+                </button>
+              </CommandEmpty>
+              <CommandGroup>
+                {CAMPAIGN_OPTIONS.map((opt) => (
+                  <CommandItem
+                    key={opt.value}
+                    value={opt.label}
+                    onSelect={() => { onChange(opt.value); setSearch(""); setOpen(false); }}
+                    className="text-xs"
+                  >
+                    <Check className={`mr-2 h-3 w-3 shrink-0 ${value === opt.value ? "opacity-100" : "opacity-0"}`} />
+                    {opt.label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+              {search.trim() && !CAMPAIGN_OPTIONS.some((o) => o.label.toLowerCase() === search.toLowerCase()) && (
+                <CommandGroup heading="Personalizado">
+                  <CommandItem value={`custom-${search}`} onSelect={applyCustom} className="text-xs">
+                    <Plus className="mr-2 h-3 w-3" />
+                    Usar "{search}"
+                  </CommandItem>
+                </CommandGroup>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {value && (
+        <div className="flex items-center gap-1.5">
+          <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/40" />
+          <span className="text-[10px] text-muted-foreground/60">utm_campaign:</span>
+          <code className="rounded bg-secondary px-1 py-0.5 font-mono text-[10px] text-violet-600 dark:text-violet-400">
+            {value}
+          </code>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function AMPscriptDialog({
   open,
@@ -52,46 +159,60 @@ function AMPscriptDialog({
   onInsert: (ampscript: string, categoryId: string) => void;
 }) {
   const [brandId, setBrandId] = useState<BrandId>("sisa");
-  const [campaigns, setCampaigns] = useState(CAMPAIGN_OPTIONS);
-  const [campaign, setCampaign] = useState("bombazo");
+  const [campaign, setCampaign] = useState("");
   const [description, setDescription] = useState("");
   const [url, setUrl] = useState(initialUrl);
-  const [addingCampaign, setAddingCampaign] = useState(false);
-  const [newCampaignLabel, setNewCampaignLabel] = useState("");
-  const newCampaignInputRef = useRef<HTMLInputElement>(null);
+  const [pasteFlash, setPasteFlash] = useState(false);
 
-  // Reset de campos cada vez que el modal se abre
   useEffect(() => {
     if (open) {
       setUrl(initialUrl);
       setDescription("");
-      setAddingCampaign(false);
-      setNewCampaignLabel("");
+      setCampaign("");
+      setPasteFlash(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const handleAddCampaign = () => {
-    const label = newCampaignLabel.trim();
-    if (!label) return;
-    const value = label.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-    if (!campaigns.find((c) => c.value === value)) {
-      setCampaigns((prev) => [...prev, { value, label }]);
-    }
-    setCampaign(value);
-    setAddingCampaign(false);
-    setNewCampaignLabel("");
-  };
-
   const brand = BRAND_CONFIGS[brandId];
   const parsed = useMemo(() => parseUrl(url), [url]);
   const slug = useMemo(() => generateSlug(description), [description]);
-  const activeCampaign = campaign;
+  const result = useMemo(() => generateAMPscript(description, url, brand, campaign), [description, url, brand, campaign]);
 
-  const ampscript = useMemo(() => {
-    if (!parsed.categoryId || !slug || !activeCampaign) return null;
-    return buildAMPscript(brand, parsed.categoryId, slug, activeCampaign);
-  }, [brand, parsed.categoryId, slug, activeCampaign]);
+  function handleSmartPaste(e: React.ClipboardEvent) {
+    const text = e.clipboardData.getData("text").trim();
+    if (!text) return;
+
+    // Caso 1: fila tabulada (desde Excel) — rellena descripción + URL, salta celdas de fechas
+    if (text.includes("\t")) {
+      e.preventDefault();
+      const parsed = parseSingleWebSpreadsheetPaste(text);
+      if (!parsed) return;
+      if (parsed.description) setDescription(parsed.description);
+      if (parsed.baseUrl) setUrl(parsed.baseUrl);
+      setPasteFlash(true);
+      setTimeout(() => setPasteFlash(false), 2000);
+      return;
+    }
+
+    // Caso 2: URL suelta pegada en el campo descripción — la redirige al campo URL
+    if (/^https?:\/\//i.test(text)) {
+      e.preventDefault();
+      setUrl(text);
+    }
+  }
+
+  function handleUrlPaste(e: React.ClipboardEvent) {
+    const text = e.clipboardData.getData("text").trim();
+    if (!text.includes("\t")) return;
+    e.preventDefault();
+    const parsed = parseSingleWebSpreadsheetPaste(text);
+    if (!parsed) return;
+    if (parsed.description) setDescription(parsed.description);
+    if (parsed.baseUrl) setUrl(parsed.baseUrl);
+    setPasteFlash(true);
+    setTimeout(() => setPasteFlash(false), 2000);
+  }
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -109,150 +230,142 @@ function AMPscriptDialog({
           </div>
         </DialogHeader>
 
-        <div className="space-y-4 p-5">
+        <div className="max-h-[70vh] overflow-y-auto">
+          <div className="space-y-4 p-5">
 
-          {/* Brand */}
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Marca</span>
-            <div className="flex gap-2">
-              {BRAND_LIST.map((b) => (
-                <button
-                  key={b.id}
-                  type="button"
-                  onClick={() => setBrandId(b.id as BrandId)}
-                  className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
-                    brandId === b.id
-                      ? "border-violet-400 bg-violet-500/10 text-violet-700 dark:text-violet-300"
-                      : "border-border bg-card text-muted-foreground hover:bg-secondary/60"
-                  }`}
-                >
-                  {b.label}
-                </button>
-              ))}
+            {/* Brand */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Marca</span>
+              <div className="flex gap-2">
+                {BRAND_LIST.map((b) => (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => setBrandId(b.id as BrandId)}
+                    className={`relative flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                      brandId === b.id
+                        ? "border-violet-400 bg-violet-500/10 text-violet-700 dark:text-violet-300"
+                        : "border-border bg-card text-muted-foreground hover:bg-secondary/60"
+                    }`}
+                  >
+                    {brandId === b.id && (
+                      <span className="absolute right-1.5 top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-violet-500">
+                        <Check className="h-2 w-2 text-white" />
+                      </span>
+                    )}
+                    {b.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Campaign — select + add new */}
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Campaña</span>
+            {/* Campaña — combobox con búsqueda + personalizado */}
+            <CampaignComboField value={campaign} onChange={setCampaign} />
 
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <select
-                  value={campaign}
-                  onChange={(e) => setCampaign(e.target.value)}
-                  className="h-8 w-full appearance-none rounded-md border border-border bg-card pl-3 pr-8 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-violet-400"
-                >
-                  {campaigns.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
+            {/* Descripción de campaña */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Descripción de campaña
+                </span>
+                {pasteFlash && (
+                  <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                    <ClipboardPaste className="h-3 w-3" />
+                    Pegado desde Excel
+                  </span>
+                )}
+              </div>
+              <Input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                onPaste={handleSmartPaste}
+                placeholder="Ej: Bombazo exclusivo ecomm todo San José — o pega desde Excel"
+                className="h-8 text-xs"
+              />
+              {slug && (
+                <div className="flex items-center gap-1.5">
+                  <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/40" />
+                  <span className="text-[10px] text-muted-foreground/60">utm_content:</span>
+                  <code className="rounded bg-secondary px-1 py-0.5 font-mono text-[10px] text-violet-600 dark:text-violet-400">
+                    {slug}
+                  </code>
+                </div>
+              )}
+            </div>
+
+            {/* URL de destino */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                URL de destino
+              </span>
+              <Textarea
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                onPaste={handleUrlPaste}
+                placeholder={`Ej: https://www.${brand.domain}${brand.searchPath}?fq=H:1234 — o pega desde Excel`}
+                rows={3}
+                className="resize-none font-mono text-xs"
+              />
+              {url.trim() && (
+                <div className="flex items-center gap-1.5">
+                  {parsed.categoryId ? (
+                    <>
+                      <Check className="h-3 w-3 shrink-0 text-emerald-500" />
+                      <span className="text-[10px] text-muted-foreground/60">categoryId:</span>
+                      <code className="rounded bg-secondary px-1 py-0.5 font-mono text-[10px] text-emerald-600 dark:text-emerald-400">
+                        {parsed.categoryId}
+                      </code>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="h-3 w-3 shrink-0 text-amber-500" />
+                      <span className="text-[10px] text-amber-600">No se detectó fq=H: en la URL</span>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Output — código AMPscript con chips */}
+            {result ? (
+              <div className="overflow-hidden rounded-lg border border-violet-200/50 bg-slate-950">
+                <div className="flex items-center gap-2 border-b border-white/10 px-4 py-2">
+                  <div className="flex gap-1">
+                    <span className="h-2.5 w-2.5 rounded-full bg-white/10" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-white/10" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-white/10" />
+                  </div>
+                  <span className="font-mono text-[10px] font-medium text-white/40">AMPscript · SFMC</span>
+                  <span className={`ml-auto inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${brand.color}`}>
+                    {brand.label}
+                  </span>
+                </div>
+                <p className="break-all p-4 font-mono text-[10px] leading-relaxed text-emerald-300">
+                  {result.ampscript}
+                </p>
+                <div className="flex flex-wrap gap-2 border-t border-white/10 px-4 py-2.5">
+                  {[
+                    { label: "categoryId", value: result.categoryId },
+                    { label: "utm_content", value: result.slug },
+                    { label: "campaign", value: `${campaign}_@fechaenvio` },
+                  ].map(({ label, value: v }) => (
+                    <div key={label} className="flex items-center gap-1.5 rounded-md bg-white/5 px-2.5 py-1">
+                      <span className="text-[9px] font-medium text-white/40">{label}</span>
+                      <code className="font-mono text-[10px] text-white/70">{v}</code>
+                    </div>
                   ))}
-                </select>
-                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50">
-                  <svg viewBox="0 0 10 6" className="h-2.5 w-2.5 fill-current"><path d="M0 0l5 6 5-6z"/></svg>
-                </span>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => { setAddingCampaign(true); setTimeout(() => newCampaignInputRef.current?.focus(), 0); }}
-                title="Añadir nueva campaña"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-card text-muted-foreground/60 transition hover:border-violet-400 hover:bg-violet-500/10 hover:text-violet-600"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
-            </div>
-
-            {addingCampaign && (
-              <div className="flex items-center gap-2 rounded-md border border-violet-200 bg-violet-500/5 p-2">
-                <input
-                  ref={newCampaignInputRef}
-                  type="text"
-                  value={newCampaignLabel}
-                  onChange={(e) => setNewCampaignLabel(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleAddCampaign();
-                    if (e.key === "Escape") { setAddingCampaign(false); setNewCampaignLabel(""); }
-                  }}
-                  placeholder="Nombre de la nueva campaña"
-                  className="h-7 flex-1 rounded border-0 bg-transparent text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddCampaign}
-                  disabled={!newCampaignLabel.trim()}
-                  className="flex h-6 items-center rounded bg-violet-600 px-2.5 text-[11px] font-medium text-white transition hover:bg-violet-700 disabled:opacity-40"
-                >
-                  Añadir
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setAddingCampaign(false); setNewCampaignLabel(""); }}
-                  className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground/50 transition hover:text-foreground"
-                >
-                  <XIcon className="h-3 w-3" />
-                </button>
+            ) : (description.trim() || url.trim() || campaign) ? (
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/30 px-3 py-2.5">
+                <Zap className="h-3.5 w-3.5 shrink-0 text-muted-foreground/30" />
+                <p className="text-[11px] text-muted-foreground/60">
+                  {!campaign ? "Selecciona una campaña" : !description.trim() ? "Escribe una descripción" : "Ingresa una URL con fq=H:categoryId"}
+                </p>
               </div>
-            )}
-          </div>
-
-          {/* Description */}
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Descripción</span>
-            <Input
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Ej: Bombazo exclusivo ecomm todo San José"
-              className="h-8 text-xs"
-            />
-            {slug && (
-              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60">
-                <span className="font-mono rounded bg-secondary px-1 py-0.5">{slug}</span>
-              </div>
-            )}
-          </div>
-
-          {/* URL destino */}
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">URL de e-commerce</span>
-            <Input
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://www.santaisabel.cl/busca?fq=H%3A10339"
-              className="h-8 text-xs font-mono"
-            />
-            {parsed.categoryId ? (
-              <div className="flex items-center gap-1.5">
-                <Check className="h-3 w-3 text-green-500" />
-                <span className="text-[10px] text-muted-foreground/70">
-                  categoryId: <span className="font-mono font-medium text-green-600">{parsed.categoryId}</span>
-                </span>
-              </div>
-            ) : url.trim() ? (
-              <span className="text-[10px] text-amber-600">No se detectó categoryId (fq=H:XXXX)</span>
             ) : null}
+
           </div>
-
-          {/* Preview chips */}
-          {ampscript && (
-            <div className="flex flex-wrap gap-1.5">
-              <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-mono text-muted-foreground">
-                categoryId <span className="font-medium text-foreground">{parsed.categoryId}</span>
-              </span>
-              <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-mono text-muted-foreground">
-                utm_content <span className="font-medium text-foreground">{slug}</span>
-              </span>
-              <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-mono text-muted-foreground">
-                campaign <span className="font-medium text-foreground">{activeCampaign}_@fechaenvio</span>
-              </span>
-            </div>
-          )}
-
-          {/* AMPscript preview */}
-          {ampscript && (
-            <div className="rounded-lg bg-[#1a1a2e] p-3 font-mono text-[9px] leading-relaxed text-green-400 break-all">
-              {ampscript}
-            </div>
-          )}
-
         </div>
 
         {/* Footer */}
@@ -266,8 +379,8 @@ function AMPscriptDialog({
           </button>
           <button
             type="button"
-            disabled={!ampscript}
-            onClick={() => ampscript && onInsert(ampscript, parsed.categoryId!)}
+            disabled={!result}
+            onClick={() => result && onInsert(result.ampscript, result.categoryId)}
             className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-1.5 text-xs font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Zap className="h-3 w-3" />

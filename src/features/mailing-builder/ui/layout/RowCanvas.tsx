@@ -139,10 +139,12 @@ export const RowCanvas = memo(function RowCanvas({
   return (
     <div
       className={`group/row relative rounded-lg border transition-colors ${
-        isRowSelected
-          ? "border-primary/50 bg-primary/[0.02]"
-          : "border-border bg-background hover:border-border/80"
+        isRowSelected ? "bg-transparent" : "border-border bg-background hover:border-border/80"
       }`}
+      style={isRowSelected ? {
+        borderColor: "var(--mb-brand-50)",
+        backgroundColor: "var(--mb-brand-10)",
+      } : undefined}
     >
       {/* Toolbar de fila */}
       <div className="flex items-center justify-between gap-2 border-b border-dashed border-border/60 px-3 py-1.5">
@@ -177,14 +179,22 @@ export const RowCanvas = memo(function RowCanvas({
                         title={def.label}
                         onClick={() => { onSetRowPreset(row.id, preset); setShowPresetPicker(false); }}
                         className={`flex items-center gap-0.5 rounded px-1.5 py-1 transition ${
-                          isActive ? "bg-primary/10 ring-1 ring-primary/40" : "hover:bg-secondary/60"
+                          isActive ? "" : "hover:bg-secondary/60"
                         }`}
+                        style={isActive ? {
+                          backgroundColor: "var(--mb-brand-10)",
+                          outline: "1px solid var(--mb-brand-30)",
+                          outlineOffset: "-1px",
+                        } : undefined}
                       >
                         {def.spans.map((span, i) => (
                           <span
                             key={i}
-                            className={`block h-5 rounded-sm ${isActive ? "bg-primary/60" : "bg-muted-foreground/30"}`}
-                            style={{ width: `${(span / 12) * 60}px` }}
+                            className={`block h-5 rounded-sm ${isActive ? "" : "bg-muted-foreground/30"}`}
+                            style={{
+                              width: `${(span / 12) * 60}px`,
+                              ...(isActive ? { backgroundColor: "var(--mb-brand-50)" } : {}),
+                            }}
                           />
                         ))}
                       </button>
@@ -319,9 +329,20 @@ const ColumnCanvas = memo(function ColumnCanvas({
   return (
     <div
       className={`flex flex-col gap-1.5 px-1.5 py-1.5 transition-colors ${
-        isDropTarget ? "bg-primary/5 ring-1 ring-primary/30 ring-inset rounded" : ""
-      } ${isColSelected ? "ring-1 ring-primary/20 ring-inset rounded" : ""}`}
-      style={{ width: fraction, minWidth: 0 }}
+        isDropTarget || isColSelected ? "rounded" : ""
+      }`}
+      style={{
+        width: fraction,
+        minWidth: 0,
+        ...(isDropTarget ? {
+          backgroundColor: "var(--mb-brand-10)",
+          outline: "1px solid var(--mb-brand-30)",
+          outlineOffset: "-1px",
+        } : isColSelected ? {
+          outline: "1px solid var(--mb-brand-10)",
+          outlineOffset: "-1px",
+        } : {}),
+      }}
       onDragOver={(e) => onDragOver(e, col.id)}
       onDragLeave={onDragLeave}
       onDrop={(e) => onDrop(e, col.id)}
@@ -366,8 +387,13 @@ const ColumnCanvas = memo(function ColumnCanvas({
 
       {/* Zona vacía si la columna no tiene bloques */}
       {col.blocks.length === 0 && (
-        <div className="flex min-h-[64px] items-center justify-center rounded-md border border-dashed border-border/60">
-          <p className="select-none text-[10px] text-muted-foreground/40">Arrastra un bloque aquí</p>
+        <div
+          className="flex min-h-[64px] items-center justify-center rounded-md border border-dashed transition-colors"
+          style={{ borderColor: "var(--mb-brand-30)" }}
+        >
+          <p className="select-none text-[10px]" style={{ color: "var(--mb-brand-50)" }}>
+            Arrastra un bloque aquí
+          </p>
         </div>
       )}
     </div>
@@ -566,10 +592,18 @@ const BlockItem = memo(function BlockItem({
         ref={blockRef}
         data-mailing-block="true"
         className={`group/block relative rounded-lg border transition-all ${
-          isSelected
-            ? "border-primary bg-primary/5 shadow-sm"
-            : "border-transparent bg-card hover:border-border/60"
-        } ${dropHalf ? "ring-2 ring-primary/40" : ""}`}
+          isSelected ? "shadow-sm" : "border-transparent bg-card hover:border-border/60"
+        }`}
+        style={{
+          ...(isSelected ? {
+            borderColor: "var(--mb-brand)",
+            backgroundColor: "var(--mb-brand-10)",
+          } : {}),
+          ...(dropHalf ? {
+            outline: "2px solid var(--mb-brand-50)",
+            outlineOffset: "-2px",
+          } : {}),
+        }}
         onClick={handleSelect}
         onDragOver={handleBlockDragOver}
         onDragLeave={handleBlockDragLeave}
@@ -577,10 +611,16 @@ const BlockItem = memo(function BlockItem({
       >
         {/* Indicador de posición de drop */}
         {dropHalf === "top" && (
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-0.5 rounded-full bg-primary shadow-[0_0_6px_2px_rgba(var(--primary)/0.4)]" />
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 z-20 h-0.5 rounded-full"
+            style={{ backgroundColor: "var(--mb-brand)", boxShadow: "0 0 6px 2px var(--mb-brand-30)" }}
+          />
         )}
         {dropHalf === "bottom" && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-0.5 rounded-full bg-primary shadow-[0_0_6px_2px_rgba(var(--primary)/0.4)]" />
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-0.5 rounded-full"
+            style={{ backgroundColor: "var(--mb-brand)", boxShadow: "0 0 6px 2px var(--mb-brand-30)" }}
+          />
         )}
 
         {/* Vista del bloque */}
@@ -613,7 +653,8 @@ function BlockDropZone({
 
   return (
     <div
-      className={`h-1.5 w-full rounded transition-colors ${active ? "bg-primary/50" : ""}`}
+      className="h-1.5 w-full rounded transition-colors"
+      style={active ? { backgroundColor: "var(--mb-brand-50)" } : undefined}
       onDragOver={(e) => { setActive(true); onDragOver(e); }}
       onDragLeave={() => { setActive(false); onDragLeave(); }}
       onDrop={(e) => { setActive(false); onDrop(e); }}
@@ -666,7 +707,7 @@ export function AddRowButton({ onAdd }: { onAdd: (preset: ColumnPreset) => void 
                   type="button"
                   title={def.label}
                   onClick={() => { onAdd(preset); setOpen(false); }}
-                  className="flex items-center gap-0.5 rounded border border-border px-2 py-1.5 hover:border-primary/40 hover:bg-primary/5 transition"
+                  className="flex items-center gap-0.5 rounded border border-border px-2 py-1.5 transition hover:border-border/80 hover:bg-secondary/60"
                 >
                   {def.spans.map((span, i) => (
                     <span

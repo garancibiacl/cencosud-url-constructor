@@ -426,50 +426,102 @@ export default function MailingBuilderPage() {
   const SaveIcon = saveIcon;
 
   // ─────────────────────────────────────────────────────────────────────────
+  // Brand CSS vars — injected at root so all children inherit via cascade
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const activeBrandColor = document.settings.brand
+    ? brandThemes[document.settings.brand]?.primaryColor
+    : undefined;
+
+  const brandCssVars = {
+    "--mb-brand":    activeBrandColor ?? "hsl(var(--primary))",
+    "--mb-brand-10": activeBrandColor ? `${activeBrandColor}1a` : "hsl(var(--primary) / 0.10)",
+    "--mb-brand-30": activeBrandColor ? `${activeBrandColor}4d` : "hsl(var(--primary) / 0.30)",
+    "--mb-brand-50": activeBrandColor ? `${activeBrandColor}80` : "hsl(var(--primary) / 0.50)",
+  } as React.CSSProperties;
+
+  // ─────────────────────────────────────────────────────────────────────────
   // Render
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col bg-background">
+    <div className="flex h-full min-h-0 flex-1 flex-col bg-background" style={brandCssVars}>
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="border-b border-border bg-card px-8 py-5">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Mail className="h-5 w-5" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">Mailing Builder</h1>
-              <div className="mt-1 flex items-center gap-1.5">
-                <SaveIcon className={`h-3 w-3 shrink-0 ${saveIconClass}`} />
-                <span className="text-xs text-muted-foreground">{saveLabel}</span>
-                {activeMailingId && (
-                  <>
-                    <span className="text-muted-foreground/40">·</span>
-                    <span className="text-xs text-muted-foreground/60">
-                      {document.rows.length} {document.rows.length === 1 ? "fila" : "filas"} · {totalBlocks} bloques
-                    </span>
-                  </>
-                )}
-              </div>
+      <div className="border-b border-border bg-card">
+        <div className="grid h-14 grid-cols-[200px_1fr_auto] items-center gap-4 px-5">
+
+          {/* Left: title + save status */}
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm font-semibold text-foreground leading-none">Mailing Cencosud</span>
+            <div className="flex items-center gap-1.5">
+              <SaveIcon className={`h-3 w-3 shrink-0 ${saveIconClass}`} />
+              <span className="text-[11px] text-muted-foreground">{saveLabel}</span>
             </div>
           </div>
 
+          {/* Center: editable campaign name */}
+          <div className="flex flex-col items-center">
+            <input
+              type="text"
+              value={document.name}
+              onChange={(e) => updateDocumentName(e.target.value)}
+              placeholder="Nombre de la campaña"
+              className="w-full max-w-xs rounded-md bg-transparent px-2 py-0.5 text-center text-[15px] font-semibold text-foreground outline-none placeholder:text-muted-foreground/40 transition-colors hover:bg-secondary/50 focus:bg-secondary/50"
+            />
+            {document.settings.brand && (
+              <span className="text-[11px] leading-none text-muted-foreground/50">
+                Editando plantilla {brandThemes[document.settings.brand]?.name}
+              </span>
+            )}
+          </div>
+
+          {/* Right: brand selector + actions */}
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleNewDraft}>
-              <Plus className="mr-2 h-4 w-4" />Nuevo
+
+            {/* Brand segmented control */}
+            <div className="flex items-center gap-0.5 rounded-lg border border-border bg-secondary/40 p-0.5">
+              {Object.values(brandThemes).map((theme) => {
+                const isActive = document.settings.brand === theme.id;
+                return (
+                  <button
+                    key={theme.id}
+                    type="button"
+                    onClick={() => updateSettings("brand", isActive ? undefined : theme.id as BrandId)}
+                    className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-200"
+                    style={isActive ? {
+                      backgroundColor: theme.primaryColor,
+                      color: "#fff",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
+                    } : {
+                      color: "hsl(var(--muted-foreground))",
+                    }}
+                  >
+                    <span
+                      className="h-1.5 w-1.5 shrink-0 rounded-full transition-colors"
+                      style={{ backgroundColor: isActive ? "rgba(255,255,255,0.7)" : theme.primaryColor }}
+                    />
+                    {theme.name}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="h-5 w-px bg-border" />
+
+            <Button variant="ghost" size="sm" onClick={handleNewDraft} className="h-8 px-3 text-xs">
+              <Plus className="mr-1.5 h-3.5 w-3.5" />Nuevo
             </Button>
-            <Button variant="outline" onClick={() => void handleCopyHtml()}>
-              <Copy className="mr-2 h-4 w-4" />Copiar HTML
+            <Button variant="outline" size="sm" onClick={() => void handleCopyHtml()} className="h-8 px-3 text-xs">
+              <Copy className="mr-1.5 h-3.5 w-3.5" />Copiar HTML
             </Button>
-            <Button onClick={handleDownloadHtml}>
-              <Download className="mr-2 h-4 w-4" />Descargar HTML
+            <Button size="sm" onClick={handleDownloadHtml} className="h-8 px-3 text-xs">
+              <Download className="mr-1.5 h-3.5 w-3.5" />Descargar
             </Button>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon" className="h-8 w-8">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -482,10 +534,10 @@ export default function MailingBuilderPage() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => void handleSaveDraft()} disabled={!user || saving}>
-                  <Save className="mr-2 h-4 w-4" />Guardar
+                  <Save className="mr-2 h-4 w-4" />Guardar borrador
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleSaveAsPdf}>
-                  <FileDown className="mr-2 h-4 w-4" />Guardar como pdf
+                  <FileDown className="mr-2 h-4 w-4" />Guardar como PDF
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -630,80 +682,73 @@ export default function MailingBuilderPage() {
         </aside>
 
         {/* ── Canvas central ──────────────────────────────────────────────── */}
-        <section className="min-h-0 bg-secondary/35 px-8 py-6">
-          <div className="mx-auto flex h-full max-w-[820px] flex-col rounded-lg border border-border bg-card shadow-[var(--shadow-card)]">
+        <section
+          className="min-h-0 bg-secondary/35 px-8 py-6"
+          style={activeBrandColor ? {
+            backgroundColor: `${activeBrandColor}0a`,
+            transition: "background-color 250ms ease",
+          } : undefined}
+        >
+          <div
+            className="mx-auto flex h-full max-w-[820px] flex-col rounded-lg bg-card shadow-[var(--shadow-card)] border transition-colors duration-250"
+            style={{ borderColor: activeBrandColor ? `${activeBrandColor}60` : undefined }}
+          >
 
             {/* Barra superior del canvas */}
-            <div className="border-b border-border px-6 py-3.5">
+            <div className="border-b border-border px-5 py-2.5">
               <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{document.name || "Sin nombre"}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {devicePreview === "mobile" ? "375px · móvil" : `${document.settings.width}px · escritorio`} · email-safe HTML
-                  </p>
-                </div>
-                {/* Brand tabs — siempre visible, escalable: se genera desde brandThemes */}
-                <div className="flex items-center gap-0.5 rounded-lg border border-border bg-secondary/30 p-0.5">
+
+                {/* Device toggle */}
+                <div className="flex items-center rounded-md border border-border bg-secondary/40 p-0.5">
                   <button
                     type="button"
-                    onClick={() => updateSettings("brand", undefined)}
-                    className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                      !document.settings.brand
+                    onClick={() => setDevicePreview("desktop")}
+                    className={`flex items-center justify-center rounded px-2 py-1 transition-colors ${
+                      devicePreview === "desktop"
                         ? "bg-card text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
+                    title="Vista escritorio"
                   >
-                    Genérico
+                    <Monitor className="h-4 w-4" />
                   </button>
-                  {Object.values(brandThemes).map((theme) => {
-                    const isActive = document.settings.brand === theme.id;
-                    return (
-                      <button
-                        key={theme.id}
-                        type="button"
-                        onClick={() => updateSettings("brand", theme.id as BrandId)}
-                        className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                          isActive ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        <span
-                          className="h-2 w-2 shrink-0 rounded-full"
-                          style={{ backgroundColor: theme.primaryColor }}
-                        />
-                        {theme.name}
-                      </button>
-                    );
-                  })}
+                  <button
+                    type="button"
+                    onClick={() => setDevicePreview("mobile")}
+                    className={`flex items-center justify-center rounded px-2 py-1 transition-colors ${
+                      devicePreview === "mobile"
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    title="Vista móvil"
+                  >
+                    <Smartphone className="h-4 w-4" />
+                  </button>
                 </div>
-                <div className="flex items-center gap-2">
-                  {/* Toggle desktop / mobile */}
-                  <div className="flex items-center rounded-md border border-border bg-secondary/40 p-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setDevicePreview("desktop")}
-                      className={`flex items-center justify-center rounded px-2 py-1 transition-colors ${
-                        devicePreview === "desktop"
-                          ? "bg-card text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                      title="Vista escritorio"
-                    >
-                      <Monitor className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDevicePreview("mobile")}
-                      className={`flex items-center justify-center rounded px-2 py-1 transition-colors ${
-                        devicePreview === "mobile"
-                          ? "bg-card text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                      title="Vista móvil"
-                    >
-                      <Smartphone className="h-4 w-4" />
-                    </button>
-                  </div>
 
+                {/* Active brand pill — eco contextual */}
+                {document.settings.brand ? (
+                  <div
+                    className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium"
+                    style={{
+                      backgroundColor: `${brandThemes[document.settings.brand]?.primaryColor}1a`,
+                      color: brandThemes[document.settings.brand]?.primaryColor,
+                    }}
+                  >
+                    <div
+                      className="h-1.5 w-1.5 rounded-full"
+                      style={{ backgroundColor: brandThemes[document.settings.brand]?.primaryColor }}
+                    />
+                    {brandThemes[document.settings.brand]?.name}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 rounded-full bg-secondary/60 px-2.5 py-1 text-[11px] font-medium text-muted-foreground/60">
+                    <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
+                    Sin marca
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
                   <Button
                     ref={globalInspectorButtonRef}
                     type="button"

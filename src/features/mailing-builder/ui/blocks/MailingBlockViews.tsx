@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { ImageIcon, ImageOff, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { ButtonBlock, HeroBlock, ImageBlock, MailingBlock, ProductBlock, SpacerBlock, TextBlock } from "../../logic/schema/block.types";
+import { TextFloatingToolbar } from "../editor/TextFloatingToolbar";
 
 const getPaddingStyle = (block: MailingBlock): CSSProperties => ({
   paddingTop: block.layout.padding?.top ?? 0,
@@ -21,20 +22,15 @@ const inlineFieldClass = "border-transparent bg-transparent px-0 shadow-none foc
 // ContentEditableDiv — edición inline sin reset de cursor
 // ---------------------------------------------------------------------------
 
-function ContentEditableDiv({
-  html,
-  onChange,
-  className,
-  style,
-  autoFocus,
-}: {
+const ContentEditableDiv = forwardRef<HTMLDivElement, {
   html: string;
   onChange: (html: string) => void;
   className?: string;
   style?: CSSProperties;
   autoFocus?: boolean;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
+}>(function ContentEditableDiv({ html, onChange, className, style, autoFocus }, forwardedRef) {
+  const innerRef = useRef<HTMLDivElement>(null);
+  const ref = (forwardedRef as React.RefObject<HTMLDivElement | null>) ?? innerRef;
   const isFocused = useRef(false);
 
   // Montar con el HTML inicial y opcionalmente enfocar
@@ -57,7 +53,7 @@ function ContentEditableDiv({
     if (!isFocused.current && ref.current) {
       ref.current.innerHTML = html;
     }
-  }, [html]);
+  }, [html, ref]);
 
   const handleInput = useCallback(
     (e: React.FormEvent<HTMLDivElement>) => onChange(e.currentTarget.innerHTML),
@@ -77,7 +73,7 @@ function ContentEditableDiv({
       onClick={(e) => e.stopPropagation()}
     />
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // ImageEditOverlay — overlay URL sobre imagen clickeable
@@ -322,6 +318,8 @@ export function HeroBlockView({ block, isSelected, onChange }: { block: HeroBloc
 }
 
 export function TextBlockView({ block, isSelected, onChange }: { block: TextBlock; isSelected?: boolean; onChange?: (nextBlock: TextBlock) => void }) {
+  const contentRef = useRef<HTMLDivElement>(null);
+
   const handleChange = useCallback(
     (html: string) => onChange?.({ ...block, props: { ...block.props, html } }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -331,17 +329,21 @@ export function TextBlockView({ block, isSelected, onChange }: { block: TextBloc
   return (
     <article className={canvasShell(isSelected)} style={getPaddingStyle(block)}>
       {isSelected && onChange ? (
-        <ContentEditableDiv
-          html={block.props.html}
-          onChange={handleChange}
-          autoFocus
-          className="prose prose-sm max-w-none min-h-[60px] rounded px-1 py-0.5 text-foreground outline-none focus:ring-1 focus:ring-ring/50 [&_*]:text-inherit [&_a]:text-primary"
-          style={{
-            textAlign: block.props.align,
-            fontSize: block.props.fontSize,
-            lineHeight: block.props.lineHeight,
-          }}
-        />
+        <>
+          <ContentEditableDiv
+            ref={contentRef}
+            html={block.props.html}
+            onChange={handleChange}
+            autoFocus
+            className="prose prose-sm max-w-none min-h-[60px] rounded px-1 py-0.5 text-foreground outline-none focus:ring-1 focus:ring-ring/50 [&_*]:text-inherit [&_a]:text-primary"
+            style={{
+              textAlign: block.props.align,
+              fontSize: block.props.fontSize,
+              lineHeight: block.props.lineHeight,
+            }}
+          />
+          <TextFloatingToolbar containerRef={contentRef} />
+        </>
       ) : (
         <div
           className="prose prose-sm max-w-none text-foreground prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-a:text-primary"
