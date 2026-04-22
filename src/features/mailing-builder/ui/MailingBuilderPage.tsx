@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle, CheckCircle2, CodeXml, Copy, Download, Eye, FileDown, GripVertical,
   History, Image as ImageIcon, ImagePlus, Loader2, Mail, Monitor, MoreHorizontal,
@@ -167,9 +167,12 @@ export default function MailingBuilderPage() {
     document,
     selectedBlockId,
     selectedColId,
+    selectedRowId,
+    selectedLevel,
     activeMailingId,
     selectBlock,
     selectRow,
+    selectCol,
     addRow,
     removeRow,
     moveRow,
@@ -434,10 +437,11 @@ export default function MailingBuilderPage() {
     : undefined;
 
   const brandCssVars = {
-    "--mb-brand":    activeBrandColor ?? "hsl(var(--primary))",
-    "--mb-brand-10": activeBrandColor ? `${activeBrandColor}1a` : "hsl(var(--primary) / 0.10)",
-    "--mb-brand-30": activeBrandColor ? `${activeBrandColor}4d` : "hsl(var(--primary) / 0.30)",
-    "--mb-brand-50": activeBrandColor ? `${activeBrandColor}80` : "hsl(var(--primary) / 0.50)",
+    "--mb-brand":         activeBrandColor ?? "hsl(var(--primary))",
+    "--mb-brand-10":      activeBrandColor ? `${activeBrandColor}1a` : "hsl(var(--primary) / 0.10)",
+    "--mb-brand-30":      activeBrandColor ? `${activeBrandColor}4d` : "hsl(var(--primary) / 0.30)",
+    "--mb-brand-50":      activeBrandColor ? `${activeBrandColor}80` : "hsl(var(--primary) / 0.50)",
+    "--brand-primary":    activeBrandColor ?? "hsl(var(--primary))",
   } as React.CSSProperties;
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -694,80 +698,135 @@ export default function MailingBuilderPage() {
             style={{ borderColor: activeBrandColor ? `${activeBrandColor}60` : undefined }}
           >
 
-            {/* Barra superior del canvas */}
-            <div className="border-b border-border px-5 py-2.5">
-              <div className="flex items-center justify-between gap-3">
+            {/* ── Split header: marca (izq, rojo) → curva blob → tabs (der, blanco) ── */}
+            <div className="relative flex flex-shrink-0" style={{ height: "52px" }}>
 
-                {/* Device toggle */}
-                <div className="flex items-center rounded-md border border-border bg-secondary/40 p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setDevicePreview("desktop")}
-                    className={`flex items-center justify-center rounded px-2 py-1 transition-colors ${
-                      devicePreview === "desktop"
-                        ? "bg-card text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                    title="Vista escritorio"
-                  >
-                    <Monitor className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDevicePreview("mobile")}
-                    className={`flex items-center justify-center rounded px-2 py-1 transition-colors ${
-                      devicePreview === "mobile"
-                        ? "bg-card text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                    title="Vista móvil"
-                  >
-                    <Smartphone className="h-4 w-4" />
-                  </button>
-                </div>
-
-                {/* Active brand pill — eco contextual */}
-                {document.settings.brand ? (
+              {/* ── IZQUIERDA: zona de marca — fondo rojo/brand ─────────── */}
+              {/* Capa blob: maneja forma y color — contenida en 52px */}
+              <div
+                className="relative z-20 flex-shrink-0"
+                style={{
+                  backgroundColor: activeBrandColor ?? "#df060f",
+                  borderRadius: "0.5rem 0.1rem 3.5rem 0px",
+                  marginRight: "-0.1rem",
+                  transition: "background-color 0.2s ease",
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+                }}
+              >
+                {/* Capa de contenido: centra exactamente dentro de los 52px visibles */}
+                <div
+                  className="flex items-center gap-2.5 pl-4 pr-5"
+                  style={{ height: "52px" }}
+                >
+                  {/* Device toggle dentro de contenedor pill con outline blanco */}
                   <div
-                    className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium"
+                    className="flex items-center gap-0.5 rounded-full p-0.5"
                     style={{
-                      backgroundColor: `${brandThemes[document.settings.brand]?.primaryColor}1a`,
-                      color: brandThemes[document.settings.brand]?.primaryColor,
+                      backgroundColor: "rgba(255,255,255,0.12)",
+                      border: "1px solid rgba(255,255,255,0.28)",
                     }}
                   >
-                    <div
-                      className="h-1.5 w-1.5 rounded-full"
-                      style={{ backgroundColor: brandThemes[document.settings.brand]?.primaryColor }}
-                    />
-                    {brandThemes[document.settings.brand]?.name}
+                    <button
+                      type="button"
+                      onClick={() => setDevicePreview("desktop")}
+                      title="Vista escritorio"
+                      className="flex items-center justify-center rounded-full p-1.5 transition-colors"
+                      style={devicePreview === "desktop"
+                        ? { backgroundColor: "rgba(255,255,255,0.28)", color: "#fff" }
+                        : { color: "rgba(255,255,255,0.55)" }
+                      }
+                    >
+                      <Monitor className="h-[13px] w-[13px]" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDevicePreview("mobile")}
+                      title="Vista móvil"
+                      className="flex items-center justify-center rounded-full p-1.5 transition-colors"
+                      style={devicePreview === "mobile"
+                        ? { backgroundColor: "rgba(255,255,255,0.28)", color: "#fff" }
+                        : { color: "rgba(255,255,255,0.55)" }
+                      }
+                    >
+                      <Smartphone className="h-[13px] w-[13px]" />
+                    </button>
                   </div>
-                ) : (
-                  <div className="flex items-center gap-1.5 rounded-full bg-secondary/60 px-2.5 py-1 text-[11px] font-medium text-muted-foreground/60">
-                    <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
-                    Sin marca
-                  </div>
-                )}
 
-                <div className="flex items-center gap-2">
-                  <Button
-                    ref={globalInspectorButtonRef}
-                    type="button"
-                    variant={showGlobalInspector && !selectedBlock ? "default" : "outline"}
-                    size="icon"
-                    onClick={handleOpenGlobalInspector}
-                    title="Configuración global"
-                  >
-                    <Settings2 className="h-4 w-4" />
-                  </Button>
-                  <Tabs value={previewMode} onValueChange={(v) => setPreviewMode(v as typeof previewMode)}>
-                    <TabsList>
-                      <TabsTrigger value="canvas"><PenSquare className="mr-2 h-4 w-4" />Canvas</TabsTrigger>
-                      <TabsTrigger value="split"><Eye className="mr-2 h-4 w-4" />Vista previa</TabsTrigger>
-                      <TabsTrigger value="html"><CodeXml className="mr-2 h-4 w-4" />HTML</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
+                  {/* Identidad de marca */}
+                  <div className="flex select-none flex-col justify-center leading-none">
+                    <span className="text-[13px] font-black uppercase tracking-widest text-white">
+                      {document.settings.brand
+                        ? brandThemes[document.settings.brand]?.name
+                        : "Sin marca"}
+                    </span>
+                    <span
+                      className="mt-[3px] text-[8px] uppercase tracking-[0.16em]"
+                      style={{ color: "rgba(255,255,255,0.50)" }}
+                    >
+                      {document.settings.brand ? "Mailing activo" : "Selecciona una marca"}
+                    </span>
+                  </div>
                 </div>
               </div>
+
+              {/* ── DERECHA: zona blanca — settings + tabs pill ─────────── */}
+              <div
+                className="relative z-10 flex flex-1 items-center justify-end gap-2 pr-4"
+                style={{
+                  backgroundColor: "#ffffff",
+                  borderRadius: "0 0.5rem 0 0",
+                  paddingLeft: "0.5rem",
+                }}
+              >
+                {/* Botón inspector global */}
+                <button
+                  ref={globalInspectorButtonRef}
+                  type="button"
+                  onClick={handleOpenGlobalInspector}
+                  title="Configuración global"
+                  className="flex h-7 w-7 items-center justify-center rounded-full transition-colors"
+                  style={{
+                    backgroundColor: showGlobalInspector && !selectedBlock ? "#f1f5f9" : "transparent",
+                    color: "#64748b",
+                    border: "1px solid #e2e8f0",
+                  }}
+                >
+                  <Settings2 className="h-3.5 w-3.5" />
+                </button>
+
+                {/* Tabs pill — Canvas / Vista previa / HTML */}
+                <div
+                  className="flex items-center gap-0.5 rounded-full p-0.5"
+                  style={{ backgroundColor: "#f1f5f9", border: "1px solid #e2e8f0" }}
+                >
+                  {(
+                    [
+                      { value: "canvas", Icon: PenSquare, label: "Canvas" },
+                      { value: "split",  Icon: Eye,       label: "Vista previa" },
+                      { value: "html",   Icon: CodeXml,   label: "HTML" },
+                    ] as { value: "canvas" | "split" | "html"; Icon: React.ElementType; label: string }[]
+                  ).map(({ value, Icon, label }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setPreviewMode(value)}
+                      className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold transition-all"
+                      style={previewMode === value ? {
+                        backgroundColor: "#fff",
+                        color: activeBrandColor ?? "#1e293b",
+                        boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+                      } : {
+                        color: "#64748b",
+                        backgroundColor: "transparent",
+                      }}
+                    >
+                      <Icon className="h-3 w-3 shrink-0" />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
             </div>
 
             <ScrollArea className="h-full">
@@ -812,9 +871,12 @@ export default function MailingBuilderPage() {
                                 totalRows={document.rows.length}
                                 selectedBlockId={selectedBlockId}
                                 selectedColId={selectedColId}
+                                selectedRowId={selectedRowId}
+                                selectedLevel={selectedLevel}
                                 dragRef={dragRef}
                                 onSelectBlock={handleSelectBlockInCanvas}
                                 onSelectRow={selectRow}
+                                onSelectCol={selectCol}
                                 onUpdateBlock={updateBlock}
                                 onRemoveBlock={removeBlock}
                                 onDuplicateBlock={duplicateBlock}

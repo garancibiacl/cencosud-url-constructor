@@ -20,6 +20,28 @@ import { COLUMN_PRESETS } from "../../logic/schema/row.types";
 import type { MailingBlock, MailingBlockType } from "../../logic/schema/block.types";
 
 // ---------------------------------------------------------------------------
+// Level color tokens
+// ---------------------------------------------------------------------------
+
+const LEVEL = {
+  row:   { border: "#7C3AED", bg: "#7C3AED14", hover: "#7C3AED22", label: "Sección" },
+  col:   { border: "#2563EB", bg: "#2563EB10", hover: "#2563EB1A", label: "Columna" },
+  block: { border: "#4B5563", bg: "#4B556308", hover: "#4B556318", label: "" },
+} as const;
+
+// ---------------------------------------------------------------------------
+// Block label map
+// ---------------------------------------------------------------------------
+
+const BLOCK_LABELS: Record<string, string> = {
+  hero: "Hero",
+  text: "Texto",
+  image: "Imagen",
+  button: "Botón",
+  spacer: "Espacio",
+};
+
+// ---------------------------------------------------------------------------
 // Tipos
 // ---------------------------------------------------------------------------
 
@@ -36,8 +58,11 @@ export interface RowCanvasProps {
   totalRows: number;
   selectedBlockId: string | null;
   selectedColId: string | null;
+  selectedRowId: string | null;
+  selectedLevel: "row" | "col" | "block" | null;
   onSelectBlock: (blockId: string, rowId: string, colId: string) => void;
   onSelectRow: (rowId: string) => void;
+  onSelectCol: (colId: string, rowId: string) => void;
   onUpdateBlock: (nextBlock: MailingBlock) => void;
   onRemoveBlock: (blockId: string) => void;
   onDuplicateBlock: (blockId: string) => void;
@@ -52,6 +77,67 @@ export interface RowCanvasProps {
 }
 
 // ---------------------------------------------------------------------------
+// SelectionBreadcrumb
+// ---------------------------------------------------------------------------
+
+interface SelectionBreadcrumbProps {
+  rowIndex: number;
+  colFraction: string | null;
+  blockLabel: string | null;
+  level: "row" | "col" | "block" | null;
+  onRow: () => void;
+  onCol: () => void;
+  onBlock: () => void;
+}
+
+function SelectionBreadcrumb({
+  rowIndex,
+  colFraction,
+  blockLabel,
+  level,
+  onRow,
+  onCol,
+  onBlock,
+}: SelectionBreadcrumbProps) {
+  const crumbs: { label: string; onClick: () => void; active: boolean }[] = [
+    { label: `Sección ${rowIndex + 1}`, onClick: onRow, active: level === "row" },
+  ];
+
+  if (level === "col" || level === "block") {
+    crumbs.push({
+      label: colFraction ? `Col ${colFraction}` : "Columna",
+      onClick: onCol,
+      active: level === "col",
+    });
+  }
+
+  if (level === "block" && blockLabel) {
+    crumbs.push({ label: blockLabel, onClick: onBlock, active: true });
+  }
+
+  return (
+    <div className="flex items-center gap-0.5 rounded-full border border-border bg-card px-2 py-0.5 shadow-md text-[10px] font-medium">
+      {crumbs.map((crumb, i) => (
+        <span key={i} className="flex items-center gap-0.5">
+          {i > 0 && <span className="text-muted-foreground/40 mx-0.5">›</span>}
+          <button
+            type="button"
+            onClick={crumb.onClick}
+            className={`rounded px-1 py-0.5 transition-colors ${
+              crumb.active
+                ? "text-foreground font-semibold"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {crumb.label}
+          </button>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // RowCanvas — memoizado: solo rerenderiza cuando SU fila cambia
 // ---------------------------------------------------------------------------
 
@@ -61,8 +147,11 @@ export const RowCanvas = memo(function RowCanvas({
   totalRows,
   selectedBlockId,
   selectedColId,
+  selectedRowId,
+  selectedLevel,
   onSelectBlock,
   onSelectRow,
+  onSelectCol,
   onUpdateBlock,
   onRemoveBlock,
   onDuplicateBlock,
@@ -77,8 +166,18 @@ export const RowCanvas = memo(function RowCanvas({
 }: RowCanvasProps) {
   const [showPresetPicker, setShowPresetPicker] = useState(false);
   const [dropTargetColId, setDropTargetColId] = useState<string | null>(null);
-  const isRowSelected = selectedColId !== null && row.columns.some((c) => c.id === selectedColId);
+
+  const isThisRowActive = selectedRowId === row.id;
+  const isRowLevel = isThisRowActive && selectedLevel === "row";
+  const isColOrBlockLevel = isThisRowActive && (selectedLevel === "col" || selectedLevel === "block");
+
   const currentPreset = detectPreset(row.columns);
+
+  // Breadcrumb data
+  const activeCol = row.columns.find((c) => c.id === selectedColId);
+  const colFraction = activeCol ? `${Math.round((activeCol.colSpan / 12) * 100)}%` : null;
+  const activeBlock = activeCol?.blocks.find((b) => b.id === selectedBlockId);
+  const blockLabel = activeBlock ? (BLOCK_LABELS[activeBlock.type] ?? null) : null;
 
   // Ref-pattern: permite que handleColDrop acceda a row.columns actualizado
   // sin recrear el callback (evita que ColumnCanvas rerender por prop nueva).
@@ -134,18 +233,56 @@ export const RowCanvas = memo(function RowCanvas({
     dragRef.current = null;
   }, [dragRef, onInsertBlock, onMoveBlockWithinColumn, onMoveBlockToColumn]);
 
+  // Stable callbacks for column-level selection
+  const handleSelectRow = useCallback(() => onSelectRow(row.id), [onSelectRow, row.id]);
+
+  // ── Row border/bg styles
+  const rowBorderStyle = isRowLevel
+    ? { borderColor: LEVEL.row.border, backgroundColor: LEVEL.row.bg }
+    : isColOrBlockLevel
+      ? { borderColor: `${LEVEL.row.border}60` }
+      : undefined;
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div
       className={`group/row relative rounded-lg border transition-colors ${
-        isRowSelected ? "bg-transparent" : "border-border bg-background hover:border-border/80"
+        isThisRowActive ? "" : "border-border bg-background hover:border-violet-500/20"
       }`}
-      style={isRowSelected ? {
-        borderColor: "var(--mb-brand-50)",
-        backgroundColor: "var(--mb-brand-10)",
-      } : undefined}
+      style={rowBorderStyle}
     >
+      {/* Sección label */}
+      {isThisRowActive && (
+        <div
+          className="absolute -top-2.5 left-2 z-20 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-white"
+          style={{ backgroundColor: isRowLevel ? LEVEL.row.border : `${LEVEL.row.border}99` }}
+        >
+          Sección {rowIndex + 1}
+        </div>
+      )}
+
+      {/* Breadcrumb */}
+      {isThisRowActive && (
+        <div className="absolute -top-7 left-0 z-30">
+          <SelectionBreadcrumb
+            rowIndex={rowIndex}
+            colFraction={colFraction}
+            blockLabel={blockLabel}
+            level={selectedLevel}
+            onRow={handleSelectRow}
+            onCol={() => {
+              if (activeCol) onSelectCol(activeCol.id, row.id);
+            }}
+            onBlock={() => {
+              if (activeBlock && activeCol) {
+                onSelectBlock(activeBlock.id, row.id, activeCol.id);
+              }
+            }}
+          />
+        </div>
+      )}
+
       {/* Toolbar de fila */}
       <div className="flex items-center justify-between gap-2 border-b border-dashed border-border/60 px-3 py-1.5">
         <div className="flex items-center gap-1">
@@ -251,7 +388,7 @@ export const RowCanvas = memo(function RowCanvas({
       {/* Grid de columnas */}
       <div
         className="flex gap-0 divide-x divide-dashed divide-border/50 p-2"
-        onClick={() => onSelectRow(row.id)}
+        onClick={handleSelectRow}
       >
         {row.columns.map((col) => (
           <ColumnCanvas
@@ -263,7 +400,11 @@ export const RowCanvas = memo(function RowCanvas({
             isDropTarget={dropTargetColId === col.id}
             selectedBlockId={selectedBlockId}
             selectedColId={selectedColId}
+            selectedLevel={selectedLevel}
+            isRowActive={isThisRowActive}
             onSelectBlock={onSelectBlock}
+            onSelectCol={(colId) => onSelectCol(colId, row.id)}
+            onSelectRow={handleSelectRow}
             onUpdateBlock={onUpdateBlock}
             onRemoveBlock={onRemoveBlock}
             onDuplicateBlock={onDuplicateBlock}
@@ -290,9 +431,13 @@ interface ColumnCanvasProps {
   rowIndex: number;
   totalRows: number;
   isDropTarget: boolean;
+  isRowActive: boolean;
   selectedBlockId: string | null;
   selectedColId: string | null;
+  selectedLevel: "row" | "col" | "block" | null;
   onSelectBlock: (blockId: string, rowId: string, colId: string) => void;
+  onSelectCol: (colId: string) => void;
+  onSelectRow: () => void;
   onUpdateBlock: (nextBlock: MailingBlock) => void;
   onRemoveBlock: (blockId: string) => void;
   onDuplicateBlock: (blockId: string) => void;
@@ -310,9 +455,13 @@ const ColumnCanvas = memo(function ColumnCanvas({
   rowIndex,
   totalRows,
   isDropTarget,
+  isRowActive,
   selectedBlockId,
   selectedColId,
+  selectedLevel,
   onSelectBlock,
+  onSelectCol,
+  onSelectRow,
   onUpdateBlock,
   onRemoveBlock,
   onDuplicateBlock,
@@ -323,35 +472,68 @@ const ColumnCanvas = memo(function ColumnCanvas({
   onDragLeave,
   onDrop,
 }: ColumnCanvasProps) {
-  const isColSelected = selectedColId === col.id;
+  const isColSelected = selectedColId === col.id && isRowActive;
+  const isColLevel = isColSelected && selectedLevel === "col";
+  const isBlockLevel = isColSelected && selectedLevel === "block";
   const fraction = `${Math.round((col.colSpan / 12) * 100)}%`;
+
+  // Column outline style
+  const colStyle: React.CSSProperties = {
+    width: fraction,
+    minWidth: 0,
+    ...(isDropTarget ? {
+      backgroundColor: "var(--mb-brand-10)",
+      outline: "1px solid var(--mb-brand-30)",
+      outlineOffset: "-1px",
+    } : isColLevel ? {
+      outline: `2px solid ${LEVEL.col.border}`,
+      outlineOffset: "-1px",
+      backgroundColor: LEVEL.col.bg,
+    } : isBlockLevel ? {
+      outline: `1px solid ${LEVEL.col.border}60`,
+      outlineOffset: "-1px",
+    } : {}),
+  };
+
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (e.shiftKey) {
+      onSelectRow();
+    } else {
+      onSelectCol(col.id);
+    }
+  }, [col.id, onSelectCol, onSelectRow]);
+
+  const handleSelectColCallback = useCallback(() => onSelectCol(col.id), [col.id, onSelectCol]);
 
   return (
     <div
-      className={`flex flex-col gap-1.5 px-1.5 py-1.5 transition-colors ${
+      className={`relative flex flex-col gap-1.5 px-1.5 py-1.5 transition-colors ${
         isDropTarget || isColSelected ? "rounded" : ""
       }`}
-      style={{
-        width: fraction,
-        minWidth: 0,
-        ...(isDropTarget ? {
-          backgroundColor: "var(--mb-brand-10)",
-          outline: "1px solid var(--mb-brand-30)",
-          outlineOffset: "-1px",
-        } : isColSelected ? {
-          outline: "1px solid var(--mb-brand-10)",
-          outlineOffset: "-1px",
-        } : {}),
-      }}
+      style={colStyle}
       onDragOver={(e) => onDragOver(e, col.id)}
       onDragLeave={onDragLeave}
       onDrop={(e) => onDrop(e, col.id)}
-      onClick={(e) => e.stopPropagation()}
+      onClick={handleClick}
     >
-      {/* Label de columna */}
+      {/* Column fraction label */}
       <span className="select-none text-[9px] font-medium uppercase tracking-[0.12em] text-muted-foreground/40">
         {fraction}
       </span>
+
+      {/* "Columna" label when column active */}
+      {isColSelected && (
+        <div
+          className="absolute -top-2 right-1 z-20 rounded px-1 py-0.5 text-[8px] font-bold uppercase tracking-widest"
+          style={{
+            color: LEVEL.col.border,
+            backgroundColor: isColLevel ? LEVEL.col.bg : "transparent",
+          }}
+        >
+          {fraction}
+        </div>
+      )}
 
       {/* Bloques — cada uno memoizado individualmente */}
       {col.blocks.map((block, index) => (
@@ -364,8 +546,9 @@ const ColumnCanvas = memo(function ColumnCanvas({
           rowId={rowId}
           rowIndex={rowIndex}
           totalRows={totalRows}
-          isSelected={block.id === selectedBlockId}
+          isSelected={block.id === selectedBlockId && isRowActive}
           onSelectBlock={onSelectBlock}
+          onSelectCol={handleSelectColCallback}
           onUpdateBlock={onUpdateBlock}
           onRemoveBlock={onRemoveBlock}
           onDuplicateBlock={onDuplicateBlock}
@@ -414,6 +597,7 @@ interface BlockItemProps {
   totalRows: number;
   isSelected: boolean;
   onSelectBlock: (blockId: string, rowId: string, colId: string) => void;
+  onSelectCol: () => void;
   onUpdateBlock: (nextBlock: MailingBlock) => void;
   onRemoveBlock: (blockId: string) => void;
   onDuplicateBlock: (blockId: string) => void;
@@ -435,6 +619,7 @@ const BlockItem = memo(function BlockItem({
   totalRows,
   isSelected,
   onSelectBlock,
+  onSelectCol,
   onUpdateBlock,
   onRemoveBlock,
   onDuplicateBlock,
@@ -450,8 +635,15 @@ const BlockItem = memo(function BlockItem({
   const [dropHalf, setDropHalf] = useState<"top" | "bottom" | null>(null);
 
   const handleSelect = useCallback(
-    (e: React.MouseEvent) => { e.stopPropagation(); onSelectBlock(block.id, rowId, colId); },
-    [block.id, rowId, colId, onSelectBlock],
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (e.shiftKey) {
+        onSelectCol();
+      } else {
+        onSelectBlock(block.id, rowId, colId);
+      }
+    },
+    [block.id, rowId, colId, onSelectBlock, onSelectCol],
   );
 
   const handleMoveUp = useCallback(
@@ -596,8 +788,8 @@ const BlockItem = memo(function BlockItem({
         }`}
         style={{
           ...(isSelected ? {
-            borderColor: "var(--mb-brand)",
-            backgroundColor: "var(--mb-brand-10)",
+            border: `1.5px dashed ${LEVEL.block.border}`,
+            backgroundColor: LEVEL.block.bg,
           } : {}),
           ...(dropHalf ? {
             outline: "2px solid var(--mb-brand-50)",
@@ -666,7 +858,7 @@ function BlockDropZone({
 // detectPreset — helper que infiere el preset a partir de los colSpans
 // ---------------------------------------------------------------------------
 
-function detectPreset(columns: MailingColumn[]): ColumnPreset | null {
+export function detectPreset(columns: MailingColumn[]): ColumnPreset | null {
   const spans = columns.map((c) => c.colSpan);
   const entry = (Object.entries(COLUMN_PRESETS) as [ColumnPreset, typeof COLUMN_PRESETS[ColumnPreset]][]).find(
     ([, def]) => def.spans.length === spans.length && def.spans.every((s, i) => s === spans[i]),

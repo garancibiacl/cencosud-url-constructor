@@ -20,6 +20,8 @@ interface MailingBuilderState {
   selectedRowId: string | null;
   /** ID de la columna seleccionada (destino para "añadir bloque"). */
   selectedColId: string | null;
+  /** Nivel de selección activo en el canvas. */
+  selectedLevel: "row" | "col" | "block" | null;
 
   devicePreview: "desktop" | "mobile";
   activeMailingId: string | null;
@@ -29,6 +31,8 @@ interface MailingBuilderState {
   selectBlock: (blockId: string | null, rowId?: string | null, colId?: string | null) => void;
   /** Selecciona una row (sin bloque específico). */
   selectRow: (rowId: string | null) => void;
+  /** Selecciona una columna. */
+  selectCol: (colId: string, rowId: string) => void;
 
   // ── Operaciones de Row ────────────────────────────────────────────────────
   addRow: (preset?: ColumnPreset, afterRowId?: string) => void;
@@ -37,6 +41,10 @@ interface MailingBuilderState {
   duplicateRow: (rowId: string) => void;
   /** Cambia el preset de columnas de una row, migrando bloques existentes. */
   setRowPreset: (rowId: string, preset: ColumnPreset) => void;
+  /** Actualiza la meta de una row. */
+  updateRowMeta: (rowId: string, meta: MailingRow["meta"]) => void;
+  /** Actualiza la meta de una columna. */
+  updateColumnMeta: (rowId: string, colId: string, meta: MailingColumn["meta"]) => void;
 
   // ── Operaciones de Bloque ─────────────────────────────────────────────────
   /**
@@ -130,16 +138,35 @@ export const useMailingBuilderStore = create<MailingBuilderState>((set, get) => 
   selectedBlockId: null,
   selectedRowId: null,
   selectedColId: null,
+  selectedLevel: null,
   devicePreview: "desktop",
   activeMailingId: null,
 
   // ── Selección ─────────────────────────────────────────────────────────────
 
   selectBlock: (blockId, rowId = null, colId = null) =>
-    set({ selectedBlockId: blockId, selectedRowId: rowId, selectedColId: colId }),
+    set({
+      selectedBlockId: blockId,
+      selectedRowId: rowId,
+      selectedColId: colId,
+      selectedLevel: blockId ? "block" : null,
+    }),
 
   selectRow: (rowId) =>
-    set({ selectedRowId: rowId, selectedBlockId: null, selectedColId: null }),
+    set({
+      selectedRowId: rowId,
+      selectedBlockId: null,
+      selectedColId: null,
+      selectedLevel: rowId ? "row" : null,
+    }),
+
+  selectCol: (colId, rowId) =>
+    set({
+      selectedColId: colId,
+      selectedRowId: rowId,
+      selectedBlockId: null,
+      selectedLevel: "col",
+    }),
 
   // ── Row ───────────────────────────────────────────────────────────────────
 
@@ -163,6 +190,7 @@ export const useMailingBuilderStore = create<MailingBuilderState>((set, get) => 
       selectedRowId: newRow.id,
       selectedColId: newRow.columns[0]?.id ?? null,
       selectedBlockId: null,
+      selectedLevel: "col",
     };
   }),
 
@@ -174,6 +202,7 @@ export const useMailingBuilderStore = create<MailingBuilderState>((set, get) => 
     selectedBlockId: state.selectedRowId === rowId ? null : state.selectedBlockId,
     selectedRowId: state.selectedRowId === rowId ? null : state.selectedRowId,
     selectedColId: state.selectedRowId === rowId ? null : state.selectedColId,
+    selectedLevel: state.selectedRowId === rowId ? null : state.selectedLevel,
   })),
 
   moveRow: (fromIndex, toIndex) => set((state) => {
@@ -205,6 +234,7 @@ export const useMailingBuilderStore = create<MailingBuilderState>((set, get) => 
       selectedRowId: cloned.id,
       selectedBlockId: null,
       selectedColId: cloned.columns[0]?.id ?? null,
+      selectedLevel: "col",
     };
   }),
 
@@ -238,6 +268,28 @@ export const useMailingBuilderStore = create<MailingBuilderState>((set, get) => 
     };
   }),
 
+  updateRowMeta: (rowId, meta) => set((state) => ({
+    document: {
+      ...state.document,
+      rows: mapRows(state.document.rows, rowId, (row) => ({
+        ...row,
+        meta: { ...row.meta, ...meta },
+      })),
+    },
+  })),
+
+  updateColumnMeta: (rowId, colId, meta) => set((state) => ({
+    document: {
+      ...state.document,
+      rows: mapRows(state.document.rows, rowId, (row) =>
+        mapColumns(row, colId, (col) => ({
+          ...col,
+          meta: { ...col.meta, ...meta },
+        })),
+      ),
+    },
+  })),
+
   // ── Bloque ────────────────────────────────────────────────────────────────
 
   insertBlock: (type) => set((state) => {
@@ -252,7 +304,11 @@ export const useMailingBuilderStore = create<MailingBuilderState>((set, get) => 
           blocks: [...col.blocks, newBlock],
         })),
       );
-      return { document: { ...state.document, rows }, selectedBlockId: newBlock.id };
+      return {
+        document: { ...state.document, rows },
+        selectedBlockId: newBlock.id,
+        selectedLevel: "block",
+      };
     }
 
     // Caso 2: sin contexto → nueva row full-width al final
@@ -266,6 +322,7 @@ export const useMailingBuilderStore = create<MailingBuilderState>((set, get) => 
       selectedBlockId: newBlock.id,
       selectedRowId: newRow.id,
       selectedColId: newRow.columns[0].id,
+      selectedLevel: "block",
     };
   }),
 
@@ -283,12 +340,14 @@ export const useMailingBuilderStore = create<MailingBuilderState>((set, get) => 
       selectedBlockId: newBlock.id,
       selectedRowId: rowId,
       selectedColId: colId,
+      selectedLevel: "block",
     };
   }),
 
   removeBlock: (blockId) => set((state) => ({
     document: { ...state.document, rows: deleteBlockFromRows(state.document.rows, blockId) },
     selectedBlockId: state.selectedBlockId === blockId ? null : state.selectedBlockId,
+    selectedLevel: state.selectedBlockId === blockId ? null : state.selectedLevel,
   })),
 
   duplicateBlock: (blockId) => set((state) => {
@@ -311,6 +370,7 @@ export const useMailingBuilderStore = create<MailingBuilderState>((set, get) => 
       selectedBlockId: cloned.id,
       selectedRowId: rowId,
       selectedColId: colId,
+      selectedLevel: "block",
     };
   }),
 
@@ -351,6 +411,7 @@ export const useMailingBuilderStore = create<MailingBuilderState>((set, get) => 
       selectedBlockId: blockId,
       selectedRowId: toRowId,
       selectedColId: toColId,
+      selectedLevel: "block",
     };
   }),
 
@@ -386,7 +447,14 @@ export const useMailingBuilderStore = create<MailingBuilderState>((set, get) => 
   })),
 
   replaceDocument: (document, mailingId = null) =>
-    set({ document, activeMailingId: mailingId, selectedBlockId: null, selectedRowId: null, selectedColId: null }),
+    set({
+      document,
+      activeMailingId: mailingId,
+      selectedBlockId: null,
+      selectedRowId: null,
+      selectedColId: null,
+      selectedLevel: null,
+    }),
 
   setActiveMailingId: (mailingId) => set({ activeMailingId: mailingId }),
 }));
