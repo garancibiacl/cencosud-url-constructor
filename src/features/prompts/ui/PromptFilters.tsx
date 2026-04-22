@@ -1,16 +1,29 @@
 import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import type { PromptFilters, PromptCategory, PromptBrand, PromptTone } from "../logic/prompts.types";
+import type { PromptFilters, PromptBrand, PromptTone } from "../logic/prompts.types";
 
-const CATEGORIES: { value: PromptCategory | "todas"; label: string }[] = [
+const CUSTOM_CATEGORIES_KEY = "prompts_custom_categories";
+
+const DEFAULT_CATEGORIES: { value: string; label: string }[] = [
   { value: "todas", label: "Todas" },
   { value: "imagen-producto", label: "Imagen producto" },
   { value: "banner-campaña", label: "Banner campaña" },
   { value: "relleno-generativo", label: "Relleno generativo" },
   { value: "copy-marketing", label: "Copy marketing" },
   { value: "social-media", label: "Social media" },
+  { value: "video", label: "Video" },
 ];
+
+function getCategories(): { value: string; label: string }[] {
+  try {
+    const raw = localStorage.getItem(CUSTOM_CATEGORIES_KEY);
+    const custom = raw ? (JSON.parse(raw) as { value: string; label: string }[]) : [];
+    return [...DEFAULT_CATEGORIES, ...custom];
+  } catch {
+    return DEFAULT_CATEGORIES;
+  }
+}
 
 const BRANDS: { value: PromptBrand | "todas"; label: string }[] = [
   { value: "todas", label: "Todas" },
@@ -32,6 +45,8 @@ interface Props {
   onChange: (filters: PromptFilters) => void;
   totalResults: number;
 }
+
+const CATEGORIES = getCategories();
 
 function FilterChip<T extends string>({
   options,

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Sparkles } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Sparkles, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import Swal from "sweetalert2";
 import {
@@ -20,57 +20,205 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { saveCustomPrompt } from "../services/prompts.service";
 import type { PromptCategory, PromptBrand, PromptTone } from "../logic/prompts.types";
 
-// ─── Opciones ─────────────────────────────────────────────────────────────────
+// ─── Categorías ───────────────────────────────────────────────────────────────
 
-const CATEGORIES: { value: PromptCategory; label: string }[] = [
-  { value: "imagen-producto", label: "Imagen producto" },
-  { value: "banner-campaña", label: "Banner campaña" },
+const CUSTOM_CATEGORIES_KEY = "prompts_custom_categories";
+
+const DEFAULT_CATEGORIES: { value: string; label: string }[] = [
+  { value: "imagen-producto",    label: "Imagen producto" },
+  { value: "banner-campaña",     label: "Banner campaña" },
   { value: "relleno-generativo", label: "Relleno generativo" },
-  { value: "copy-marketing", label: "Copy marketing" },
-  { value: "social-media", label: "Social media" },
+  { value: "copy-marketing",     label: "Copy marketing" },
+  { value: "social-media",       label: "Social media" },
+  { value: "video",              label: "Video" },
 ];
 
+function loadCustomCategories(): { value: string; label: string }[] {
+  try {
+    const raw = localStorage.getItem(CUSTOM_CATEGORIES_KEY);
+    return raw ? (JSON.parse(raw) as { value: string; label: string }[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistCustomCategories(cats: { value: string; label: string }[]) {
+  localStorage.setItem(CUSTOM_CATEGORIES_KEY, JSON.stringify(cats));
+}
+
+// ─── CategoryCombobox ─────────────────────────────────────────────────────────
+
+interface CategoryComboboxProps {
+  value: string;
+  onChange: (value: string) => void;
+  customCats: { value: string; label: string }[];
+  onAddCustom: (cat: { value: string; label: string }) => void;
+  onRemoveCustom: (value: string) => void;
+  isAdmin: boolean;
+}
+
+function CategoryCombobox({
+  value,
+  onChange,
+  customCats,
+  onAddCustom,
+  onRemoveCustom,
+  isAdmin,
+}: CategoryComboboxProps) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const allCategories = [...DEFAULT_CATEGORIES, ...customCats];
+  const selectedLabel = allCategories.find((c) => c.value === value)?.label ?? value;
+
+  function handleAddCustom() {
+    const label = search.trim();
+    if (!label) return;
+    const slug = label.toLowerCase().replace(/\s+/g, "-");
+    if (!allCategories.some((c) => c.value === slug)) {
+      onAddCustom({ value: slug, label });
+    }
+    onChange(slug);
+    setSearch("");
+    setOpen(false);
+  }
+
+  const searchLower = search.toLowerCase();
+  const exactMatch = allCategories.some(
+    (c) => c.label.toLowerCase() === searchLower,
+  );
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 text-left text-sm ring-offset-background transition-colors hover:bg-accent/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <span className={value ? "text-foreground" : "text-muted-foreground"}>
+            {value ? selectedLabel : "Seleccionar"}
+          </span>
+          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[var(--radix-popover-trigger-width)] p-0"
+        align="start"
+      >
+        <Command>
+          <CommandInput
+            placeholder="Buscar o escribir..."
+            value={search}
+            onValueChange={setSearch}
+          />
+          <CommandList>
+            <CommandEmpty>
+              <button
+                type="button"
+                onClick={handleAddCustom}
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Plus size={14} />
+                Usar "{search}" como categoría
+              </button>
+            </CommandEmpty>
+            <CommandGroup>
+              {allCategories.map((cat) => (
+                <CommandItem
+                  key={cat.value}
+                  value={cat.label}
+                  onSelect={() => {
+                    onChange(cat.value);
+                    setSearch("");
+                    setOpen(false);
+                  }}
+                  className="group flex items-center justify-between"
+                >
+                  <span className="flex items-center">
+                    <Check
+                      className={`mr-2 h-4 w-4 shrink-0 ${value === cat.value ? "opacity-100" : "opacity-0"}`}
+                    />
+                    {cat.label}
+                  </span>
+                  {isAdmin && customCats.some((c) => c.value === cat.value) && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveCustom(cat.value);
+                        if (value === cat.value) onChange("");
+                      }}
+                      className="ml-2 flex h-4 w-4 items-center justify-center rounded bg-destructive opacity-0 transition-opacity group-hover:opacity-100 hover:brightness-90"
+                      title="Eliminar categoría"
+                    >
+                      <X size={11} className="text-white" />
+                    </button>
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            {search.trim() && !exactMatch && (
+              <CommandGroup heading="Personalizado">
+                <CommandItem
+                  value={`custom-${search}`}
+                  onSelect={handleAddCustom}
+                  className="cursor-pointer"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Usar "{search}"
+                </CommandItem>
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// ─── Opciones fijas ───────────────────────────────────────────────────────────
+
 const BRANDS: { value: PromptBrand; label: string }[] = [
-  { value: "Jumbo", label: "Jumbo" },
-  { value: "Santa Isabel", label: "Santa Isabel" },
-  { value: "Spid", label: "Spid" },
+  { value: "Jumbo",         label: "Jumbo" },
+  { value: "Santa Isabel",  label: "Santa Isabel" },
+  { value: "Spid",          label: "Spid" },
 ];
 
 const TONES: { value: PromptTone; label: string }[] = [
-  { value: "formal", label: "Formal" },
-  { value: "casual", label: "Casual" },
-  { value: "urgente", label: "Urgente" },
+  { value: "formal",       label: "Formal" },
+  { value: "casual",       label: "Casual" },
+  { value: "urgente",      label: "Urgente" },
   { value: "aspiracional", label: "Aspiracional" },
 ];
 
 // ─── Estado inicial del form ──────────────────────────────────────────────────
 
 interface FormState {
-  title: string;
+  title:       string;
   description: string;
-  category: PromptCategory | "";
-  brand: PromptBrand | "";
-  tone: PromptTone | "";
-  content: string;
-  model: string;
+  category:    PromptCategory | "";
+  brand:       PromptBrand | "";
+  tone:        PromptTone | "";
+  content:     string;
+  model:       string;
 }
 
 const EMPTY: FormState = {
-  title: "",
-  description: "",
-  category: "",
-  brand: "",
-  tone: "",
-  content: "",
-  model: "",
+  title: "", description: "", category: "", brand: "", tone: "", content: "", model: "",
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Detecta {{variables}} en el texto del prompt */
 function extractVariables(text: string): string[] {
   const matches = text.match(/\{\{(\w+)\}\}/g) ?? [];
   return [...new Set(matches.map((m) => m.slice(2, -2)))];
@@ -85,9 +233,11 @@ interface Props {
 }
 
 export function CreatePromptModal({ open, onClose, onCreated }: Props) {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const isAdmin = role === "admin";
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+  const [customCats, setCustomCats] = useState<{ value: string; label: string }[]>(loadCustomCategories);
 
   const creatorName = (() => {
     const meta = user?.user_metadata ?? {};
@@ -101,12 +251,24 @@ export function CreatePromptModal({ open, onClose, onCreated }: Props) {
     setErrors((prev) => ({ ...prev, [key]: undefined }));
   }
 
+  function handleAddCustomCat(cat: { value: string; label: string }) {
+    const updated = [...customCats, cat];
+    setCustomCats(updated);
+    persistCustomCategories(updated);
+  }
+
+  function handleRemoveCustomCat(value: string) {
+    const updated = customCats.filter((c) => c.value !== value);
+    setCustomCats(updated);
+    persistCustomCategories(updated);
+  }
+
   function validate(): boolean {
     const next: typeof errors = {};
     if (!form.title.trim()) next.title = "Requerido";
-    if (!form.category) next.category = "Requerido";
-    if (!form.brand) next.brand = "Requerido";
-    if (!form.tone) next.tone = "Requerido";
+    if (!form.category)     next.category = "Requerido";
+    if (!form.brand)        next.brand = "Requerido";
+    if (!form.tone)         next.tone = "Requerido";
     if (!form.content.trim()) next.content = "Requerido";
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -134,7 +296,7 @@ export function CreatePromptModal({ open, onClose, onCreated }: Props) {
       user?.id ?? "",
     );
 
-    if (!result) return; // error already logged in service
+    if (!result) return;
 
     setForm(EMPTY);
     setErrors({});
@@ -198,21 +360,14 @@ export function CreatePromptModal({ open, onClose, onCreated }: Props) {
           {/* Categoría / Marca / Tono — fila */}
           <div className="grid grid-cols-3 gap-3">
             <Field label="Categoría" error={errors.category} required>
-              <Select
+              <CategoryCombobox
                 value={form.category}
-                onValueChange={(v) => set("category", v as PromptCategory)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      {c.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(v) => set("category", v as PromptCategory)}
+                customCats={customCats}
+                onAddCustom={handleAddCustomCat}
+                onRemoveCustom={handleRemoveCustomCat}
+                isAdmin={isAdmin}
+              />
             </Field>
 
             <Field label="Marca" error={errors.brand} required>

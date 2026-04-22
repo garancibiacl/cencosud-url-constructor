@@ -1,9 +1,4 @@
-export type PromptCategory =
-  | "imagen-producto"
-  | "banner-campaña"
-  | "relleno-generativo"
-  | "copy-marketing"
-  | "social-media";
+export type PromptCategory = string;
 
 export type PromptBrand = "Jumbo" | "Santa Isabel" | "Spid";
 
