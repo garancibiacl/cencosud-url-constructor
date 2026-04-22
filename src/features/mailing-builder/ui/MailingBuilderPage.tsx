@@ -408,6 +408,7 @@ export default function MailingBuilderPage() {
       if (inspectorRef.current?.contains(target)) return;
       if (globalInspectorButtonRef.current?.contains(target)) return;
       if (target.closest('[data-mailing-block="true"]')) return;
+      if (target.closest('[role="dialog"]') || target.closest('[data-radix-dialog-overlay]')) return;
       handleCloseInspector();
     };
     window.document.addEventListener("mousedown", handler);

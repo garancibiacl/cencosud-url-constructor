@@ -1,16 +1,350 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect, createContext, useContext, useCallback, useRef } from "react";
 import type { ReactNode } from "react";
 import {
   AlignCenter, AlignJustify, AlignLeft, AlignRight,
   ArrowDown, ArrowLeft, ArrowRight, ArrowUp,
   ArrowLeftRight, ArrowUpDown,
-  Check, Image as ImageIcon, Link2, Monitor,
+  Check, Image as ImageIcon, Link2, Maximize2, Minimize2, Monitor,
   MonitorSmartphone, PenLine, Plus, Settings2, Smartphone,
+  X as XIcon, Zap,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { BRAND_CONFIGS, BRAND_LIST } from "@/features/ampscript-builder/logic/ampscript.brands";
+import { parseUrl, generateSlug, buildAMPscript } from "@/features/ampscript-builder/logic/ampscript.engine";
+import type { BrandId } from "@/features/ampscript-builder/logic/ampscript.types";
 import type {
   ButtonBlock, HeroBlock, ImageBlock, ProductBlock, SpacerBlock, TextBlock,
 } from "../../logic/schema/block.types";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AMPscript Dialog + UrlInput
+// ─────────────────────────────────────────────────────────────────────────────
+
+const CAMPAIGN_OPTIONS = [
+  { value: "bombazo",               label: "Bombazo" },
+  { value: "lo-mejor-de-la-semana", label: "Lo mejor de la semana" },
+  { value: "fondo-surtido",         label: "Fondo surtido" },
+  { value: "super-ofertas-online",  label: "Super Ofertas Online" },
+  { value: "ofertas-tc",            label: "Ofertas TC" },
+  { value: "avance",                label: "Avance" },
+  { value: "cyber-day",             label: "Cyber Day" },
+  { value: "black-friday",          label: "Black Friday" },
+  { value: "navidad",               label: "Navidad" },
+  { value: "aniversario",           label: "Aniversario" },
+  { value: "especial",              label: "Especial" },
+];
+
+function AMPscriptDialog({
+  open,
+  onClose,
+  initialUrl,
+  onInsert,
+}: {
+  open: boolean;
+  onClose: () => void;
+  initialUrl: string;
+  onInsert: (ampscript: string, categoryId: string) => void;
+}) {
+  const [brandId, setBrandId] = useState<BrandId>("sisa");
+  const [campaigns, setCampaigns] = useState(CAMPAIGN_OPTIONS);
+  const [campaign, setCampaign] = useState("bombazo");
+  const [description, setDescription] = useState("");
+  const [url, setUrl] = useState(initialUrl);
+  const [addingCampaign, setAddingCampaign] = useState(false);
+  const [newCampaignLabel, setNewCampaignLabel] = useState("");
+  const newCampaignInputRef = useRef<HTMLInputElement>(null);
+
+  // Reset de campos cada vez que el modal se abre
+  useEffect(() => {
+    if (open) {
+      setUrl(initialUrl);
+      setDescription("");
+      setAddingCampaign(false);
+      setNewCampaignLabel("");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const handleAddCampaign = () => {
+    const label = newCampaignLabel.trim();
+    if (!label) return;
+    const value = label.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+    if (!campaigns.find((c) => c.value === value)) {
+      setCampaigns((prev) => [...prev, { value, label }]);
+    }
+    setCampaign(value);
+    setAddingCampaign(false);
+    setNewCampaignLabel("");
+  };
+
+  const brand = BRAND_CONFIGS[brandId];
+  const parsed = useMemo(() => parseUrl(url), [url]);
+  const slug = useMemo(() => generateSlug(description), [description]);
+  const activeCampaign = campaign;
+
+  const ampscript = useMemo(() => {
+    if (!parsed.categoryId || !slug || !activeCampaign) return null;
+    return buildAMPscript(brand, parsed.categoryId, slug, activeCampaign);
+  }, [brand, parsed.categoryId, slug, activeCampaign]);
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent
+        className="max-w-lg gap-0 p-0 overflow-hidden"
+        onInteractOutside={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => e.preventDefault()}
+      >
+        <DialogHeader className="border-b border-border/50 px-5 py-4">
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-500/15">
+              <Zap className="h-3.5 w-3.5 text-violet-600" />
+            </div>
+            <DialogTitle className="text-sm font-semibold">Generar AMPscript SFMC</DialogTitle>
+          </div>
+        </DialogHeader>
+
+        <div className="space-y-4 p-5">
+
+          {/* Brand */}
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Marca</span>
+            <div className="flex gap-2">
+              {BRAND_LIST.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => setBrandId(b.id as BrandId)}
+                  className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                    brandId === b.id
+                      ? "border-violet-400 bg-violet-500/10 text-violet-700 dark:text-violet-300"
+                      : "border-border bg-card text-muted-foreground hover:bg-secondary/60"
+                  }`}
+                >
+                  {b.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Campaign — select + add new */}
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Campaña</span>
+
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <select
+                  value={campaign}
+                  onChange={(e) => setCampaign(e.target.value)}
+                  className="h-8 w-full appearance-none rounded-md border border-border bg-card pl-3 pr-8 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-violet-400"
+                >
+                  {campaigns.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50">
+                  <svg viewBox="0 0 10 6" className="h-2.5 w-2.5 fill-current"><path d="M0 0l5 6 5-6z"/></svg>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setAddingCampaign(true); setTimeout(() => newCampaignInputRef.current?.focus(), 0); }}
+                title="Añadir nueva campaña"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-card text-muted-foreground/60 transition hover:border-violet-400 hover:bg-violet-500/10 hover:text-violet-600"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {addingCampaign && (
+              <div className="flex items-center gap-2 rounded-md border border-violet-200 bg-violet-500/5 p-2">
+                <input
+                  ref={newCampaignInputRef}
+                  type="text"
+                  value={newCampaignLabel}
+                  onChange={(e) => setNewCampaignLabel(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleAddCampaign();
+                    if (e.key === "Escape") { setAddingCampaign(false); setNewCampaignLabel(""); }
+                  }}
+                  placeholder="Nombre de la nueva campaña"
+                  className="h-7 flex-1 rounded border-0 bg-transparent text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddCampaign}
+                  disabled={!newCampaignLabel.trim()}
+                  className="flex h-6 items-center rounded bg-violet-600 px-2.5 text-[11px] font-medium text-white transition hover:bg-violet-700 disabled:opacity-40"
+                >
+                  Añadir
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setAddingCampaign(false); setNewCampaignLabel(""); }}
+                  className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground/50 transition hover:text-foreground"
+                >
+                  <XIcon className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Description */}
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Descripción</span>
+            <Input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Ej: Bombazo exclusivo ecomm todo San José"
+              className="h-8 text-xs"
+            />
+            {slug && (
+              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60">
+                <span className="font-mono rounded bg-secondary px-1 py-0.5">{slug}</span>
+              </div>
+            )}
+          </div>
+
+          {/* URL destino */}
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">URL de e-commerce</span>
+            <Input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://www.santaisabel.cl/busca?fq=H%3A10339"
+              className="h-8 text-xs font-mono"
+            />
+            {parsed.categoryId ? (
+              <div className="flex items-center gap-1.5">
+                <Check className="h-3 w-3 text-green-500" />
+                <span className="text-[10px] text-muted-foreground/70">
+                  categoryId: <span className="font-mono font-medium text-green-600">{parsed.categoryId}</span>
+                </span>
+              </div>
+            ) : url.trim() ? (
+              <span className="text-[10px] text-amber-600">No se detectó categoryId (fq=H:XXXX)</span>
+            ) : null}
+          </div>
+
+          {/* Preview chips */}
+          {ampscript && (
+            <div className="flex flex-wrap gap-1.5">
+              <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-mono text-muted-foreground">
+                categoryId <span className="font-medium text-foreground">{parsed.categoryId}</span>
+              </span>
+              <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-mono text-muted-foreground">
+                utm_content <span className="font-medium text-foreground">{slug}</span>
+              </span>
+              <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-mono text-muted-foreground">
+                campaign <span className="font-medium text-foreground">{activeCampaign}_@fechaenvio</span>
+              </span>
+            </div>
+          )}
+
+          {/* AMPscript preview */}
+          {ampscript && (
+            <div className="rounded-lg bg-[#1a1a2e] p-3 font-mono text-[9px] leading-relaxed text-green-400 break-all">
+              {ampscript}
+            </div>
+          )}
+
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between border-t border-border/50 px-5 py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg px-3 py-1.5 text-xs text-muted-foreground transition hover:bg-secondary/60"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            disabled={!ampscript}
+            onClick={() => ampscript && onInsert(ampscript, parsed.categoryId!)}
+            className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-1.5 text-xs font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Zap className="h-3 w-3" />
+            Insertar AMPscript
+          </button>
+        </div>
+
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AMPscriptUrlInput({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const isAMPscript = value.startsWith("%%=");
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-1.5">
+        <Link2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40" />
+        <div className="relative flex-1 min-w-0">
+          <Input
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="https://..."
+            className={`h-7 text-xs ${isAMPscript ? "pr-8 font-mono text-[9px] text-violet-700 dark:text-violet-300" : ""}`}
+          />
+          {isAMPscript && (
+            <span className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 rounded px-1 py-0.5 text-[8px] font-bold bg-violet-500/15 text-violet-600">
+              SF
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          title="Generar AMPscript SFMC"
+          className={`flex h-7 shrink-0 items-center gap-1 rounded-md border px-1.5 text-[10px] font-bold transition ${
+            isAMPscript
+              ? "border-violet-300 bg-violet-500/10 text-violet-600"
+              : "border-border bg-card text-muted-foreground/60 hover:bg-secondary/60 hover:text-foreground"
+          }`}
+        >
+          <Zap className="h-3 w-3" />
+          <span>SF</span>
+        </button>
+      </div>
+      {isAMPscript && (
+        <div className="flex items-center gap-1 pl-5">
+          <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-[9px] font-medium text-violet-600">AMPscript SFMC</span>
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="text-[9px] text-muted-foreground/40 transition hover:text-destructive"
+          >
+            × quitar
+          </button>
+        </div>
+      )}
+      <AMPscriptDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        initialUrl={isAMPscript ? "" : value}
+        onInsert={(ampscript) => {
+          onChange(ampscript);
+          setOpen(false);
+        }}
+      />
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tipos compartidos
@@ -443,11 +777,9 @@ export function HeroBlockInspector({ block, onChange }: SharedProps<HeroBlock>) 
       <InspSection title="Enlace CTA">
         <div className="space-y-1">
           <span className="text-xs text-foreground/60">URL destino</span>
-          <Input
+          <AMPscriptUrlInput
             value={block.props.href ?? ""}
-            onChange={(e) => onChange({ ...block, props: { ...block.props, href: e.target.value } })}
-            placeholder="https://..."
-            className="h-7 text-xs"
+            onChange={(href) => onChange({ ...block, props: { ...block.props, href } })}
           />
         </div>
       </InspSection>
@@ -735,15 +1067,10 @@ export function ImageBlockInspector({ block, onChange }: SharedProps<ImageBlock>
       <InspSection title="Enlace">
         <div className="space-y-1">
           <span className="text-xs text-foreground/60">URL destino</span>
-          <div className="flex items-center gap-1.5">
-            <Link2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40" />
-            <Input
-              value={block.props.href ?? ""}
-              onChange={(e) => onChange({ ...block, props: { ...block.props, href: e.target.value } })}
-              placeholder="https://..."
-              className="h-7 text-xs"
-            />
-          </div>
+          <AMPscriptUrlInput
+            value={block.props.href ?? ""}
+            onChange={(href) => onChange({ ...block, props: { ...block.props, href } })}
+          />
         </div>
       </InspSection>
 
@@ -782,16 +1109,10 @@ export function ButtonBlockInspector({ block, onChange }: SharedProps<ButtonBloc
       <InspSection title="Enlace">
         <div className="space-y-1">
           <span className="text-xs text-foreground/60">URL destino</span>
-          <div className="flex items-center gap-1.5">
-            <Link2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40" />
-            <Input
-              value={block.props.href ?? ""}
-              onChange={(e) => onChange({ ...block, props: { ...block.props, href: e.target.value } })}
-              placeholder="https://..."
-              className="h-7 text-xs"
-              autoFocus
-            />
-          </div>
+          <AMPscriptUrlInput
+            value={block.props.href ?? ""}
+            onChange={(href) => onChange({ ...block, props: { ...block.props, href } })}
+          />
         </div>
       </InspSection>
 
@@ -897,15 +1218,10 @@ export function ProductBlockInspector({ block, onChange }: SharedProps<ProductBl
       <InspSection title="Enlace">
         <div className="space-y-1">
           <span className="text-xs text-foreground/60">URL del producto</span>
-          <div className="flex items-center gap-1.5">
-            <Link2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40" />
-            <Input
-              value={block.props.href}
-              onChange={(e) => setProps({ href: e.target.value })}
-              placeholder="https://..."
-              className="h-7 text-xs"
-            />
-          </div>
+          <AMPscriptUrlInput
+            value={block.props.href ?? ""}
+            onChange={(href) => setProps({ href })}
+          />
         </div>
         <div className="space-y-1">
           <span className="text-xs text-foreground/60">Texto del botón CTA</span>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { ImageIcon } from "lucide-react";
+import { ImageIcon, ImageOff, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { ButtonBlock, HeroBlock, ImageBlock, MailingBlock, ProductBlock, SpacerBlock, TextBlock } from "../../logic/schema/block.types";
 
@@ -91,13 +91,51 @@ function ImageEditOverlay({
   onChange: (src: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     setOpen(true);
     setTimeout(() => inputRef.current?.focus(), 0);
   }, []);
+
+  const readFileAsDataUrl = useCallback((file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      onChange(e.target?.result as string);
+      setOpen(false);
+    };
+    reader.readAsDataURL(file);
+  }, [onChange]);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) readFileAsDataUrl(file);
+    // Reset so the same file can be re-selected
+    e.target.value = "";
+  }, [readFileAsDataUrl]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) readFileAsDataUrl(file);
+  }, [readFileAsDataUrl]);
 
   return (
     <>
@@ -114,26 +152,52 @@ function ImageEditOverlay({
         </div>
       )}
 
-      {/* Overlay con input URL */}
+      {/* Overlay con input URL y carga de archivo */}
       {open && (
         <div
-          className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[1px]"
+          className={`absolute inset-0 flex items-center justify-center backdrop-blur-[1px] transition-colors ${isDragOver ? "bg-blue-500/30" : "bg-black/40"}`}
           onClick={(e) => e.stopPropagation()}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
         >
-          <div className="mx-4 flex w-full max-w-xs items-center gap-2 rounded-lg bg-card px-3 py-2.5 shadow-xl ring-1 ring-border">
-            <ImageIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={src}
-              onChange={(e) => onChange(e.target.value)}
-              onBlur={() => setOpen(false)}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setOpen(false); }}
-              className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground/50"
-              placeholder="https://..."
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
+          {isDragOver ? (
+            <div className="flex flex-col items-center gap-2 rounded-lg bg-card px-5 py-4 shadow-xl ring-2 ring-blue-500">
+              <Upload className="h-5 w-5 text-blue-500" />
+              <span className="text-xs font-medium text-blue-600">Suelta la imagen aquí</span>
+            </div>
+          ) : (
+            <div className="mx-4 flex w-full max-w-xs items-center gap-2 rounded-lg bg-card px-3 py-2.5 shadow-xl ring-1 ring-border">
+              <ImageIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={src}
+                onChange={(e) => onChange(e.target.value)}
+                onBlur={() => setOpen(false)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setOpen(false); }}
+                className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground/50"
+                placeholder="https://..."
+                onClick={(e) => e.stopPropagation()}
+              />
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                className="shrink-0 rounded p-0.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                title="Subir imagen desde disco"
+              >
+                <Upload className="h-3.5 w-3.5" />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </div>
+          )}
         </div>
       )}
     </>
@@ -145,16 +209,68 @@ function ImageEditOverlay({
 // ---------------------------------------------------------------------------
 
 export function HeroBlockView({ block, isSelected, onChange }: { block: HeroBlock; isSelected?: boolean; onChange?: (nextBlock: HeroBlock) => void }) {
+  const [isHeroDragOver, setIsHeroDragOver] = useState(false);
+  const [heroImgError, setHeroImgError] = useState(false);
+
+  useEffect(() => { setHeroImgError(false); }, [block.props.imageUrl]);
+
+  const readHeroFile = useCallback((file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      onChange?.({ ...block, props: { ...block.props, imageUrl: e.target?.result as string } });
+    };
+    reader.readAsDataURL(file);
+  }, [block, onChange]);
+
+  const handleHeroDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onChange) setIsHeroDragOver(true);
+  }, [onChange]);
+
+  const handleHeroDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsHeroDragOver(false);
+  }, []);
+
+  const handleHeroDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsHeroDragOver(false);
+    if (!onChange) return;
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) readHeroFile(file);
+  }, [onChange, readHeroFile]);
+
   return (
     <article className={canvasShell(isSelected)}>
-      <div className="relative aspect-[5/3] w-full overflow-hidden bg-secondary group/img">
-        <img
-          src={block.props.imageUrl || "/placeholder.svg"}
-          alt={block.props.title}
-          className="h-full w-full object-cover"
-          loading="lazy"
-        />
-        {isSelected && onChange && (
+      <div
+        className={`relative aspect-[5/3] w-full overflow-hidden bg-secondary group/img transition-[box-shadow] ${isHeroDragOver ? "ring-2 ring-inset ring-blue-500" : ""}`}
+        onDragOver={handleHeroDragOver}
+        onDragLeave={handleHeroDragLeave}
+        onDrop={handleHeroDrop}
+      >
+        {block.props.imageUrl && heroImgError ? (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-muted-foreground/50">
+            <ImageOff className="h-8 w-8" />
+            <span className="text-xs">No se pudo cargar la imagen</span>
+          </div>
+        ) : (
+          <img
+            src={block.props.imageUrl || "/placeholder.svg"}
+            alt={block.props.title}
+            className="h-full w-full object-cover"
+            onError={() => setHeroImgError(true)}
+          />
+        )}
+        {isHeroDragOver && (
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 bg-blue-500/20">
+            <Upload className="h-6 w-6 text-blue-600" />
+            <span className="rounded-full bg-card/90 px-3 py-1 text-xs font-medium text-blue-600 shadow">Suelta la imagen aquí</span>
+          </div>
+        )}
+        {isSelected && onChange && !isHeroDragOver && (
           <ImageEditOverlay
             src={block.props.imageUrl ?? ""}
             onChange={(imageUrl) => onChange({ ...block, props: { ...block.props, imageUrl } })}
@@ -242,15 +358,25 @@ export function TextBlockView({ block, isSelected, onChange }: { block: TextBloc
 }
 
 export function ImageBlockView({ block, isSelected, onChange }: { block: ImageBlock; isSelected?: boolean; onChange?: (nextBlock: ImageBlock) => void }) {
+  const [imgError, setImgError] = useState(false);
+  useEffect(() => { setImgError(false); }, [block.props.src]);
+
   return (
     <article className={canvasShell(isSelected)} style={getPaddingStyle(block)}>
       <div className="relative overflow-hidden rounded-sm bg-secondary group/img">
-        <img
-          src={block.props.src || "/placeholder.svg"}
-          alt={block.props.alt || "Imagen del bloque"}
-          className="h-auto w-full object-cover"
-          loading="lazy"
-        />
+        {block.props.src && imgError ? (
+          <div className="flex min-h-[120px] w-full flex-col items-center justify-center gap-2 text-muted-foreground/50">
+            <ImageOff className="h-7 w-7" />
+            <span className="text-xs">No se pudo cargar la imagen</span>
+          </div>
+        ) : (
+          <img
+            src={block.props.src || "/placeholder.svg"}
+            alt={block.props.alt || "Imagen del bloque"}
+            className="h-auto w-full object-cover"
+            onError={() => setImgError(true)}
+          />
+        )}
         {isSelected && onChange && (
           <ImageEditOverlay
             src={block.props.src ?? ""}
@@ -315,17 +441,27 @@ export function SpacerBlockView({ block, isSelected }: { block: SpacerBlock; isS
 }
 
 export function ProductBlockView({ block, isSelected, onChange }: { block: ProductBlock; isSelected?: boolean; onChange?: (nextBlock: ProductBlock) => void }) {
+  const [productImgError, setProductImgError] = useState(false);
+  useEffect(() => { setProductImgError(false); }, [block.props.imageUrl]);
+
   return (
     <article className={canvasShell(isSelected)} style={getPaddingStyle(block)}>
       <div className="flex flex-col border border-border/60 bg-white font-sans" style={{ borderBottom: "1px solid #e5e7eb" }}>
         {/* Product image */}
         <div className="relative flex h-[200px] items-center justify-center bg-white group/img px-4 py-3">
-          <img
-            src={block.props.imageUrl || "/placeholder.svg"}
-            alt={block.props.name}
-            className="max-h-full max-w-[152px] object-contain"
-            loading="lazy"
-          />
+          {block.props.imageUrl && productImgError ? (
+            <div className="flex flex-col items-center gap-1.5 text-muted-foreground/40">
+              <ImageOff className="h-6 w-6" />
+              <span className="text-[10px]">Sin imagen</span>
+            </div>
+          ) : (
+            <img
+              src={block.props.imageUrl || "/placeholder.svg"}
+              alt={block.props.name}
+              className="max-h-full max-w-[152px] object-contain"
+              onError={() => setProductImgError(true)}
+            />
+          )}
           {isSelected && onChange && (
             <ImageEditOverlay
               src={block.props.imageUrl ?? ""}
