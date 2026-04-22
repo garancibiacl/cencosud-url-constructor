@@ -694,8 +694,10 @@ export default function MailingBuilderPage() {
           } : undefined}
         >
           <div
-            className="mx-auto flex h-full max-w-[820px] flex-col rounded-lg bg-card shadow-[var(--shadow-card)] border transition-colors duration-250"
-            style={{ borderColor: activeBrandColor ? `${activeBrandColor}60` : undefined }}
+            className="mx-auto flex h-full max-w-[820px] flex-col rounded-lg bg-card transition-colors duration-250"
+            style={{
+              boxShadow: "0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.07), 0 16px 40px rgba(0,0,0,0.06)",
+            }}
           >
 
             {/* ── Split header: marca (izq, rojo) → curva blob → tabs (der, blanco) ── */}
