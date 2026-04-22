@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -6,16 +7,16 @@ import type { PromptFilters, PromptBrand, PromptTone } from "../logic/prompts.ty
 const CUSTOM_CATEGORIES_KEY = "prompts_custom_categories";
 
 const DEFAULT_CATEGORIES: { value: string; label: string }[] = [
-  { value: "todas", label: "Todas" },
-  { value: "imagen-producto", label: "Imagen producto" },
-  { value: "banner-campaña", label: "Banner campaña" },
-  { value: "relleno-generativo", label: "Relleno generativo" },
-  { value: "copy-marketing", label: "Copy marketing" },
-  { value: "social-media", label: "Social media" },
-  { value: "video", label: "Video" },
+  { value: "todas",             label: "Todas" },
+  { value: "imagen-producto",   label: "Imagen producto" },
+  { value: "banner-campaña",    label: "Banner campaña" },
+  { value: "relleno-generativo",label: "Relleno generativo" },
+  { value: "copy-marketing",    label: "Copy marketing" },
+  { value: "social-media",      label: "Social media" },
+  { value: "video",             label: "Video" },
 ];
 
-function getCategories(): { value: string; label: string }[] {
+function loadAllCategories(): { value: string; label: string }[] {
   try {
     const raw = localStorage.getItem(CUSTOM_CATEGORIES_KEY);
     const custom = raw ? (JSON.parse(raw) as { value: string; label: string }[]) : [];
@@ -26,17 +27,17 @@ function getCategories(): { value: string; label: string }[] {
 }
 
 const BRANDS: { value: PromptBrand | "todas"; label: string }[] = [
-  { value: "todas", label: "Todas" },
-  { value: "Jumbo", label: "Jumbo" },
+  { value: "todas",        label: "Todas" },
+  { value: "Jumbo",        label: "Jumbo" },
   { value: "Santa Isabel", label: "Santa Isabel" },
-  { value: "Spid", label: "Spid" },
+  { value: "Spid",         label: "Spid" },
 ];
 
 const TONES: { value: PromptTone | "todos"; label: string }[] = [
-  { value: "todos", label: "Todos" },
-  { value: "formal", label: "Formal" },
-  { value: "casual", label: "Casual" },
-  { value: "urgente", label: "Urgente" },
+  { value: "todos",        label: "Todos" },
+  { value: "formal",       label: "Formal" },
+  { value: "casual",       label: "Casual" },
+  { value: "urgente",      label: "Urgente" },
   { value: "aspiracional", label: "Aspiracional" },
 ];
 
@@ -46,16 +47,14 @@ interface Props {
   totalResults: number;
 }
 
-const CATEGORIES = getCategories();
-
-function FilterChip<T extends string>({
+function FilterChip({
   options,
   value,
   onChange,
 }: {
-  options: { value: T; label: string }[];
-  value: T;
-  onChange: (v: T) => void;
+  options: { value: string; label: string }[];
+  value: string;
+  onChange: (v: string) => void;
 }) {
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -77,6 +76,9 @@ function FilterChip<T extends string>({
 }
 
 export function PromptFilters({ filters, onChange, totalResults }: Props) {
+  // Read fresh from localStorage on each mount so custom categories appear
+  const categories = useMemo(() => loadAllCategories(), []);
+
   const hasActiveFilters =
     filters.search !== "" ||
     filters.category !== "todas" ||
@@ -112,7 +114,7 @@ export function PromptFilters({ filters, onChange, totalResults }: Props) {
       <div className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Categoría</p>
         <FilterChip
-          options={CATEGORIES}
+          options={categories}
           value={filters.category}
           onChange={(v) => onChange({ ...filters, category: v })}
         />

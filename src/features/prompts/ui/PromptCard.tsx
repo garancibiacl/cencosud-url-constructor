@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Check, Copy, ChevronDown, ChevronUp, Trash2, UserRound, Pencil, Clock } from "lucide-react";
 import Swal from "sweetalert2";
 import { useAuth } from "@/hooks/useAuth";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { copyPromptToClipboard, deletePrompt } from "../services/prompts.service";
@@ -15,26 +14,59 @@ function formatDate(iso: string): string {
   }).format(new Date(iso));
 }
 
-const CATEGORY_LABELS: Record<Prompt["category"], string> = {
-  "imagen-producto": "Imagen producto",
-  "banner-campaña": "Banner campaña",
+const BUILT_IN_LABELS: Record<string, string> = {
+  "imagen-producto":    "Imagen producto",
+  "banner-campaña":     "Banner campaña",
   "relleno-generativo": "Relleno generativo",
-  "copy-marketing": "Copy marketing",
-  "social-media": "Social media",
+  "copy-marketing":     "Copy marketing",
+  "social-media":       "Social media",
+  "video":              "Video",
 };
 
-const TONE_LABELS: Record<Prompt["tone"], string> = {
-  formal: "Formal",
-  casual: "Casual",
-  urgente: "Urgente",
-  aspiracional: "Aspiracional",
+function getCategoryLabel(value: string): string {
+  if (BUILT_IN_LABELS[value]) return BUILT_IN_LABELS[value];
+  try {
+    const raw = localStorage.getItem("prompts_custom_categories");
+    const custom = raw ? (JSON.parse(raw) as { value: string; label: string }[]) : [];
+    const found = custom.find((c) => c.value === value);
+    if (found) return found.label;
+  } catch { /* ignore */ }
+  // fallback: capitalize and replace hyphens
+  return value.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// ─── Badge palettes ───────────────────────────────────────────────────────────
+
+const BRAND_STYLES: Record<string, string> = {
+  Jumbo:          "bg-emerald-50 text-emerald-700 border-emerald-200 font-semibold",
+  "Santa Isabel": "bg-orange-50  text-orange-700  border-orange-200  font-semibold",
+  Spid:           "bg-violet-50  text-violet-700  border-violet-200  font-semibold",
 };
 
-const BRAND_COLORS: Record<Prompt["brand"], string> = {
-  Jumbo: "bg-green-100 text-green-800 border-green-200",
-  "Santa Isabel": "bg-orange-100 text-orange-800 border-orange-200",
-  Spid: "bg-violet-100 text-violet-800 border-violet-200",
+const CATEGORY_STYLES: Record<string, string> = {
+  "imagen-producto":    "bg-blue-50   text-blue-700   border-blue-200",
+  "banner-campaña":     "bg-purple-50 text-purple-700 border-purple-200",
+  "relleno-generativo": "bg-teal-50   text-teal-700   border-teal-200",
+  "copy-marketing":     "bg-rose-50   text-rose-700   border-rose-200",
+  "social-media":       "bg-sky-50    text-sky-700    border-sky-200",
+  "video":              "bg-pink-50   text-pink-700   border-pink-200",
 };
+
+const TONE_STYLES: Record<string, string> = {
+  formal:       "bg-slate-100  text-slate-600  border-slate-200",
+  casual:       "bg-green-50   text-green-700  border-green-200",
+  urgente:      "bg-red-50     text-red-700    border-red-200",
+  aspiracional: "bg-amber-50   text-amber-700  border-amber-200",
+};
+
+const BADGE_BASE = "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium tracking-wide";
+
+function categoryStyle(value: string): string {
+  return CATEGORY_STYLES[value] ?? "bg-indigo-50 text-indigo-700 border-indigo-200";
+}
+function toneStyle(value: string): string {
+  return TONE_STYLES[value] ?? "bg-slate-100 text-slate-600 border-slate-200";
+}
 
 interface Props {
   prompt: Prompt;
@@ -138,23 +170,20 @@ export function PromptCard({ prompt, canDelete = false, canEdit = false, onDelet
 
         {/* Badges */}
         <div className="mt-2 flex flex-wrap gap-1.5">
-          <span
-            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${
-              BRAND_COLORS[prompt.brand]
-            }`}
-          >
+          <span className={`${BADGE_BASE} ${BRAND_STYLES[prompt.brand] ?? "bg-gray-50 text-gray-700 border-gray-200 font-semibold"}`}>
             {prompt.brand}
           </span>
-          <Badge variant="outline" className="text-[11px]">
-            {CATEGORY_LABELS[prompt.category]}
-          </Badge>
-          <Badge variant="outline" className="text-[11px]">
-            {TONE_LABELS[prompt.tone]}
-          </Badge>
+          <span className={`${BADGE_BASE} ${categoryStyle(prompt.category)}`}>
+            {getCategoryLabel(prompt.category)}
+          </span>
+          <span className={`${BADGE_BASE} ${toneStyle(prompt.tone)}`}>
+            {prompt.tone.charAt(0).toUpperCase() + prompt.tone.slice(1)}
+          </span>
           {prompt.model && (
-            <Badge variant="secondary" className="text-[11px]">
+            <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-0.5 text-[11px] font-medium text-gray-500">
+              <span className="text-[10px]">⚡</span>
               {prompt.model}
-            </Badge>
+            </span>
           )}
         </div>
       </CardHeader>
