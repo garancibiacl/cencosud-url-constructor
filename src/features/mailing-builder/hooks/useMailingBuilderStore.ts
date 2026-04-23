@@ -41,6 +41,10 @@ interface MailingBuilderState {
   addRowFromLayout: (layoutId: string, afterRowId?: string) => void;
   /** Inserta una nueva row en una posición absoluta (0 = antes de la primera). */
   insertRowFromLayoutAt: (layoutId: string, atIndex: number) => void;
+  /** Crea una nueva row full-width con el bloque nuevo en la posición dada. */
+  insertBlockAsNewRowAt: (type: MailingBlockType, atIndex: number) => void;
+  /** Mueve un bloque existente a una nueva row full-width en la posición dada. */
+  moveBlockToNewRowAt: (blockId: string, atIndex: number) => void;
   removeRow: (rowId: string) => void;
   moveRow: (fromIndex: number, toIndex: number) => void;
   duplicateRow: (rowId: string) => void;
@@ -233,6 +237,43 @@ export const useMailingBuilderStore = create<MailingBuilderState>((set, get) => 
       selectedColId: newRow.columns[0]?.id ?? null,
       selectedBlockId: null,
       selectedLevel: "col",
+    };
+  }),
+
+  insertBlockAsNewRowAt: (type, atIndex) => set((state) => {
+    const newBlock = blockRegistry[type].create();
+    const newRow: MailingRow = {
+      id: `row-${crypto.randomUUID().slice(0, 12)}`,
+      columns: [createColumn(12, [newBlock])],
+    };
+    const rows = [...state.document.rows];
+    rows.splice(Math.max(0, Math.min(atIndex, rows.length)), 0, newRow);
+    return {
+      document: { ...state.document, rows },
+      selectedBlockId: newBlock.id,
+      selectedRowId: newRow.id,
+      selectedColId: newRow.columns[0].id,
+      selectedLevel: "block",
+    };
+  }),
+
+  moveBlockToNewRowAt: (blockId, atIndex) => set((state) => {
+    const found = findBlock(state.document.rows, blockId);
+    if (!found) return state;
+    let rows = deleteBlockFromRows(state.document.rows, blockId);
+    const newRow: MailingRow = {
+      id: `row-${crypto.randomUUID().slice(0, 12)}`,
+      columns: [createColumn(12, [found.block])],
+    };
+    const insertAt = Math.max(0, Math.min(atIndex, rows.length));
+    rows = [...rows];
+    rows.splice(insertAt, 0, newRow);
+    return {
+      document: { ...state.document, rows },
+      selectedBlockId: found.block.id,
+      selectedRowId: newRow.id,
+      selectedColId: newRow.columns[0].id,
+      selectedLevel: "block",
     };
   }),
 

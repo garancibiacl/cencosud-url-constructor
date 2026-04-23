@@ -178,6 +178,8 @@ export default function MailingBuilderPage() {
     addRow,
     addRowFromLayout,
     insertRowFromLayoutAt,
+    insertBlockAsNewRowAt,
+    moveBlockToNewRowAt,
     mutateRowLayout,
     removeRow,
     moveRow,
@@ -223,6 +225,19 @@ export default function MailingBuilderPage() {
     onReorderRow: useCallback(
       (from: number, to: number) => moveRow(from, to),
       [moveRow],
+    ),
+    onInsertBlockAsRow: useCallback(
+      (blockData: string, atIndex: number) => {
+        if (blockData.startsWith("new:")) {
+          // Bloque nuevo desde sidebar
+          const type = blockData.slice(4) as Parameters<typeof insertBlockAsNewRowAt>[0];
+          insertBlockAsNewRowAt(type, atIndex);
+        } else {
+          // Bloque existente reordenado entre filas
+          moveBlockToNewRowAt(blockData, atIndex);
+        }
+      },
+      [insertBlockAsNewRowAt, moveBlockToNewRowAt],
     ),
   });
 

@@ -557,9 +557,10 @@ const ColumnCanvas = memo(function ColumnCanvas({
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     const { types } = e.dataTransfer;
-    if (!types.includes(BLOCK_DRAG_TYPE)) return; // solo drags de bloque
+    if (!types.includes(BLOCK_DRAG_TYPE)) return;
     e.preventDefault();
-    e.stopPropagation();
+    // No stopPropagation: el canvas también necesita saber si el cursor está en una
+    // columna (data-column-area) para decidir si mostrar el RowDropIndicator.
     onDragOver(e, col.id);
     setBlockDropIndex(resolveBlockDropIndex(e.clientY));
   }, [col.id, onDragOver, resolveBlockDropIndex]);
@@ -574,6 +575,7 @@ const ColumnCanvas = memo(function ColumnCanvas({
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     if (!e.dataTransfer.types.includes(BLOCK_DRAG_TYPE)) return;
+    e.stopPropagation(); // evitar que el canvas cree también una nueva fila
     const idx = blockDropIndex ?? col.blocks.length;
     setBlockDropIndex(null);
     onDrop(e, col.id, idx);
@@ -611,6 +613,7 @@ const ColumnCanvas = memo(function ColumnCanvas({
   return (
     <div
       ref={colRef}
+      data-column-area
       className={`relative flex flex-col gap-1.5 px-1.5 py-1.5 transition-colors ${
         isDropTarget || isColSelected ? "rounded" : ""
       }`}
