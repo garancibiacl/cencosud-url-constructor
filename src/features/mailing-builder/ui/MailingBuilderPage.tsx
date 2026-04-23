@@ -180,6 +180,7 @@ export default function MailingBuilderPage() {
     insertRowFromLayoutAt,
     insertBlockAsNewRowAt,
     moveBlockToNewRowAt,
+    insertPresetBlockAsRowAt,
     mutateRowLayout,
     removeRow,
     moveRow,
@@ -228,7 +229,10 @@ export default function MailingBuilderPage() {
     ),
     onInsertBlockAsRow: useCallback(
       (blockData: string, atIndex: number) => {
-        if (blockData.startsWith("new:")) {
+        if (blockData.startsWith("preset:")) {
+          const presetId = blockData.slice(7);
+          insertPresetBlockAsRowAt(presetId, atIndex);
+        } else if (blockData.startsWith("new:")) {
           // Bloque nuevo desde sidebar
           const type = blockData.slice(4) as Parameters<typeof insertBlockAsNewRowAt>[0];
           insertBlockAsNewRowAt(type, atIndex);
@@ -237,7 +241,7 @@ export default function MailingBuilderPage() {
           moveBlockToNewRowAt(blockData, atIndex);
         }
       },
-      [insertBlockAsNewRowAt, moveBlockToNewRowAt],
+      [insertBlockAsNewRowAt, moveBlockToNewRowAt, insertPresetBlockAsRowAt],
     ),
   });
 
@@ -652,15 +656,12 @@ export default function MailingBuilderPage() {
             </TabsContent>
 
             {/* Tab Secciones — visual layout picker */}
-            <TabsContent value="secciones" className="m-0 min-h-0 flex-1">
-              <ScrollArea className="h-full">
-                <div className="px-1 pb-2 pt-1">
-                  <p className="px-3 pb-2 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
-                    Elige un layout para agregar
-                  </p>
-                  <SectionLayoutPicker />
-                </div>
-              </ScrollArea>
+            {/* Plain overflow div instead of ScrollArea: Radix injects display:table on its
+                viewport inner child, which breaks flex width containment in the sidebar. */}
+            <TabsContent value="secciones" className="m-0 min-h-0 flex-1 overflow-hidden">
+              <div className="h-full overflow-y-auto overflow-x-hidden">
+                <SectionLayoutPicker />
+              </div>
             </TabsContent>
 
             {/* Tab Guardado */}

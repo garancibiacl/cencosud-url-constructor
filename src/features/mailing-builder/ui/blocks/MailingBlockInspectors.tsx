@@ -26,7 +26,7 @@ import { parseUrl, generateSlug, generateAMPscript } from "@/features/ampscript-
 import { parseSingleWebSpreadsheetPaste } from "@/lib/title-url-app";
 import type { BrandId } from "@/features/ampscript-builder/logic/ampscript.types";
 import type {
-  ButtonBlock, HeroBlock, ImageBlock, ProductBlock, SpacerBlock, TextBlock,
+  ButtonBlock, HeroBlock, ImageBlock, ProductBlock, RawHtmlBlock, SpacerBlock, TextBlock,
 } from "../../logic/schema/block.types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1363,6 +1363,23 @@ export function ProductBlockInspector({ block, onChange }: SharedProps<ProductBl
         </InspRow>
       </InspSection>
 
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RawHtmlBlockInspector
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function RawHtmlBlockInspector({ block }: { block: RawHtmlBlock; onChange: (next: RawHtmlBlock) => void }) {
+  return (
+    <div className="space-y-3 p-4">
+      <div className="rounded-lg border border-border bg-muted/30 p-3">
+        <p className="text-xs font-medium text-foreground">{block.props.presetLabel ?? "Sección HTML fija"}</p>
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          Esta sección es un bloque HTML estandarizado de marca. No es editable desde el canvas.
+        </p>
+      </div>
     </div>
   );
 }

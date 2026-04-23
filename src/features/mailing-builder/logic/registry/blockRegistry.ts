@@ -24,6 +24,7 @@ import type {
   MailingBlock,
   MailingBlockType,
   ProductBlock,
+  RawHtmlBlock,
   SpacerBlock,
   TextBlock,
 } from "../schema/block.types";
@@ -39,6 +40,7 @@ import {
   HeroBlockInspector,
   ImageBlockInspector,
   ProductBlockInspector,
+  RawHtmlBlockInspector,
   SpacerBlockInspector,
   TextBlockInspector,
 } from "../../ui/blocks/MailingBlockInspectors";
@@ -47,6 +49,7 @@ import {
   HeroBlockView,
   ImageBlockView,
   ProductBlockView,
+  RawHtmlBlockView,
   SpacerBlockView,
   TextBlockView,
 } from "../../ui/blocks/MailingBlockViews";
@@ -276,6 +279,18 @@ export const blockRegistry: BlockRegistryMap = {
         `<div style="line-height:${block.props.height}px; height:${block.props.height}px;">&nbsp;</div>`,
         "transparent",
       ),
+  }),
+
+  // ── Raw HTML ──────────────────────────────────────────────────────────────
+  "raw-html": defineBlock<RawHtmlBlock>({
+    type: "raw-html",
+    label: "HTML fijo",
+    category: "content",
+    defaultProps: { html: "", presetId: undefined, presetLabel: undefined },
+    defaultLayout: { colSpan: 12 },
+    View: RawHtmlBlockView,
+    Inspector: RawHtmlBlockInspector,
+    renderHtml: (block) => block.props.html,
   }),
 
   // ── Product ───────────────────────────────────────────────────────────────

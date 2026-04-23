@@ -1,8 +1,8 @@
 import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { ImageIcon, ImageOff, Upload } from "lucide-react";
+import { CodeXml, ImageIcon, ImageOff, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import type { ButtonBlock, HeroBlock, ImageBlock, MailingBlock, ProductBlock, SpacerBlock, TextBlock } from "../../logic/schema/block.types";
+import type { ButtonBlock, HeroBlock, ImageBlock, MailingBlock, ProductBlock, RawHtmlBlock, SpacerBlock, TextBlock } from "../../logic/schema/block.types";
 import { TextFloatingToolbar } from "../editor/TextFloatingToolbar";
 
 const getPaddingStyle = (block: MailingBlock): CSSProperties => ({
@@ -439,6 +439,43 @@ export function SpacerBlockView({ block, isSelected }: { block: SpacerBlock; isS
       </div>
       <div className="bg-secondary/40" style={{ height: block.props.height }} />
     </article>
+  );
+}
+
+type BlockViewProps<TBlock extends MailingBlock> = {
+  block: TBlock;
+  isSelected?: boolean;
+  onChange?: (nextBlock: TBlock) => void;
+};
+
+export function RawHtmlBlockView({ block, isSelected }: BlockViewProps<RawHtmlBlock>) {
+  return (
+    <div className={canvasShell(isSelected) + " bg-muted/30"} style={getPaddingStyle(block)}>
+      <div className="flex items-center gap-2 px-3 py-2">
+        <div className="flex h-6 w-6 items-center justify-center rounded bg-primary/10">
+          <CodeXml className="h-3.5 w-3.5 text-primary/60" />
+        </div>
+        <div>
+          <p className="text-xs font-medium text-foreground">{block.props.presetLabel ?? "Sección HTML"}</p>
+          <p className="text-[10px] text-muted-foreground">Sección fija — no editable</p>
+        </div>
+      </div>
+      <div className="pointer-events-none overflow-hidden rounded-b-md border-t border-border">
+        {block.props.presetId?.includes("jumbo") && (
+          <div className="bg-white px-3 py-2">
+            <div className="h-5 w-24 rounded bg-[#2DC850]/20 mb-1.5" />
+            <div className="h-5 w-full rounded bg-[#2DC850]" />
+            <div className="mt-1.5 h-3 w-20 rounded bg-muted/60" />
+          </div>
+        )}
+        {block.props.presetId?.includes("santa-isabel") && (
+          <div className="bg-white px-3 py-2">
+            <div className="h-5 w-20 rounded bg-[#de0610]/20 mb-1.5" />
+            <div className="h-3 w-32 rounded bg-muted/60 mt-1.5" />
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

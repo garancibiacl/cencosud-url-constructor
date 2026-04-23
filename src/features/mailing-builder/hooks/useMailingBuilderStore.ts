@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { MailingBlock, MailingBlockType } from "../logic/schema/block.types";
 import type { ColumnPreset, MailingColumn, MailingRow } from "../logic/schema/row.types";
+import { presetSectionsMap } from "../logic/registry/presetSections";
 import type { MailingDocument, MailingSettings } from "../logic/schema/mailing.types";
 import { COLUMN_PRESETS } from "../logic/schema/row.types";
 import { blockRegistry } from "../logic/registry/blockRegistry";
@@ -45,6 +46,8 @@ interface MailingBuilderState {
   insertBlockAsNewRowAt: (type: MailingBlockType, atIndex: number) => void;
   /** Mueve un bloque existente a una nueva row full-width en la posición dada. */
   moveBlockToNewRowAt: (blockId: string, atIndex: number) => void;
+  /** Crea una nueva row full-width con un bloque raw-html de preset en la posición dada. */
+  insertPresetBlockAsRowAt: (presetId: string, atIndex: number) => void;
   removeRow: (rowId: string) => void;
   moveRow: (fromIndex: number, toIndex: number) => void;
   duplicateRow: (rowId: string) => void;
@@ -271,6 +274,30 @@ export const useMailingBuilderStore = create<MailingBuilderState>((set, get) => 
     return {
       document: { ...state.document, rows },
       selectedBlockId: found.block.id,
+      selectedRowId: newRow.id,
+      selectedColId: newRow.columns[0].id,
+      selectedLevel: "block",
+    };
+  }),
+
+  insertPresetBlockAsRowAt: (presetId, atIndex) => set((state) => {
+    const preset = presetSectionsMap[presetId];
+    if (!preset) return state;
+    const newBlock: MailingBlock = {
+      id: `raw-html-${crypto.randomUUID().slice(0, 8)}`,
+      type: "raw-html" as const,
+      props: { html: preset.html, presetId, presetLabel: preset.label },
+      layout: { colSpan: 12 },
+    };
+    const newRow: MailingRow = {
+      id: `row-${crypto.randomUUID().slice(0, 12)}`,
+      columns: [createColumn(12, [newBlock])],
+    };
+    const rows = [...state.document.rows];
+    rows.splice(Math.max(0, Math.min(atIndex, rows.length)), 0, newRow);
+    return {
+      document: { ...state.document, rows },
+      selectedBlockId: newBlock.id,
       selectedRowId: newRow.id,
       selectedColId: newRow.columns[0].id,
       selectedLevel: "block",

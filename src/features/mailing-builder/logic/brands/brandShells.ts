@@ -135,38 +135,32 @@ const SANTA_ISABEL_FOOTER = `<table role="presentation" width="100%" border="0" 
   </tr>
 </table>`;
 
-const JUMBO_HEADER = `<table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0">
+const JUMBO_HEADER = `<table width="100%" cellpadding="0" cellspacing="0" border="0">
   <tr>
     <td align="center">
       <table width="600" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;">
         <tr>
           <td align="center" style="padding:20px;">
             <a href="https://www.jumbo.cl/" target="_blank" style="text-decoration:none;">
-              <img src="https://cencosud-assets.codelex.dev/uploads/LQdpgFDbYNy55SHD5-logojumbo50.svg" alt="Jumbo" width="360" style="display:block;border:0;">
+              <img src="https://cencosud-assets.codelex.dev/uploads/LQdpgFDbYNy55SHD5-logojumbo50.svg" alt="Jumbo" width="420" style="display:block;border:0;">
             </a>
           </td>
         </tr>
         <tr>
           <td>
-            <table width="600" align="center" border="0" cellpadding="0" cellspacing="0" style="width:600px;background-color:#1fa02e;margin:0 auto;font-family:Arial,Helvetica,sans-serif;">
+            <table width="600" align="center" border="0" cellpadding="0" cellspacing="0" style="width:600px;background-color:#2DC850;margin:0 auto;font-family:Arial,Helvetica,sans-serif;">
               <tr>
                 <td style="padding:10px 0;text-align:center;font-size:0;">
                   <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin:auto;">
                     <tr>
                       <td>
-                        <a href="https://www.jumbo.cl/jumbo-ofertas" target="_blank" style="width:auto!important;display:inline-block;">
-                          <img style="display:block!important;" src="https://cencosud-assets.codelex.dev/sodlab/fIHna69w2d9H7QGbi-banner-6Zkke3C4dva8Jhqdb.png" alt="Ofertas">
-                        </a>
+                        <img style="display:block!important;" src="https://cencosud-assets.codelex.dev/sodlab/0KwkyC1rBeWVXoBsp-banner-6Zkke3C4dva8Jhqdb.png" alt="">
                       </td>
                       <td>
-                        <a href="https://www.jumbo.cl/experiencias-jumbo/marcas-exclusivas/cuisine---co" target="_blank" style="width:auto!important;display:inline-block;">
-                          <img style="display:block!important;" src="https://cencosud-assets.codelex.dev/sodlab/HS3lSXAkwWvePgPSu-banner-6Zkke3C4dva8Jhqdb.png" alt="Cuisine &amp; Co">
-                        </a>
+                        <img style="display:block!important;" src="https://cencosud-assets.codelex.dev/sodlab/Rmp3tNQfVeZOSqSUj-banner-6Zkke3C4dva8Jhqdb.png" alt="">
                       </td>
                       <td>
-                        <a href="https://www.jumbo.cl/recetas" target="_blank" style="width:auto!important;display:inline-block;">
-                          <img style="display:block!important;" src="https://cencosud-assets.codelex.dev/sodlab/kdpRxl38A4zQZFM2x-banner-6Zkke3C4dva8Jhqdb.png" alt="Recetas">
-                        </a>
+                        <img style="display:block!important;" src="https://cencosud-assets.codelex.dev/sodlab/mQWddb2m63RHXVZnR-banner-6Zkke3C4dva8Jhqdb.png" alt="">
                       </td>
                     </tr>
                   </table>
