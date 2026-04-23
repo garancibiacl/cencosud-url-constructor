@@ -91,60 +91,58 @@ table{border-collapse:collapse;width:100%;}
 // SectionLayoutPicker
 // ---------------------------------------------------------------------------
 
+function SectionHeader({
+  label,
+  open,
+  onToggle,
+}: {
+  label: string;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="group flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left transition-colors duration-150 hover:bg-violet-50/60 dark:hover:bg-violet-950/30"
+    >
+      <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-foreground transition-colors duration-150 group-hover:text-violet-700 dark:group-hover:text-violet-300">
+        {label}
+      </span>
+      <span
+        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-200 ${
+          open
+            ? "border-violet-300/60 bg-violet-100/60 text-violet-600"
+            : "border-foreground/15 bg-foreground/5 text-foreground/50"
+        } group-hover:border-violet-400 group-hover:bg-violet-100 group-hover:text-violet-600 dark:group-hover:border-violet-600 dark:group-hover:bg-violet-900/40 dark:group-hover:text-violet-400`}
+      >
+        {open
+          ? <ChevronDown className="h-3 w-3" />
+          : <ChevronRight className="h-3 w-3" />
+        }
+      </span>
+    </button>
+  );
+}
+
 export function SectionLayoutPicker() {
   const addRowFromLayout = useMailingBuilderStore((s) => s.addRowFromLayout);
   const insertPresetBlockAsRowAt = useMailingBuilderStore((s) => s.insertPresetBlockAsRowAt);
   const rowCount = useMailingBuilderStore((s) => s.document.rows.length);
 
   const [headersOpen, setHeadersOpen] = useState(true);
+  const [layoutsOpen, setLayoutsOpen] = useState(true);
 
   return (
-    <div className="space-y-2 p-3">
+    <div className="space-y-3 p-3">
 
-      {/* ── Layouts section ──────────────────────────────────────────────── */}
-      <p className="px-0 pb-1 pt-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
-        Elige un layout para agregar
-      </p>
-
-      {layoutRegistry.map((layout) => (
-        <button
-          key={layout.id}
-          type="button"
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.setData("text/plain", `section:${layout.id}`);
-            e.dataTransfer.setData("application/mailing-section", layout.id);
-            e.dataTransfer.effectAllowed = "copy";
-          }}
-          onClick={() => addRowFromLayout(layout.id)}
-          title={layout.label}
-          className="group w-full overflow-hidden cursor-pointer rounded-xl border border-border bg-secondary/30 pt-2 text-left transition-all duration-150 hover:border-violet-300 hover:bg-violet-50/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 dark:hover:border-violet-700 dark:hover:bg-violet-950/20"
-        >
-          {/* Drag-handle dots */}
-          <div className="flex justify-center pb-1.5">
-            <GripHorizontal className="h-3.5 w-3.5 text-muted-foreground/30 transition-colors group-hover:text-violet-400" />
-          </div>
-          {/* Column visual */}
-          <LayoutPreview spans={layout.columns.map((c) => c.colSpan)} />
-        </button>
-      ))}
-
-      {/* ── Encabezados section ──────────────────────────────────────────── */}
-      <div className="pt-2">
-        <button
-          type="button"
-          onClick={() => setHeadersOpen((v) => !v)}
-          className="flex w-full items-center justify-between px-0 pb-1 text-left"
-        >
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/60">
-            Encabezados
-          </p>
-          {headersOpen
-            ? <ChevronDown className="h-3 w-3 text-muted-foreground/40" />
-            : <ChevronRight className="h-3 w-3 text-muted-foreground/40" />
-          }
-        </button>
-
+      {/* ── Encabezados — primero ─────────────────────────────────────────── */}
+      <div>
+        <SectionHeader
+          label="Encabezados"
+          open={headersOpen}
+          onToggle={() => setHeadersOpen((v) => !v)}
+        />
         {headersOpen && (
           <div className="mt-1 space-y-2">
             {presetSections.map((preset) => (
@@ -161,16 +159,46 @@ export function SectionLayoutPicker() {
                 title={preset.label}
                 className="group w-full overflow-hidden cursor-pointer rounded-xl border border-border bg-secondary/30 pt-2 text-left transition-all duration-150 hover:border-primary/30 hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
-                {/* Drag-handle dots */}
                 <div className="flex justify-center pb-1.5">
                   <GripHorizontal className="h-3.5 w-3.5 text-muted-foreground/30 transition-colors group-hover:text-primary/60" />
                 </div>
-                {/* Brand thumbnail */}
                 <PresetHeaderThumbnail html={preset.html} label={preset.label} />
-                {/* Label */}
                 <div className="px-3 pb-2.5">
                   <p className="text-[11px] font-medium text-foreground/80">{preset.label}</p>
                 </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Layouts ───────────────────────────────────────────────────────── */}
+      <div>
+        <SectionHeader
+          label="Elige un layout para agregar"
+          open={layoutsOpen}
+          onToggle={() => setLayoutsOpen((v) => !v)}
+        />
+        {layoutsOpen && (
+          <div className="mt-1 space-y-2">
+            {layoutRegistry.map((layout) => (
+              <button
+                key={layout.id}
+                type="button"
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("text/plain", `section:${layout.id}`);
+                  e.dataTransfer.setData("application/mailing-section", layout.id);
+                  e.dataTransfer.effectAllowed = "copy";
+                }}
+                onClick={() => addRowFromLayout(layout.id)}
+                title={layout.label}
+                className="group w-full overflow-hidden cursor-pointer rounded-xl border border-border bg-secondary/30 pt-2 text-left transition-all duration-150 hover:border-violet-300 hover:bg-violet-50/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 dark:hover:border-violet-700 dark:hover:bg-violet-950/20"
+              >
+                <div className="flex justify-center pb-1.5">
+                  <GripHorizontal className="h-3.5 w-3.5 text-muted-foreground/30 transition-colors group-hover:text-violet-400" />
+                </div>
+                <LayoutPreview spans={layout.columns.map((c) => c.colSpan)} />
               </button>
             ))}
           </div>

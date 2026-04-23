@@ -448,32 +448,60 @@ type BlockViewProps<TBlock extends MailingBlock> = {
   onChange?: (nextBlock: TBlock) => void;
 };
 
+const RAW_HTML_RENDER_WIDTH = 600;
+const RAW_HTML_RENDER_HEIGHT = 200;
+
 export function RawHtmlBlockView({ block, isSelected }: BlockViewProps<RawHtmlBlock>) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const w = entry.contentRect.width;
+      if (w > 0) setScale(w / RAW_HTML_RENDER_WIDTH);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const srcDoc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#fff;font-family:Arial,Helvetica,sans-serif;overflow:hidden;}img{max-width:100%!important;height:auto!important;display:block!important;}table{border-collapse:collapse;width:100%;}</style></head><body>${block.props.html}</body></html>`;
+
   return (
-    <div className={canvasShell(isSelected) + " bg-muted/30"} style={getPaddingStyle(block)}>
-      <div className="flex items-center gap-2 px-3 py-2">
-        <div className="flex h-6 w-6 items-center justify-center rounded bg-primary/10">
-          <CodeXml className="h-3.5 w-3.5 text-primary/60" />
+    <div className={canvasShell(isSelected)} style={getPaddingStyle(block)}>
+      {/* Badge label */}
+      <div className="flex items-center gap-1.5 px-2 py-1.5">
+        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-primary/10">
+          <CodeXml className="h-3 w-3 text-primary/60" />
         </div>
-        <div>
-          <p className="text-xs font-medium text-foreground">{block.props.presetLabel ?? "Sección HTML"}</p>
-          <p className="text-[10px] text-muted-foreground">Sección fija — no editable</p>
-        </div>
+        <span className="text-[10px] font-medium text-muted-foreground">
+          {block.props.presetLabel ?? "Sección HTML"} · solo lectura
+        </span>
       </div>
-      <div className="pointer-events-none overflow-hidden rounded-b-md border-t border-border">
-        {block.props.presetId?.includes("jumbo") && (
-          <div className="bg-white px-3 py-2">
-            <div className="h-5 w-24 rounded bg-[#2DC850]/20 mb-1.5" />
-            <div className="h-5 w-full rounded bg-[#2DC850]" />
-            <div className="mt-1.5 h-3 w-20 rounded bg-muted/60" />
-          </div>
-        )}
-        {block.props.presetId?.includes("santa-isabel") && (
-          <div className="bg-white px-3 py-2">
-            <div className="h-5 w-20 rounded bg-[#de0610]/20 mb-1.5" />
-            <div className="h-3 w-32 rounded bg-muted/60 mt-1.5" />
-          </div>
-        )}
+      {/* Scaled iframe preview */}
+      <div
+        ref={containerRef}
+        className="w-full overflow-hidden rounded-b-md border-t border-border/50"
+        style={{
+          height: `${Math.ceil(RAW_HTML_RENDER_HEIGHT * scale)}px`,
+          contain: "paint",
+        }}
+      >
+        <iframe
+          srcDoc={srcDoc}
+          title={block.props.presetLabel ?? "preview"}
+          scrolling="no"
+          style={{
+            width: `${RAW_HTML_RENDER_WIDTH}px`,
+            height: `${RAW_HTML_RENDER_HEIGHT}px`,
+            border: "none",
+            transform: `scale(${scale})`,
+            transformOrigin: "top left",
+            pointerEvents: "none",
+            display: "block",
+          }}
+        />
       </div>
     </div>
   );

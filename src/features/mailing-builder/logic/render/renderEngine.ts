@@ -34,7 +34,7 @@ import { imageTemplate } from "./templates/block/image.template";
 import { buttonTemplate } from "./templates/block/button.template";
 import { spacerTemplate } from "./templates/block/spacer.template";
 import { productTemplate } from "./templates/block/product.template";
-import type { HeroBlock, TextBlock, ImageBlock, ButtonBlock, SpacerBlock, ProductBlock } from "../schema/block.types";
+import type { HeroBlock, TextBlock, ImageBlock, ButtonBlock, SpacerBlock, ProductBlock, RawHtmlBlock } from "../schema/block.types";
 
 // ---------------------------------------------------------------------------
 // Preparadores de datos por bloque (lógica ≠ template)
@@ -149,7 +149,8 @@ export class RenderEngine {
       case "image":   return prepareImage(block, doc);
       case "button":  return prepareButton(block, doc, brandColors);
       case "spacer":  return prepareSpacer(block);
-      case "product": return prepareProduct(block, doc, brandColors);
+      case "product":  return prepareProduct(block, doc, brandColors);
+      case "raw-html": return (block as RawHtmlBlock).props.html;
       default:
         return "";
     }
