@@ -1,4 +1,4 @@
-export type BrandId = "santa-isabel" | "jumbo";
+export type BrandId = "santa-isabel" | "jumbo" | "spid";
 
 export interface BrandTheme {
   id: BrandId;

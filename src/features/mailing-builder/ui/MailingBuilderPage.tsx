@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCanvasDrop } from "./layout/useCanvasDrop";
+import { RowDropIndicator } from "./layout/RowDropIndicator";
 import {
   AlertCircle, CheckCircle2, CodeXml, Copy, Download, Eye, FileDown, GripVertical,
   History, Image as ImageIcon, ImagePlus, Loader2, Mail, Monitor, MoreHorizontal,
@@ -27,13 +29,13 @@ import { useMailings } from "../hooks/useMailings";
 import { useMailingBuilderStore } from "../hooks/useMailingBuilderStore";
 import { useDebounce } from "../hooks/useDebounce";
 import { mailingTemplates } from "../logic/templates/mailingTemplates";
+import { SectionLayoutPicker } from "./sidebar/SectionLayoutPicker";
 import { RowCanvas, AddRowButton } from "./layout/RowCanvas";
 import { AssetPickerDialog } from "./AssetPickerDialog";
 import { NewTemplateModal } from "./NewTemplateModal";
 import type { ScratchMode } from "./NewTemplateModal";
 import type { FileRecord } from "@/features/file-bank/logic/file-bank.types";
 import type { MailingBlock } from "../logic/schema/block.types";
-import type { ColumnPreset } from "../logic/schema/row.types";
 import type { BrandId } from "../logic/brands/brand.types";
 import { brandThemes } from "../logic/brands/brandThemes";
 
@@ -104,7 +106,7 @@ function CanvasEmptyState({
   onAddRow,
 }: {
   onApplyTemplate: (id: string) => void;
-  onAddRow: (preset: ColumnPreset) => void;
+  onAddRow: (layoutId: string) => void;
 }) {
   const quickStarts = [
     { id: "promo-hero", label: "Hero + CTA", desc: "Hero, texto y botón" },
@@ -174,6 +176,9 @@ export default function MailingBuilderPage() {
     selectRow,
     selectCol,
     addRow,
+    addRowFromLayout,
+    insertRowFromLayoutAt,
+    mutateRowLayout,
     removeRow,
     moveRow,
     duplicateRow,
@@ -205,6 +210,21 @@ export default function MailingBuilderPage() {
   const inspectorRef = useRef<HTMLDivElement | null>(null);
   const globalInspectorButtonRef = useRef<HTMLButtonElement | null>(null);
   const dragRef = useRef<Parameters<typeof RowCanvas>[0]["dragRef"]["current"]>(null);
+  const rowsContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // ── Section insert + row reorder via canvas drag & drop ─────────────────────
+  const { dropIndex, rowDragRef, canvasDropHandlers } = useCanvasDrop({
+    containerRef: rowsContainerRef,
+    rowCount: document.rows.length,
+    onInsertSection: useCallback(
+      (layoutId: string, atIndex: number) => insertRowFromLayoutAt(layoutId, atIndex),
+      [insertRowFromLayoutAt],
+    ),
+    onReorderRow: useCallback(
+      (from: number, to: number) => moveRow(from, to),
+      [moveRow],
+    ),
+  });
 
   // ── Estado del guardado ──────────────────────────────────────────────────
 
@@ -597,6 +617,7 @@ export default function MailingBuilderPage() {
                             onDragStart={(e) => {
                               dragRef.current = null;
                               e.dataTransfer.setData("text/plain", `new:${definition.type}`);
+                              e.dataTransfer.setData("application/mailing-block", `new:${definition.type}`);
                               e.dataTransfer.effectAllowed = "all";
                             }}
                             onClick={() => { insertBlock(definition.type); setShowGlobalInspector(false); }}
@@ -615,21 +636,14 @@ export default function MailingBuilderPage() {
               </ScrollArea>
             </TabsContent>
 
-            {/* Tab Secciones */}
+            {/* Tab Secciones — visual layout picker */}
             <TabsContent value="secciones" className="m-0 min-h-0 flex-1">
               <ScrollArea className="h-full">
-                <div className="space-y-3 p-4">
-                  {mailingTemplates.map((template) => (
-                    <button
-                      key={template.id}
-                      type="button"
-                      onClick={() => handleApplyTemplate(template.id)}
-                      className="w-full rounded-md border border-border px-3 py-2 text-left transition hover:border-primary/40 hover:bg-primary/5"
-                    >
-                      <p className="text-sm font-medium text-foreground">{template.label}</p>
-                      <p className="text-xs text-muted-foreground">{template.description}</p>
-                    </button>
-                  ))}
+                <div className="px-1 pb-2 pt-1">
+                  <p className="px-3 pb-2 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
+                    Elige un layout para agregar
+                  </p>
+                  <SectionLayoutPicker />
                 </div>
               </ScrollArea>
             </TabsContent>
@@ -687,11 +701,12 @@ export default function MailingBuilderPage() {
 
         {/* ── Canvas central ──────────────────────────────────────────────── */}
         <section
-          className="min-h-0 bg-secondary/35 px-8 py-6"
-          style={activeBrandColor ? {
+          className={`min-h-0 bg-secondary/35 px-8 py-6 transition-colors duration-150 ${dropIndex !== null ? "bg-violet-50/60 dark:bg-violet-950/20" : ""}`}
+          style={activeBrandColor && dropIndex === null ? {
             backgroundColor: `${activeBrandColor}0a`,
             transition: "background-color 250ms ease",
           } : undefined}
+          {...canvasDropHandlers}
         >
           <div
             className="mx-auto flex h-full max-w-[820px] flex-col rounded-lg bg-card transition-colors duration-250"
@@ -861,43 +876,50 @@ export default function MailingBuilderPage() {
                         {document.rows.length === 0 ? (
                           <CanvasEmptyState
                             onApplyTemplate={handleApplyTemplate}
-                            onAddRow={(preset) => addRow(preset)}
+                            onAddRow={(layoutId) => addRowFromLayout(layoutId)}
                           />
                         ) : (
-                          <div className="space-y-2">
+                          <div className="space-y-2" ref={rowsContainerRef}>
                             {document.rows.map((row, rowIndex) => (
-                              <RowCanvas
-                                key={row.id}
-                                row={row}
-                                rowIndex={rowIndex}
-                                totalRows={document.rows.length}
-                                selectedBlockId={selectedBlockId}
-                                selectedColId={selectedColId}
-                                selectedRowId={selectedRowId}
-                                selectedLevel={selectedLevel}
-                                dragRef={dragRef}
-                                onSelectBlock={handleSelectBlockInCanvas}
-                                onSelectRow={selectRow}
-                                onSelectCol={selectCol}
-                                onUpdateBlock={updateBlock}
-                                onRemoveBlock={removeBlock}
-                                onDuplicateBlock={duplicateBlock}
-                                onMoveBlockWithinColumn={moveBlockWithinColumn}
-                                onMoveBlockToColumn={moveBlockToColumn}
-                                onMoveRow={moveRow}
-                                onDuplicateRow={duplicateRow}
-                                onRemoveRow={removeRow}
-                                onSetRowPreset={setRowPreset}
-                                onInsertBlock={insertBlockAtColumn}
-                              />
+                              <React.Fragment key={row.id}>
+                                {dropIndex === rowIndex && <RowDropIndicator />}
+                                <div data-row-drop>
+                                  <RowCanvas
+                                    row={row}
+                                    rowIndex={rowIndex}
+                                    totalRows={document.rows.length}
+                                    selectedBlockId={selectedBlockId}
+                                    selectedColId={selectedColId}
+                                    selectedRowId={selectedRowId}
+                                    selectedLevel={selectedLevel}
+                                    dragRef={dragRef}
+                                    rowDragRef={rowDragRef}
+                                    onSelectBlock={handleSelectBlockInCanvas}
+                                    onSelectRow={selectRow}
+                                    onSelectCol={selectCol}
+                                    onUpdateBlock={updateBlock}
+                                    onRemoveBlock={removeBlock}
+                                    onDuplicateBlock={duplicateBlock}
+                                    onMoveBlockWithinColumn={moveBlockWithinColumn}
+                                    onMoveBlockToColumn={moveBlockToColumn}
+                                    onMoveRow={moveRow}
+                                    onDuplicateRow={duplicateRow}
+                                    onRemoveRow={removeRow}
+                                    onSetRowPreset={setRowPreset}
+                                    onInsertBlock={insertBlockAtColumn}
+                                    onMutateRowLayout={mutateRowLayout}
+                                  />
+                                </div>
+                              </React.Fragment>
                             ))}
+                            {dropIndex === document.rows.length && <RowDropIndicator />}
                           </div>
                         )}
 
                         {/* Botón añadir fila (solo cuando hay filas) */}
                         {document.rows.length > 0 && (
                           <div className="mt-3">
-                            <AddRowButton onAdd={(preset) => addRow(preset)} />
+                            <AddRowButton onAdd={(layoutId) => addRowFromLayout(layoutId)} />
                           </div>
                         )}
                       </div>

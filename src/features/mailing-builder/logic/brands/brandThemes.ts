@@ -17,4 +17,12 @@ export const brandThemes: Record<BrandId, BrandTheme> = {
     fontFamily: "'Montserrat', Arial, sans-serif",
     websiteUrl: "https://www.jumbo.cl/",
   },
+  "spid": {
+    id: "spid",
+    name: "Spid",
+    primaryColor: "#E91E8C",
+    primaryForeground: "#FFFFFF",
+    fontFamily: "'Montserrat', Arial, sans-serif",
+    websiteUrl: "https://www.spid.cl/",
+  },
 };

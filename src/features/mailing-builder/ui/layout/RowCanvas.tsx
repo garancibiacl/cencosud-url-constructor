@@ -11,13 +11,21 @@
  *   componentes no afectados se saltean el render completamente.
  */
 
-import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { Bookmark, Copy, GripHorizontal, MoveDown, MoveUp, Plus, Settings2, Trash2 } from "lucide-react";
+import React, { memo, useCallback, useEffect, useRef, useState } from "react";
+import { Bookmark, Copy, GripHorizontal, GripVertical, MoveDown, MoveUp, Plus, Settings2, Trash2 } from "lucide-react";
+
+// Custom MIME types — permiten distinguir tipo de drag en dragOver (sin leer contenido)
+const SECTION_DRAG_TYPE = "application/mailing-section";
+const ROW_DRAG_TYPE    = "application/mailing-row";
+const BLOCK_DRAG_TYPE  = "application/mailing-block";
 import { Button } from "@/components/ui/button";
 import { blockRegistry } from "../../logic/registry/blockRegistry";
-import type { ColumnPreset, MailingColumn, MailingRow } from "../../logic/schema/row.types";
-import { COLUMN_PRESETS } from "../../logic/schema/row.types";
+import { layoutRegistry, layoutRegistryMap } from "../../logic/registry/layoutRegistry";
+import type { LayoutColumnSchema } from "../../logic/schema/layout-schema.types";
+import type { MailingColumn, MailingRow } from "../../logic/schema/row.types";
 import type { MailingBlock, MailingBlockType } from "../../logic/schema/block.types";
+import { ColumnPlaceholder } from "./ColumnPlaceholder";
+import { BlockDropIndicator } from "./RowDropIndicator";
 
 // ---------------------------------------------------------------------------
 // Level color tokens
@@ -71,9 +79,11 @@ export interface RowCanvasProps {
   onMoveRow: (fromIndex: number, toIndex: number) => void;
   onDuplicateRow: (rowId: string) => void;
   onRemoveRow: (rowId: string) => void;
-  onSetRowPreset: (rowId: string, preset: ColumnPreset) => void;
+  onSetRowPreset: (rowId: string, preset: string) => void;
   onInsertBlock: (type: MailingBlockType, rowId: string, colId: string, index: number) => void;
+  onMutateRowLayout?: (rowId: string, layoutId: string) => void;
   dragRef: React.MutableRefObject<DragSource | null>;
+  rowDragRef: React.MutableRefObject<{ rowId: string; fromIndex: number } | null>;
 }
 
 // ---------------------------------------------------------------------------
@@ -162,7 +172,9 @@ export const RowCanvas = memo(function RowCanvas({
   onRemoveRow,
   onSetRowPreset,
   onInsertBlock,
+  onMutateRowLayout,
   dragRef,
+  rowDragRef,
 }: RowCanvasProps) {
   const [showPresetPicker, setShowPresetPicker] = useState(false);
   const [dropTargetColId, setDropTargetColId] = useState<string | null>(null);
@@ -171,7 +183,8 @@ export const RowCanvas = memo(function RowCanvas({
   const isRowLevel = isThisRowActive && selectedLevel === "row";
   const isColOrBlockLevel = isThisRowActive && (selectedLevel === "col" || selectedLevel === "block");
 
-  const currentPreset = detectPreset(row.columns);
+  // Determine active layout from layoutId or infer from spans for legacy rows
+  const currentLayoutId = row.layoutId ?? null;
 
   // Breadcrumb data
   const activeCol = row.columns.find((c) => c.id === selectedColId);
@@ -196,9 +209,12 @@ export const RowCanvas = memo(function RowCanvas({
     dragRef.current = { blockId: block.id, srcRowId: rowRef.current.id, srcColId: colId, srcIndex: index };
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", block.id);
+    e.dataTransfer.setData(BLOCK_DRAG_TYPE, block.id);
   }, [dragRef]);
 
   const handleColDragOver = useCallback((e: React.DragEvent, colId: string) => {
+    const { types } = e.dataTransfer;
+    if (types.includes(SECTION_DRAG_TYPE) || types.includes(ROW_DRAG_TYPE)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
     setDropTargetColId(colId);
@@ -207,6 +223,8 @@ export const RowCanvas = memo(function RowCanvas({
   const handleColDragLeave = useCallback(() => setDropTargetColId(null), []);
 
   const handleColDrop = useCallback((e: React.DragEvent, toColId: string, toIndex?: number) => {
+    const { types } = e.dataTransfer;
+    if (types.includes(SECTION_DRAG_TYPE) || types.includes(ROW_DRAG_TYPE)) return;
     e.preventDefault();
     setDropTargetColId(null);
 
@@ -236,12 +254,21 @@ export const RowCanvas = memo(function RowCanvas({
   // Stable callbacks for column-level selection
   const handleSelectRow = useCallback(() => onSelectRow(row.id), [onSelectRow, row.id]);
 
+  // Callback for clicking a placeholder button within a column
+  const makeInsertInColumn = useCallback(
+    (colId: string) => (type: MailingBlockType) => onInsertBlock(type, row.id, colId, 0),
+    [row.id, onInsertBlock],
+  );
+
   // ── Row border/bg styles
   const rowBorderStyle = isRowLevel
     ? { borderColor: LEVEL.row.border, backgroundColor: LEVEL.row.bg }
     : isColOrBlockLevel
       ? { borderColor: `${LEVEL.row.border}60` }
       : undefined;
+
+  // Schema for the current row (if any)
+  const rowSchema = currentLayoutId ? layoutRegistryMap[currentLayoutId] : undefined;
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -286,6 +313,21 @@ export const RowCanvas = memo(function RowCanvas({
       {/* Toolbar de fila */}
       <div className="flex items-center justify-between gap-2 border-b border-dashed border-border/60 px-3 py-1.5">
         <div className="flex items-center gap-1">
+          {/* Row drag handle */}
+          <span
+            draggable
+            onDragStart={(e) => {
+              e.stopPropagation();
+              e.dataTransfer.setData("text/plain", `row:${row.id}`);
+              e.dataTransfer.setData(ROW_DRAG_TYPE, row.id);
+              e.dataTransfer.effectAllowed = "move";
+              rowDragRef.current = { rowId: row.id, fromIndex: rowIndex };
+            }}
+            className="flex h-6 w-5 cursor-grab items-center justify-center rounded text-muted-foreground/40 transition hover:bg-secondary/60 hover:text-muted-foreground active:cursor-grabbing"
+            title="Reordenar sección"
+          >
+            <GripVertical className="h-3.5 w-3.5" />
+          </span>
           <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/60">
             Fila {rowIndex + 1}
           </span>
@@ -305,17 +347,23 @@ export const RowCanvas = memo(function RowCanvas({
                 <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                   Layout de columnas
                 </p>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {(Object.keys(COLUMN_PRESETS) as ColumnPreset[]).map((preset) => {
-                    const def = COLUMN_PRESETS[preset];
-                    const isActive = currentPreset === preset;
+                <div className="grid grid-cols-2 gap-1.5">
+                  {layoutRegistry.map((layout) => {
+                    const isActive = currentLayoutId === layout.id;
                     return (
                       <button
-                        key={preset}
+                        key={layout.id}
                         type="button"
-                        title={def.label}
-                        onClick={() => { onSetRowPreset(row.id, preset); setShowPresetPicker(false); }}
-                        className={`flex items-center gap-0.5 rounded px-1.5 py-1 transition ${
+                        title={layout.label}
+                        onClick={() => {
+                          if (onMutateRowLayout) {
+                            onMutateRowLayout(row.id, layout.id);
+                          } else {
+                            onSetRowPreset(row.id, layout.id);
+                          }
+                          setShowPresetPicker(false);
+                        }}
+                        className={`flex flex-col gap-1 rounded px-1.5 py-1.5 transition ${
                           isActive ? "" : "hover:bg-secondary/60"
                         }`}
                         style={isActive ? {
@@ -324,16 +372,22 @@ export const RowCanvas = memo(function RowCanvas({
                           outlineOffset: "-1px",
                         } : undefined}
                       >
-                        {def.spans.map((span, i) => (
-                          <span
-                            key={i}
-                            className={`block h-5 rounded-sm ${isActive ? "" : "bg-muted-foreground/30"}`}
-                            style={{
-                              width: `${(span / 12) * 60}px`,
-                              ...(isActive ? { backgroundColor: "var(--mb-brand-50)" } : {}),
-                            }}
-                          />
-                        ))}
+                        <div className="flex items-center gap-0.5">
+                          {layout.columns.map((col, i) => (
+                            <div
+                              key={i}
+                              className={`h-5 rounded-sm border border-dashed ${
+                                isActive
+                                  ? "border-violet-400/60 bg-violet-100/60 dark:border-violet-600/50 dark:bg-violet-900/30"
+                                  : "border-muted-foreground/30 bg-muted-foreground/10"
+                              }`}
+                              style={{ flex: col.colSpan }}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-[9px] font-medium leading-none text-muted-foreground/70">
+                          {layout.label}
+                        </span>
                       </button>
                     );
                   })}
@@ -390,32 +444,37 @@ export const RowCanvas = memo(function RowCanvas({
         className="flex gap-0 divide-x divide-dashed divide-border/50 p-2"
         onClick={handleSelectRow}
       >
-        {row.columns.map((col) => (
-          <ColumnCanvas
-            key={col.id}
-            col={col}
-            rowId={row.id}
-            rowIndex={rowIndex}
-            totalRows={totalRows}
-            isDropTarget={dropTargetColId === col.id}
-            selectedBlockId={selectedBlockId}
-            selectedColId={selectedColId}
-            selectedLevel={selectedLevel}
-            isRowActive={isThisRowActive}
-            onSelectBlock={onSelectBlock}
-            onSelectCol={(colId) => onSelectCol(colId, row.id)}
-            onSelectRow={handleSelectRow}
-            onUpdateBlock={onUpdateBlock}
-            onRemoveBlock={onRemoveBlock}
-            onDuplicateBlock={onDuplicateBlock}
-            onMoveBlockWithinColumn={onMoveBlockWithinColumn}
-            onMoveRow={onMoveRow}
-            onBlockDragStart={handleBlockDragStart}
-            onDragOver={handleColDragOver}
-            onDragLeave={handleColDragLeave}
-            onDrop={handleColDrop}
-          />
-        ))}
+        {row.columns.map((col, colIndex) => {
+          const colSchema = rowSchema?.columns[colIndex];
+          return (
+            <ColumnCanvas
+              key={col.id}
+              col={col}
+              colSchema={colSchema}
+              rowId={row.id}
+              rowIndex={rowIndex}
+              totalRows={totalRows}
+              isDropTarget={dropTargetColId === col.id}
+              selectedBlockId={selectedBlockId}
+              selectedColId={selectedColId}
+              selectedLevel={selectedLevel}
+              isRowActive={isThisRowActive}
+              onSelectBlock={onSelectBlock}
+              onSelectCol={(colId) => onSelectCol(colId, row.id)}
+              onSelectRow={handleSelectRow}
+              onUpdateBlock={onUpdateBlock}
+              onRemoveBlock={onRemoveBlock}
+              onDuplicateBlock={onDuplicateBlock}
+              onMoveBlockWithinColumn={onMoveBlockWithinColumn}
+              onMoveRow={onMoveRow}
+              onBlockDragStart={handleBlockDragStart}
+              onDragOver={handleColDragOver}
+              onDragLeave={handleColDragLeave}
+              onDrop={handleColDrop}
+              onInsertBlockInColumn={makeInsertInColumn(col.id)}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -427,6 +486,7 @@ export const RowCanvas = memo(function RowCanvas({
 
 interface ColumnCanvasProps {
   col: MailingColumn;
+  colSchema?: LayoutColumnSchema;
   rowId: string;
   rowIndex: number;
   totalRows: number;
@@ -447,10 +507,12 @@ interface ColumnCanvasProps {
   onDragOver: (e: React.DragEvent, colId: string) => void;
   onDragLeave: () => void;
   onDrop: (e: React.DragEvent, colId: string, toIndex?: number) => void;
+  onInsertBlockInColumn: (type: MailingBlockType) => void;
 }
 
 const ColumnCanvas = memo(function ColumnCanvas({
   col,
+  colSchema,
   rowId,
   rowIndex,
   totalRows,
@@ -471,11 +533,51 @@ const ColumnCanvas = memo(function ColumnCanvas({
   onDragOver,
   onDragLeave,
   onDrop,
+  onInsertBlockInColumn,
 }: ColumnCanvasProps) {
   const isColSelected = selectedColId === col.id && isRowActive;
   const isColLevel = isColSelected && selectedLevel === "col";
   const isBlockLevel = isColSelected && selectedLevel === "block";
   const fraction = `${Math.round((col.colSpan / 12) * 100)}%`;
+
+  // ── Block drop indicator state ────────────────────────────────────────────
+  const colRef = useRef<HTMLDivElement>(null);
+  const [blockDropIndex, setBlockDropIndex] = useState<number | null>(null);
+
+  const resolveBlockDropIndex = useCallback((clientY: number): number => {
+    const el = colRef.current;
+    if (!el) return col.blocks.length;
+    const items = el.querySelectorAll<HTMLElement>("[data-block-drop]");
+    for (let i = 0; i < items.length; i++) {
+      const rect = items[i].getBoundingClientRect();
+      if (clientY < rect.top + rect.height / 2) return i;
+    }
+    return items.length;
+  }, [col.blocks.length]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    const { types } = e.dataTransfer;
+    if (!types.includes(BLOCK_DRAG_TYPE)) return; // solo drags de bloque
+    e.preventDefault();
+    e.stopPropagation();
+    onDragOver(e, col.id);
+    setBlockDropIndex(resolveBlockDropIndex(e.clientY));
+  }, [col.id, onDragOver, resolveBlockDropIndex]);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    const el = colRef.current;
+    if (!el || !el.contains(e.relatedTarget as Node)) {
+      setBlockDropIndex(null);
+      onDragLeave();
+    }
+  }, [onDragLeave]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes(BLOCK_DRAG_TYPE)) return;
+    const idx = blockDropIndex ?? col.blocks.length;
+    setBlockDropIndex(null);
+    onDrop(e, col.id, idx);
+  }, [blockDropIndex, col.blocks.length, col.id, onDrop]);
 
   // Column outline style
   const colStyle: React.CSSProperties = {
@@ -508,13 +610,14 @@ const ColumnCanvas = memo(function ColumnCanvas({
 
   return (
     <div
+      ref={colRef}
       className={`relative flex flex-col gap-1.5 px-1.5 py-1.5 transition-colors ${
         isDropTarget || isColSelected ? "rounded" : ""
       }`}
       style={colStyle}
-      onDragOver={(e) => onDragOver(e, col.id)}
-      onDragLeave={onDragLeave}
-      onDrop={(e) => onDrop(e, col.id)}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
       onClick={handleClick}
     >
       {/* Column fraction label */}
@@ -535,49 +638,52 @@ const ColumnCanvas = memo(function ColumnCanvas({
         </div>
       )}
 
-      {/* Bloques — cada uno memoizado individualmente */}
+      {/* Bloques con indicador de posición entre ellos */}
       {col.blocks.map((block, index) => (
-        <BlockItem
-          key={block.id}
-          block={block}
-          index={index}
-          totalInCol={col.blocks.length}
-          colId={col.id}
-          rowId={rowId}
-          rowIndex={rowIndex}
-          totalRows={totalRows}
-          isSelected={block.id === selectedBlockId && isRowActive}
-          onSelectBlock={onSelectBlock}
-          onSelectCol={handleSelectColCallback}
-          onUpdateBlock={onUpdateBlock}
-          onRemoveBlock={onRemoveBlock}
-          onDuplicateBlock={onDuplicateBlock}
-          onMoveBlockWithinColumn={onMoveBlockWithinColumn}
-          onMoveRow={onMoveRow}
-          onBlockDragStart={onBlockDragStart}
-          onDragOver={onDragOver}
-          onDragLeave={onDragLeave}
-          onDrop={onDrop}
-        />
+        <React.Fragment key={block.id}>
+          {blockDropIndex === index && <BlockDropIndicator />}
+          <BlockItem
+            block={block}
+            index={index}
+            totalInCol={col.blocks.length}
+            colId={col.id}
+            rowId={rowId}
+            rowIndex={rowIndex}
+            totalRows={totalRows}
+            isSelected={block.id === selectedBlockId && isRowActive}
+            onSelectBlock={onSelectBlock}
+            onSelectCol={handleSelectColCallback}
+            onUpdateBlock={onUpdateBlock}
+            onRemoveBlock={onRemoveBlock}
+            onDuplicateBlock={onDuplicateBlock}
+            onMoveBlockWithinColumn={onMoveBlockWithinColumn}
+            onMoveRow={onMoveRow}
+            onBlockDragStart={onBlockDragStart}
+          />
+        </React.Fragment>
       ))}
 
-      {/* Drop zone al final de la columna */}
-      <BlockDropZone
-        onDrop={(e) => onDrop(e, col.id, col.blocks.length)}
-        onDragOver={(e) => onDragOver(e, col.id)}
-        onDragLeave={onDragLeave}
-      />
+      {/* Indicador al final de la lista (después del último bloque, o en columna vacía) */}
+      {blockDropIndex === col.blocks.length && <BlockDropIndicator />}
 
       {/* Zona vacía si la columna no tiene bloques */}
       {col.blocks.length === 0 && (
-        <div
-          className="flex min-h-[64px] items-center justify-center rounded-md border border-dashed transition-colors"
-          style={{ borderColor: "var(--mb-brand-30)" }}
-        >
-          <p className="select-none text-[10px]" style={{ color: "var(--mb-brand-50)" }}>
-            Arrastra un bloque aquí
-          </p>
-        </div>
+        colSchema?.placeholders ? (
+          <ColumnPlaceholder
+            slots={colSchema.placeholders}
+            onInsert={onInsertBlockInColumn}
+            isDragOver={isDropTarget}
+          />
+        ) : (
+          <div
+            className="flex min-h-[64px] items-center justify-center rounded-md border border-dashed transition-colors"
+            style={{ borderColor: "var(--mb-brand-30)" }}
+          >
+            <p className="select-none text-[10px]" style={{ color: "var(--mb-brand-50)" }}>
+              {isDropTarget ? "Suelta aquí" : "Arrastra un bloque aquí"}
+            </p>
+          </div>
+        )
       )}
     </div>
   );
@@ -604,9 +710,6 @@ interface BlockItemProps {
   onMoveBlockWithinColumn: (rowId: string, colId: string, from: number, to: number) => void;
   onMoveRow: (from: number, to: number) => void;
   onBlockDragStart: (e: React.DragEvent, block: MailingBlock, colId: string, index: number) => void;
-  onDragOver: (e: React.DragEvent, colId: string) => void;
-  onDragLeave: () => void;
-  onDrop: (e: React.DragEvent, colId: string, toIndex?: number) => void;
 }
 
 const BlockItem = memo(function BlockItem({
@@ -626,22 +729,14 @@ const BlockItem = memo(function BlockItem({
   onMoveBlockWithinColumn,
   onMoveRow,
   onBlockDragStart,
-  onDragOver,
-  onDragLeave,
-  onDrop,
 }: BlockItemProps) {
   const BlockView = blockRegistry[block.type].View;
-  const blockRef = useRef<HTMLDivElement>(null);
-  const [dropHalf, setDropHalf] = useState<"top" | "bottom" | null>(null);
 
   const handleSelect = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      if (e.shiftKey) {
-        onSelectCol();
-      } else {
-        onSelectBlock(block.id, rowId, colId);
-      }
+      if (e.shiftKey) onSelectCol();
+      else onSelectBlock(block.id, rowId, colId);
     },
     [block.id, rowId, colId, onSelectBlock, onSelectCol],
   );
@@ -679,28 +774,6 @@ const BlockItem = memo(function BlockItem({
     [block, colId, index, onBlockDragStart],
   );
 
-  const handleBlockDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onDragOver(e, colId);
-    if (!blockRef.current) return;
-    const rect = blockRef.current.getBoundingClientRect();
-    setDropHalf(e.clientY < rect.top + rect.height / 2 ? "top" : "bottom");
-  }, [onDragOver, colId]);
-
-  const handleBlockDragLeave = useCallback(() => {
-    setDropHalf(null);
-    onDragLeave();
-  }, [onDragLeave]);
-
-  const handleBlockDrop = useCallback((e: React.DragEvent) => {
-    e.stopPropagation();
-    const half = dropHalf ?? "bottom";
-    setDropHalf(null);
-    onDrop(e, colId, half === "top" ? index : index + 1);
-  }, [dropHalf, onDrop, colId, index]);
-
-  // BlockView onChange — estable mientras onUpdateBlock sea estable (acción Zustand)
   const handleChange = useCallback(
     (nextBlock: typeof block) => onUpdateBlock(nextBlock as MailingBlock),
     [onUpdateBlock],
@@ -712,7 +785,6 @@ const BlockItem = memo(function BlockItem({
       {isSelected && (
         <div className="absolute -top-5 left-1/2 z-30 -translate-x-1/2">
           <div className="flex items-center gap-0.5 rounded-full border border-border bg-card px-2 py-1 shadow-lg">
-            {/* Arrastrar */}
             <span
               draggable
               onDragStart={handleDragStart}
@@ -724,7 +796,6 @@ const BlockItem = memo(function BlockItem({
 
             <div className="mx-0.5 h-3.5 w-px bg-border/60" />
 
-            {/* Subir */}
             <button
               type="button"
               disabled={index === 0 && rowIndex === 0}
@@ -735,7 +806,6 @@ const BlockItem = memo(function BlockItem({
               <MoveUp className="h-3.5 w-3.5" />
             </button>
 
-            {/* Bajar */}
             <button
               type="button"
               disabled={index === totalInCol - 1 && rowIndex === totalRows - 1}
@@ -748,7 +818,6 @@ const BlockItem = memo(function BlockItem({
 
             <div className="mx-0.5 h-3.5 w-px bg-border/60" />
 
-            {/* Duplicar */}
             <button
               type="button"
               onClick={handleDuplicate}
@@ -758,7 +827,6 @@ const BlockItem = memo(function BlockItem({
               <Copy className="h-3.5 w-3.5" />
             </button>
 
-            {/* Guardar */}
             <button
               type="button"
               title="Guardar bloque"
@@ -767,7 +835,6 @@ const BlockItem = memo(function BlockItem({
               <Bookmark className="h-3.5 w-3.5" />
             </button>
 
-            {/* Eliminar */}
             <button
               type="button"
               onClick={handleRemove}
@@ -780,48 +847,21 @@ const BlockItem = memo(function BlockItem({
         </div>
       )}
 
+      {/* data-block-drop: marcador para que ColumnCanvas calcule la posición del indicador */}
       <div
-        ref={blockRef}
+        data-block-drop
         data-mailing-block="true"
         className={`group/block relative rounded-lg border transition-all ${
           isSelected ? "shadow-sm" : "border-transparent bg-card hover:border-border/60"
         }`}
-        style={{
-          ...(isSelected ? {
-            border: `1.5px dashed ${LEVEL.block.border}`,
-            backgroundColor: LEVEL.block.bg,
-          } : {}),
-          ...(dropHalf ? {
-            outline: "2px solid var(--mb-brand-50)",
-            outlineOffset: "-2px",
-          } : {}),
-        }}
+        style={isSelected ? {
+          border: `1.5px dashed ${LEVEL.block.border}`,
+          backgroundColor: LEVEL.block.bg,
+        } : undefined}
         onClick={handleSelect}
-        onDragOver={handleBlockDragOver}
-        onDragLeave={handleBlockDragLeave}
-        onDrop={handleBlockDrop}
       >
-        {/* Indicador de posición de drop */}
-        {dropHalf === "top" && (
-          <div
-            className="pointer-events-none absolute inset-x-0 top-0 z-20 h-0.5 rounded-full"
-            style={{ backgroundColor: "var(--mb-brand)", boxShadow: "0 0 6px 2px var(--mb-brand-30)" }}
-          />
-        )}
-        {dropHalf === "bottom" && (
-          <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-0.5 rounded-full"
-            style={{ backgroundColor: "var(--mb-brand)", boxShadow: "0 0 6px 2px var(--mb-brand-30)" }}
-          />
-        )}
-
-        {/* Vista del bloque */}
         <div className="p-1.5">
-          <BlockView
-            block={block}
-            isSelected={isSelected}
-            onChange={handleChange}
-          />
+          <BlockView block={block} isSelected={isSelected} onChange={handleChange} />
         </div>
       </div>
     </div>
@@ -829,48 +869,10 @@ const BlockItem = memo(function BlockItem({
 });
 
 // ---------------------------------------------------------------------------
-// BlockDropZone — indicador visual de drop entre bloques
+// AddRowButton — selector de layout para agregar filas
 // ---------------------------------------------------------------------------
 
-function BlockDropZone({
-  onDrop,
-  onDragOver,
-  onDragLeave,
-}: {
-  onDrop: (e: React.DragEvent) => void;
-  onDragOver: (e: React.DragEvent) => void;
-  onDragLeave: () => void;
-}) {
-  const [active, setActive] = useState(false);
-
-  return (
-    <div
-      className="h-1.5 w-full rounded transition-colors"
-      style={active ? { backgroundColor: "var(--mb-brand-50)" } : undefined}
-      onDragOver={(e) => { setActive(true); onDragOver(e); }}
-      onDragLeave={() => { setActive(false); onDragLeave(); }}
-      onDrop={(e) => { setActive(false); onDrop(e); }}
-    />
-  );
-}
-
-// ---------------------------------------------------------------------------
-// detectPreset — helper que infiere el preset a partir de los colSpans
-// ---------------------------------------------------------------------------
-
-export function detectPreset(columns: MailingColumn[]): ColumnPreset | null {
-  const spans = columns.map((c) => c.colSpan);
-  const entry = (Object.entries(COLUMN_PRESETS) as [ColumnPreset, typeof COLUMN_PRESETS[ColumnPreset]][]).find(
-    ([, def]) => def.spans.length === spans.length && def.spans.every((s, i) => s === spans[i]),
-  );
-  return entry ? entry[0] : null;
-}
-
-// ---------------------------------------------------------------------------
-// AddRowButton — selector de preset para agregar filas
-// ---------------------------------------------------------------------------
-
-export function AddRowButton({ onAdd }: { onAdd: (preset: ColumnPreset) => void }) {
+export function AddRowButton({ onAdd }: { onAdd: (layoutId: string) => void }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -891,26 +893,26 @@ export function AddRowButton({ onAdd }: { onAdd: (preset: ColumnPreset) => void 
             Elegir layout
           </p>
           <div className="flex flex-wrap gap-1.5">
-            {(Object.keys(COLUMN_PRESETS) as ColumnPreset[]).map((preset) => {
-              const def = COLUMN_PRESETS[preset];
-              return (
-                <button
-                  key={preset}
-                  type="button"
-                  title={def.label}
-                  onClick={() => { onAdd(preset); setOpen(false); }}
-                  className="flex items-center gap-0.5 rounded border border-border px-2 py-1.5 transition hover:border-border/80 hover:bg-secondary/60"
-                >
-                  {def.spans.map((span, i) => (
+            {layoutRegistry.map((layout) => (
+              <button
+                key={layout.id}
+                type="button"
+                title={layout.label}
+                onClick={() => { onAdd(layout.id); setOpen(false); }}
+                className="flex flex-col gap-1 rounded border border-border px-2 py-1.5 transition hover:border-border/80 hover:bg-secondary/60"
+              >
+                <div className="flex items-center gap-0.5">
+                  {layout.columns.map((col, i) => (
                     <span
                       key={i}
                       className="block h-4 rounded-sm bg-muted-foreground/30"
-                      style={{ width: `${(span / 12) * 48}px` }}
+                      style={{ width: `${(col.colSpan / 12) * 48}px` }}
                     />
                   ))}
-                </button>
-              );
-            })}
+                </div>
+                <span className="text-[9px] font-medium text-muted-foreground/70">{layout.label}</span>
+              </button>
+            ))}
           </div>
         </div>
       )}

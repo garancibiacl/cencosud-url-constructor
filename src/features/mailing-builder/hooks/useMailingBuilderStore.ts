@@ -4,6 +4,7 @@ import type { ColumnPreset, MailingColumn, MailingRow } from "../logic/schema/ro
 import type { MailingDocument, MailingSettings } from "../logic/schema/mailing.types";
 import { COLUMN_PRESETS } from "../logic/schema/row.types";
 import { blockRegistry } from "../logic/registry/blockRegistry";
+import { layoutRegistryMap } from "../logic/registry/layoutRegistry";
 import { createColumn, createRow } from "../logic/builders/createRow";
 import { createDefaultMailing } from "../logic/builders/createDefaultMailing";
 
@@ -36,11 +37,19 @@ interface MailingBuilderState {
 
   // ── Operaciones de Row ────────────────────────────────────────────────────
   addRow: (preset?: ColumnPreset, afterRowId?: string) => void;
+  /** Agrega una nueva row basada en un LayoutSchema del registry. */
+  addRowFromLayout: (layoutId: string, afterRowId?: string) => void;
+  /** Inserta una nueva row en una posición absoluta (0 = antes de la primera). */
+  insertRowFromLayoutAt: (layoutId: string, atIndex: number) => void;
   removeRow: (rowId: string) => void;
   moveRow: (fromIndex: number, toIndex: number) => void;
   duplicateRow: (rowId: string) => void;
   /** Cambia el preset de columnas de una row, migrando bloques existentes. */
   setRowPreset: (rowId: string, preset: ColumnPreset) => void;
+  /** Cambia el layout de una row usando el registry, preservando contenido existente. */
+  mutateRowLayout: (rowId: string, layoutId: string) => void;
+  /** Reordena columnas dentro de una row. */
+  reorderColumns: (rowId: string, fromIndex: number, toIndex: number) => void;
   /** Actualiza la meta de una row. */
   updateRowMeta: (rowId: string, meta: MailingRow["meta"]) => void;
   /** Actualiza la meta de una columna. */
@@ -194,6 +203,59 @@ export const useMailingBuilderStore = create<MailingBuilderState>((set, get) => 
     };
   }),
 
+  addRowFromLayout: (layoutId, afterRowId) => set((state) => {
+    const schema = layoutRegistryMap[layoutId];
+    if (!schema) return state;
+
+    const uid = () => crypto.randomUUID().slice(0, 12);
+    const newRow: MailingRow = {
+      id: `row-${uid()}`,
+      layoutId,
+      columns: schema.columns.map((colSchema) => createColumn(colSchema.colSpan)),
+    };
+
+    const rows = [...state.document.rows];
+
+    if (afterRowId) {
+      const idx = rows.findIndex((r) => r.id === afterRowId);
+      if (idx >= 0) {
+        rows.splice(idx + 1, 0, newRow);
+      } else {
+        rows.push(newRow);
+      }
+    } else {
+      rows.push(newRow);
+    }
+
+    return {
+      document: { ...state.document, rows },
+      selectedRowId: newRow.id,
+      selectedColId: newRow.columns[0]?.id ?? null,
+      selectedBlockId: null,
+      selectedLevel: "col",
+    };
+  }),
+
+  insertRowFromLayoutAt: (layoutId, atIndex) => set((state) => {
+    const schema = layoutRegistryMap[layoutId];
+    if (!schema) return state;
+    const uid = () => crypto.randomUUID().slice(0, 12);
+    const newRow: MailingRow = {
+      id: `row-${uid()}`,
+      layoutId,
+      columns: schema.columns.map((colSchema) => createColumn(colSchema.colSpan)),
+    };
+    const rows = [...state.document.rows];
+    rows.splice(Math.max(0, Math.min(atIndex, rows.length)), 0, newRow);
+    return {
+      document: { ...state.document, rows },
+      selectedRowId: newRow.id,
+      selectedColId: newRow.columns[0]?.id ?? null,
+      selectedBlockId: null,
+      selectedLevel: "col",
+    };
+  }),
+
   removeRow: (rowId) => set((state) => ({
     document: {
       ...state.document,
@@ -264,6 +326,58 @@ export const useMailingBuilderStore = create<MailingBuilderState>((set, get) => 
       document: {
         ...state.document,
         rows: mapRows(state.document.rows, rowId, (r) => ({ ...r, columns: newColumns })),
+      },
+    };
+  }),
+
+  mutateRowLayout: (rowId, layoutId) => set((state) => {
+    const row = state.document.rows.find((r) => r.id === rowId);
+    const schema = layoutRegistryMap[layoutId];
+    if (!row || !schema) return state;
+
+    const existing = row.columns;
+
+    const newColumns: MailingColumn[] = schema.columns.map((colSchema, idx) => {
+      if (idx < existing.length) {
+        // Preserve existing column content, just update colSpan
+        return { ...existing[idx], colSpan: colSchema.colSpan };
+      }
+      return createColumn(colSchema.colSpan);
+    });
+
+    // Bloques huérfanos de columnas que sobran → al final de la última columna
+    if (existing.length > schema.columns.length) {
+      const orphans = existing.slice(schema.columns.length).flatMap((col) => col.blocks);
+      const last = newColumns[newColumns.length - 1];
+      newColumns[newColumns.length - 1] = { ...last, blocks: [...last.blocks, ...orphans] };
+    }
+
+    return {
+      document: {
+        ...state.document,
+        rows: mapRows(state.document.rows, rowId, (r) => ({
+          ...r,
+          columns: newColumns,
+          layoutId,
+        })),
+      },
+    };
+  }),
+
+  reorderColumns: (rowId, fromIndex, toIndex) => set((state) => {
+    const row = state.document.rows.find((r) => r.id === rowId);
+    if (!row) return state;
+    const columns = [...row.columns];
+    if (
+      fromIndex < 0 || toIndex < 0 ||
+      fromIndex >= columns.length || toIndex >= columns.length
+    ) return state;
+    const [moved] = columns.splice(fromIndex, 1);
+    columns.splice(toIndex, 0, moved);
+    return {
+      document: {
+        ...state.document,
+        rows: mapRows(state.document.rows, rowId, (r) => ({ ...r, columns })),
       },
     };
   }),

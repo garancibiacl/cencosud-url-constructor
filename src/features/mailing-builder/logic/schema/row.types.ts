@@ -56,6 +56,8 @@ export interface MailingColumn {
 export interface MailingRow {
   id: string;
   columns: MailingColumn[];
+  /** Reference to LayoutSchema.id — undefined for legacy rows without a schema. */
+  layoutId?: string;
   meta?: {
     label?: string;
     backgroundColor?: string;

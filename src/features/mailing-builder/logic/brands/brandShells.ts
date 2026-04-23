@@ -248,6 +248,22 @@ const JUMBO_FOOTER = `<table role="presentation" width="100%" border="0" cellpad
   </tr>
 </table>`;
 
+const SPID_HEADER = `<table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr>
+    <td align="center" style="background-color:#E91E8C;padding:20px 0;">
+      <img src="https://www.spid.cl/logo.png" alt="Spid" width="120" style="display:block;" />
+    </td>
+  </tr>
+</table>`;
+
+const SPID_FOOTER = `<table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr>
+    <td align="center" style="background-color:#E91E8C;padding:20px;font-family:'Montserrat',Arial,sans-serif;font-size:12px;color:#ffffff;">
+      <p style="margin:0;">© Spid — spid.cl</p>
+    </td>
+  </tr>
+</table>`;
+
 export const brandShells: Record<BrandId, BrandShell> = {
   "santa-isabel": {
     css: BASE_SFMC_CSS,
@@ -259,6 +275,12 @@ export const brandShells: Record<BrandId, BrandShell> = {
     css: BASE_SFMC_CSS,
     header: JUMBO_HEADER,
     footer: JUMBO_FOOTER,
+    sfmc: true,
+  },
+  "spid": {
+    css: BASE_SFMC_CSS,
+    header: SPID_HEADER,
+    footer: SPID_FOOTER,
     sfmc: true,
   },
 };

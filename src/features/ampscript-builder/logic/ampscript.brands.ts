@@ -28,7 +28,7 @@ export const BRAND_CONFIGS: Record<BrandId, BrandConfig> = {
   spid: {
     id: "spid",
     label: "Spid",
-    color: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
+    color: "bg-pink-500/15 text-pink-700 dark:text-pink-300",
     domain: "spid.cl",
     campaign: "spidofertas",
     appLinkDomain: "spidapp.page.link",
