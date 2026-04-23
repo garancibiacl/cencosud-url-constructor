@@ -751,40 +751,6 @@ export default function MailingBuilderPage() {
                   className="flex items-center gap-2.5 pl-4 pr-5"
                   style={{ height: "52px" }}
                 >
-                  {/* Device toggle dentro de contenedor pill con outline blanco */}
-                  <div
-                    className="flex items-center gap-0.5 rounded-full p-0.5"
-                    style={{
-                      backgroundColor: "rgba(255,255,255,0.12)",
-                      border: "1px solid rgba(255,255,255,0.28)",
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setDevicePreview("desktop")}
-                      title="Vista escritorio"
-                      className="flex items-center justify-center rounded-full p-1.5 transition-colors"
-                      style={devicePreview === "desktop"
-                        ? { backgroundColor: "rgba(255,255,255,0.28)", color: "#fff" }
-                        : { color: "rgba(255,255,255,0.55)" }
-                      }
-                    >
-                      <Monitor className="h-[13px] w-[13px]" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDevicePreview("mobile")}
-                      title="Vista móvil"
-                      className="flex items-center justify-center rounded-full p-1.5 transition-colors"
-                      style={devicePreview === "mobile"
-                        ? { backgroundColor: "rgba(255,255,255,0.28)", color: "#fff" }
-                        : { color: "rgba(255,255,255,0.55)" }
-                      }
-                    >
-                      <Smartphone className="h-[13px] w-[13px]" />
-                    </button>
-                  </div>
-
                   {/* Identidad de marca */}
                   <div className="flex select-none flex-col justify-center leading-none">
                     <span className="text-[13px] font-black uppercase tracking-widest text-white">
@@ -827,6 +793,31 @@ export default function MailingBuilderPage() {
                   <Settings2 className="h-3.5 w-3.5" />
                 </button>
 
+                {/* Device toggle — estilo oscuro con activo violeta */}
+                <div
+                  className="flex items-center gap-0.5 rounded-full p-0.5"
+                  style={{ backgroundColor: "#f1f5f9", border: "1px solid #e2e8f0" }}
+                >
+                  {([
+                    { value: "desktop", Icon: Monitor,    title: "Vista escritorio" },
+                    { value: "mobile",  Icon: Smartphone, title: "Vista móvil" },
+                  ] as { value: "desktop" | "mobile"; Icon: React.ElementType; title: string }[]).map(({ value, Icon, title }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setDevicePreview(value)}
+                      title={title}
+                      className="flex items-center justify-center rounded-full p-1.5 transition-all duration-150"
+                      style={devicePreview === value
+                        ? { backgroundColor: "#ffffff", color: "#818cf8", boxShadow: "rgba(129,140,248,0.3) 0px 0px 0px 1px inset" }
+                        : { color: "#94a3b8" }
+                      }
+                    >
+                      <Icon className="h-[13px] w-[13px]" />
+                    </button>
+                  ))}
+                </div>
+
                 {/* Tabs pill — Canvas / Vista previa / HTML */}
                 <div
                   className="flex items-center gap-0.5 rounded-full p-0.5"
@@ -866,8 +857,8 @@ export default function MailingBuilderPage() {
               <div
                 className="p-6"
                 style={{
-                  backgroundColor: "hsl(var(--muted) / 0.4)",
-                  backgroundImage: "radial-gradient(circle, hsl(var(--border) / 0.9) 1px, transparent 1px)",
+                  backgroundColor: "#F0F0F0",
+                  backgroundImage: "radial-gradient(circle, #d4d4d4 1px, transparent 1px)",
                   backgroundSize: "20px 20px",
                 }}
               >
