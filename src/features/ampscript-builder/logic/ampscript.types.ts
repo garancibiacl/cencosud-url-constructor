@@ -17,6 +17,7 @@ export interface BrandConfig {
 
 export interface ParsedUrlData {
   categoryId: string | null;
+  recipeSlug: string | null;
   rawUrl: string;
   isValid: boolean;
 }

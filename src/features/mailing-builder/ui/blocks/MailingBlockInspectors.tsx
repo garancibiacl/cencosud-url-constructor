@@ -183,6 +183,7 @@ function AMPscriptDialog({
   }, [open]);
 
   const brand = BRAND_CONFIGS[brandId];
+  const isRecipe = campaign === "recetas";
   const parsed = useMemo(() => parseUrl(url), [url]);
   const slug = useMemo(() => generateSlug(description), [description]);
   const result = useMemo(() => generateAMPscript(description, url, brand, campaign), [description, url, brand, campaign]);
@@ -274,7 +275,8 @@ function AMPscriptDialog({
             {/* Campaña — combobox con búsqueda + personalizado */}
             <CampaignComboField value={campaign} onChange={setCampaign} brandId={brandId} />
 
-            {/* Descripción de campaña */}
+            {/* Descripción — oculta en modo Recetas (utm_content viene del slug de la URL) */}
+            {!isRecipe && (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -304,6 +306,7 @@ function AMPscriptDialog({
                 </div>
               )}
             </div>
+            )}
 
             {/* URL de destino */}
             <div className="space-y-1.5">
@@ -314,13 +317,32 @@ function AMPscriptDialog({
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 onPaste={handleUrlPaste}
-                placeholder={`Ej: https://www.${brand.domain}${brand.searchPath}?fq=H:1234 — o pega desde Excel`}
+                placeholder={
+                  isRecipe
+                    ? `Ej: https://www.${brand.domain}/recetas/ensalada_verde_vinagreta_naranja`
+                    : `Ej: https://www.${brand.domain}${brand.searchPath}?fq=H:1234 — o pega desde Excel`
+                }
                 rows={3}
                 className="resize-none font-mono text-xs"
               />
               {url.trim() && (
                 <div className="flex items-center gap-1.5">
-                  {parsed.categoryId ? (
+                  {isRecipe ? (
+                    parsed.recipeSlug ? (
+                      <>
+                        <Check className="h-3 w-3 shrink-0 text-emerald-500" />
+                        <span className="text-[10px] text-muted-foreground/60">utm_content:</span>
+                        <code className="rounded bg-secondary px-1 py-0.5 font-mono text-[10px] text-emerald-600 dark:text-emerald-400">
+                          {parsed.recipeSlug}
+                        </code>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="h-3 w-3 shrink-0 text-amber-500" />
+                        <span className="text-[10px] text-amber-600">URL debe contener /recetas/{"{nombre}"}</span>
+                      </>
+                    )
+                  ) : parsed.categoryId ? (
                     <>
                       <Check className="h-3 w-3 shrink-0 text-emerald-500" />
                       <span className="text-[10px] text-muted-foreground/60">categoryId:</span>
@@ -357,7 +379,7 @@ function AMPscriptDialog({
                 </p>
                 <div className="flex flex-wrap gap-2 border-t border-white/10 px-4 py-2.5">
                   {[
-                    { label: "categoryId", value: result.categoryId },
+                    { label: isRecipe ? "receta" : "categoryId", value: result.categoryId },
                     { label: "utm_content", value: result.slug },
                     { label: "campaign", value: `${campaign}_@fechaenvio` },
                   ].map(({ label, value: v }) => (
@@ -372,7 +394,13 @@ function AMPscriptDialog({
               <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/30 px-3 py-2.5">
                 <Zap className="h-3.5 w-3.5 shrink-0 text-muted-foreground/30" />
                 <p className="text-[11px] text-muted-foreground/60">
-                  {!campaign ? "Selecciona una campaña" : !description.trim() ? "Escribe una descripción" : "Ingresa una URL con fq=H:categoryId"}
+                  {!campaign
+                    ? "Selecciona una campaña"
+                    : isRecipe
+                    ? "Ingresa una URL tipo /recetas/nombre-de-la-receta"
+                    : !description.trim()
+                    ? "Escribe una descripción"
+                    : "Ingresa una URL con fq=H:categoryId"}
                 </p>
               </div>
             ) : null}

@@ -46,13 +46,23 @@ export function extractCategoryId(url: string): string | null {
 }
 
 /**
+ * Extrae el slug de receta desde URLs tipo https://www.jumbo.cl/recetas/{slug}
+ */
+export function extractRecipeSlug(url: string): string | null {
+  if (!url.trim()) return null;
+  const match = url.match(/\/recetas\/([^?&#]+)/i);
+  return match ? match[1] : null;
+}
+
+/**
  * Parsea una URL y retorna los datos extraídos con estado de validación.
  */
 export function parseUrl(url: string): ParsedUrlData {
   const categoryId = extractCategoryId(url);
-  const isValid = !!url.trim() && categoryId !== null;
+  const recipeSlug = extractRecipeSlug(url);
+  const isValid = !!url.trim() && (categoryId !== null || recipeSlug !== null);
 
-  return { categoryId, rawUrl: url, isValid };
+  return { categoryId, recipeSlug, rawUrl: url, isValid };
 }
 
 /**
@@ -117,6 +127,28 @@ export function buildAMPscript(
 }
 
 /**
+ * Construye AMPscript para Jumbo Recetas.
+ * URL destino: https://www.jumbo.cl/recetas/{recipeSlug}
+ * utm_content = recipeSlug (igual que el path)
+ */
+function buildRecipeAMPscript(brand: BrandConfig, recipeSlug: string, campaign: string): string {
+  const base = `https://www.${brand.domain}/recetas/${recipeSlug}?`;
+  const args = [
+    `'${base}'`,
+    `@utm_source`,
+    `'&'`,
+    `@utm_medium`,
+    `'&'`,
+    `'utm_campaign=${campaign}'`,
+    `'_'`,
+    `@fechaenvio`,
+    `'&'`,
+    `'utm_content=${recipeSlug}'`,
+  ];
+  return `%%=RedirectTo(Concat(${args.join(",")}))=%%`;
+}
+
+/**
  * Punto de entrada principal. Orquesta parseo + slug + generación AMPscript.
  */
 export function generateAMPscript(
@@ -125,12 +157,20 @@ export function generateAMPscript(
   brand: BrandConfig,
   campaign: string,
 ): AMPscriptResult | null {
-  const slug = generateSlug(description);
-  const { categoryId } = parseUrl(url);
+  if (!campaign) return null;
 
-  if (!categoryId || !slug || !campaign) return null;
+  const { categoryId, recipeSlug } = parseUrl(url);
+
+  // Caso Recetas (Jumbo): usa el slug del path, no fq=H:
+  if (campaign === "recetas" && recipeSlug) {
+    const ampscript = buildRecipeAMPscript(brand, recipeSlug, campaign);
+    return { ampscript, slug: recipeSlug, categoryId: recipeSlug, brand };
+  }
+
+  // Caso estándar
+  const slug = generateSlug(description);
+  if (!categoryId || !slug) return null;
 
   const ampscript = buildAMPscript(brand, categoryId, slug, campaign);
-
   return { ampscript, slug, categoryId, brand };
 }

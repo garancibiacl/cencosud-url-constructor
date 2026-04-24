@@ -160,6 +160,8 @@ export default function AMPscriptBuilderPage() {
     setBrandId(id);
   }
 
+  const isRecipe = campaign === "recetas";
+
   // Reactivo: se recalcula en cada keystroke
   const slug = useMemo(() => generateSlug(description), [description]);
   const parsedUrl = useMemo(() => parseUrl(url), [url]);
@@ -273,7 +275,8 @@ export default function AMPscriptBuilderPage() {
             {/* Campaña */}
             <CampaignComboField value={campaign} onChange={setCampaign} brandId={brandId} />
 
-            {/* Descripción */}
+            {/* Descripción — oculta en modo Recetas (utm_content viene del slug de la URL) */}
+            {!isRecipe && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="description" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -294,7 +297,6 @@ export default function AMPscriptBuilderPage() {
                 onPaste={handleSmartPaste}
                 className="h-10"
               />
-              {/* Slug preview */}
               {slug && (
                 <div className="flex items-center gap-2">
                   <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
@@ -305,6 +307,7 @@ export default function AMPscriptBuilderPage() {
                 </div>
               )}
             </div>
+            )}
 
             {/* URL */}
             <div className="space-y-2">
@@ -313,7 +316,11 @@ export default function AMPscriptBuilderPage() {
               </Label>
               <Textarea
                 id="url"
-                placeholder={`Ej: https://www.${brand.domain}${brand.searchPath}?fq=H:1234 — o pega desde Excel`}
+                placeholder={
+                  isRecipe
+                    ? `Ej: https://www.${brand.domain}/recetas/ensalada_verde_vinagreta_naranja`
+                    : `Ej: https://www.${brand.domain}${brand.searchPath}?fq=H:1234 — o pega desde Excel`
+                }
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 onPaste={handleSmartPaste}
@@ -323,7 +330,24 @@ export default function AMPscriptBuilderPage() {
               {/* URL parse status */}
               {url && (
                 <div className="flex items-center gap-2">
-                  {parsedUrl.categoryId ? (
+                  {isRecipe ? (
+                    parsedUrl.recipeSlug ? (
+                      <>
+                        <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                        <span className="text-xs text-muted-foreground">utm_content:</span>
+                        <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-emerald-600 dark:text-emerald-400">
+                          {parsedUrl.recipeSlug}
+                        </code>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                        <span className="text-xs text-amber-600 dark:text-amber-400">
+                          URL debe contener /recetas/{"{nombre}"}
+                        </span>
+                      </>
+                    )
+                  ) : parsedUrl.categoryId ? (
                     <>
                       <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
                       <span className="text-xs text-muted-foreground">categoryId:</span>
