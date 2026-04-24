@@ -19,44 +19,44 @@ import { generateSlug, parseUrl, generateAMPscript } from "../logic/ampscript.en
 import { parseSingleWebSpreadsheetPaste } from "@/lib/title-url-app";
 import type { BrandId } from "../logic/ampscript.types";
 
-// ── Lista de campañas (igual que URLBuilder) ───────────────────────────────────
-const CAMPAIGN_OPTIONS = [
-  { value: "bombazo",                          label: "Bombazo" },
-  { value: "lo-mejor-de-la-semana",            label: "Lo mejor de la semana" },
-  { value: "fondo-surtido",                    label: "Fondo surtido" },
-  { value: "super-ofertas-online",             label: "Super Ofertas Online" },
-  { value: "torta-del-mes",                    label: "Torta del mes" },
-  { value: "ofertas-tc",                       label: "Ofertas TC" },
-  { value: "avance",                           label: "Avance" },
-  { value: "puntos",                           label: "Puntos" },
-  { value: "cencopay",                         label: "Cencopay" },
-  { value: "lpm",                              label: "LPM" },
-  { value: "tarjeta",                          label: "Tarjeta" },
-  { value: "hogar-de-cristo",                  label: "Hogar de cristo" },
-  { value: "retiro",                           label: "Retiro" },
-  { value: "especial",                         label: "Especial" },
-  { value: "proveedor",                        label: "Proveedor" },
-  { value: "exlusivas",                        label: "Exclusivas" },
-  { value: "semanasanta",                      label: "Semana Santa" },
-  { value: "cyber-day",                        label: "Cyber Day" },
-  { value: "black-friday",                     label: "Black Friday" },
-  { value: "navidad",                          label: "Navidad" },
-  { value: "aniversario",                      label: "Aniversario" },
-  { value: "oferta-semanal",                   label: "Oferta Semanal" },
-];
+// ── Campañas por marca ────────────────────────────────────────────────────────
+const CAMPAIGNS_BY_BRAND: Record<string, { value: string; label: string; freeText?: boolean }[]> = {
+  jumbo: [
+    { value: "jumbo-ofertas",         label: "Jumbo Ofertas" },
+    { value: "exclusivas-ecommerce",  label: "Exclusivas Ecommerce" },
+    { value: "prime",                 label: "Prime" },
+    { value: "mi-cupon",              label: "Mi Cupón" },
+    { value: "marcas-propias",        label: "Marcas Propias" },
+    { value: "recetas",               label: "Recetas", freeText: true },
+  ],
+  sisa: [
+    { value: "santas-ofertas",        label: "Santas Ofertas" },
+    { value: "exclusivas-ecommerce",  label: "Exclusivas Ecommerce" },
+    { value: "mi-cupon",              label: "Mi Cupón" },
+  ],
+  spid: [
+    { value: "exclusivas-ecommerce",  label: "Exclusivas Ecommerce" },
+    { value: "mi-cupon",              label: "Mi Cupón" },
+  ],
+};
 
 // ── CampaignComboField ─────────────────────────────────────────────────────────
 function CampaignComboField({
   value,
   onChange,
+  brandId,
 }: {
   value: string;
   onChange: (v: string) => void;
+  brandId: string;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
-  const selectedLabel = CAMPAIGN_OPTIONS.find((o) => o.value === value)?.label;
+  const options = CAMPAIGNS_BY_BRAND[brandId] ?? [];
+  const selectedOption = options.find((o) => o.value === value);
+  const selectedLabel = selectedOption?.label;
+  const isFreeText = selectedOption?.freeText;
 
   function applyCustom() {
     const next = search.trim().replace(/\s+/g, "-").toLowerCase();
@@ -101,18 +101,21 @@ function CampaignComboField({
                 </button>
               </CommandEmpty>
               <CommandGroup>
-                {CAMPAIGN_OPTIONS.map((opt) => (
+                {options.map((opt) => (
                   <CommandItem
                     key={opt.value}
                     value={opt.label}
                     onSelect={() => { onChange(opt.value); setSearch(""); setOpen(false); }}
                   >
                     <Check className={`mr-2 h-4 w-4 ${value === opt.value ? "opacity-100" : "opacity-0"}`} />
-                    {opt.label}
+                    <span>{opt.label}</span>
+                    {opt.freeText && (
+                      <span className="ml-auto text-[10px] text-muted-foreground">texto libre</span>
+                    )}
                   </CommandItem>
                 ))}
               </CommandGroup>
-              {search.trim() && !CAMPAIGN_OPTIONS.some((o) => o.label.toLowerCase() === search.toLowerCase()) && (
+              {search.trim() && !options.some((o) => o.label.toLowerCase() === search.toLowerCase()) && (
                 <CommandGroup heading="Personalizado">
                   <CommandItem value={`custom-${search}`} onSelect={applyCustom}>
                     <Plus className="mr-2 h-4 w-4" />
@@ -131,6 +134,9 @@ function CampaignComboField({
           <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-violet-600 dark:text-violet-400">
             {value}
           </code>
+          {isFreeText && (
+            <span className="text-[10px] text-amber-600 dark:text-amber-400">— escribe el nombre en Descripción</span>
+          )}
         </div>
       )}
     </div>
@@ -147,6 +153,12 @@ export default function AMPscriptBuilderPage() {
   const [pasteFlash, setPasteFlash] = useState(false);
 
   const brand = BRAND_CONFIGS[brandId];
+
+  function handleBrandChange(id: BrandId) {
+    const nextOptions = CAMPAIGNS_BY_BRAND[id] ?? [];
+    if (!nextOptions.some((o) => o.value === campaign)) setCampaign("");
+    setBrandId(id);
+  }
 
   // Reactivo: se recalcula en cada keystroke
   const slug = useMemo(() => generateSlug(description), [description]);
@@ -240,7 +252,7 @@ export default function AMPscriptBuilderPage() {
                 {BRAND_LIST.map((b) => (
                   <button
                     key={b.id}
-                    onClick={() => setBrandId(b.id)}
+                    onClick={() => handleBrandChange(b.id)}
                     className={`relative flex flex-col items-center gap-1.5 rounded-xl border-2 px-3 py-3 text-xs font-semibold transition-all duration-150 ${
                       brandId === b.id
                         ? "border-violet-500 bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300"
@@ -259,7 +271,7 @@ export default function AMPscriptBuilderPage() {
             </div>
 
             {/* Campaña */}
-            <CampaignComboField value={campaign} onChange={setCampaign} />
+            <CampaignComboField value={campaign} onChange={setCampaign} brandId={brandId} />
 
             {/* Descripción */}
             <div className="space-y-2">

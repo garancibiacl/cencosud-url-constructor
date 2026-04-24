@@ -33,40 +33,42 @@ import type {
 // AMPscript Dialog + UrlInput
 // ─────────────────────────────────────────────────────────────────────────────
 
-const CAMPAIGN_OPTIONS = [
-  { value: "bombazo",               label: "Bombazo" },
-  { value: "lo-mejor-de-la-semana", label: "Lo mejor de la semana" },
-  { value: "fondo-surtido",         label: "Fondo surtido" },
-  { value: "super-ofertas-online",  label: "Super Ofertas Online" },
-  { value: "torta-del-mes",         label: "Torta del mes" },
-  { value: "ofertas-tc",            label: "Ofertas TC" },
-  { value: "avance",                label: "Avance" },
-  { value: "puntos",                label: "Puntos" },
-  { value: "cencopay",              label: "Cencopay" },
-  { value: "lpm",                   label: "LPM" },
-  { value: "tarjeta",               label: "Tarjeta" },
-  { value: "retiro",                label: "Retiro" },
-  { value: "especial",              label: "Especial" },
-  { value: "proveedor",             label: "Proveedor" },
-  { value: "exclusivas",            label: "Exclusivas" },
-  { value: "semanasanta",           label: "Semana Santa" },
-  { value: "cyber-day",             label: "Cyber Day" },
-  { value: "black-friday",          label: "Black Friday" },
-  { value: "navidad",               label: "Navidad" },
-  { value: "aniversario",           label: "Aniversario" },
-  { value: "oferta-semanal",        label: "Oferta Semanal" },
-];
+const CAMPAIGNS_BY_BRAND: Record<string, { value: string; label: string; freeText?: boolean }[]> = {
+  jumbo: [
+    { value: "jumbo-ofertas",        label: "Jumbo Ofertas" },
+    { value: "exclusivas-ecommerce", label: "Exclusivas Ecommerce" },
+    { value: "prime",                label: "Prime" },
+    { value: "mi-cupon",             label: "Mi Cupón" },
+    { value: "marcas-propias",       label: "Marcas Propias" },
+    { value: "recetas",              label: "Recetas", freeText: true },
+  ],
+  sisa: [
+    { value: "santas-ofertas",       label: "Santas Ofertas" },
+    { value: "exclusivas-ecommerce", label: "Exclusivas Ecommerce" },
+    { value: "mi-cupon",             label: "Mi Cupón" },
+  ],
+  spid: [
+    { value: "exclusivas-ecommerce", label: "Exclusivas Ecommerce" },
+    { value: "mi-cupon",             label: "Mi Cupón" },
+  ],
+};
 
 function CampaignComboField({
   value,
   onChange,
+  brandId,
 }: {
   value: string;
   onChange: (v: string) => void;
+  brandId: string;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const selectedLabel = CAMPAIGN_OPTIONS.find((o) => o.value === value)?.label;
+
+  const options = CAMPAIGNS_BY_BRAND[brandId] ?? [];
+  const selectedOption = options.find((o) => o.value === value);
+  const selectedLabel = selectedOption?.label;
+  const isFreeText = selectedOption?.freeText;
 
   function applyCustom() {
     const next = search.trim().toLowerCase().replace(/\s+/g, "-");
@@ -110,7 +112,7 @@ function CampaignComboField({
                 </button>
               </CommandEmpty>
               <CommandGroup>
-                {CAMPAIGN_OPTIONS.map((opt) => (
+                {options.map((opt) => (
                   <CommandItem
                     key={opt.value}
                     value={opt.label}
@@ -118,11 +120,14 @@ function CampaignComboField({
                     className="text-xs"
                   >
                     <Check className={`mr-2 h-3 w-3 shrink-0 ${value === opt.value ? "opacity-100" : "opacity-0"}`} />
-                    {opt.label}
+                    <span>{opt.label}</span>
+                    {opt.freeText && (
+                      <span className="ml-auto text-[9px] text-muted-foreground/60">texto libre</span>
+                    )}
                   </CommandItem>
                 ))}
               </CommandGroup>
-              {search.trim() && !CAMPAIGN_OPTIONS.some((o) => o.label.toLowerCase() === search.toLowerCase()) && (
+              {search.trim() && !options.some((o) => o.label.toLowerCase() === search.toLowerCase()) && (
                 <CommandGroup heading="Personalizado">
                   <CommandItem value={`custom-${search}`} onSelect={applyCustom} className="text-xs">
                     <Plus className="mr-2 h-3 w-3" />
@@ -141,6 +146,9 @@ function CampaignComboField({
           <code className="rounded bg-secondary px-1 py-0.5 font-mono text-[10px] text-violet-600 dark:text-violet-400">
             {value}
           </code>
+          {isFreeText && (
+            <span className="text-[9px] text-amber-600 dark:text-amber-400">— nombre en Descripción</span>
+          )}
         </div>
       )}
     </div>
@@ -241,7 +249,11 @@ function AMPscriptDialog({
                   <button
                     key={b.id}
                     type="button"
-                    onClick={() => setBrandId(b.id as BrandId)}
+                    onClick={() => {
+                      const nextOptions = CAMPAIGNS_BY_BRAND[b.id] ?? [];
+                      if (!nextOptions.some((o) => o.value === campaign)) setCampaign("");
+                      setBrandId(b.id as BrandId);
+                    }}
                     className={`relative flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
                       brandId === b.id
                         ? "border-violet-400 bg-violet-500/10 text-violet-700 dark:text-violet-300"
@@ -260,7 +272,7 @@ function AMPscriptDialog({
             </div>
 
             {/* Campaña — combobox con búsqueda + personalizado */}
-            <CampaignComboField value={campaign} onChange={setCampaign} />
+            <CampaignComboField value={campaign} onChange={setCampaign} brandId={brandId} />
 
             {/* Descripción de campaña */}
             <div className="space-y-1.5">
