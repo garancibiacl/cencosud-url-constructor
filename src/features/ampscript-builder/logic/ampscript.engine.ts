@@ -58,14 +58,14 @@ export function parseUrl(url: string): ParsedUrlData {
 /**
  * Construye el bloque AMPscript completo para SFMC.
  *
- * Formato exacto (una sola línea):
- * %%=RedirectTo(Concat('https://{appLink}/?link=https://www.{domain}/busca%3Ffq=H%3A{categoryId}%26',
+ * Jumbo (deepLink=false) — URL web directa, separador &:
+ * %%=RedirectTo(Concat('https://www.jumbo.cl/busca?fq=H%3A{id}&',@utm_source,'&',@utm_medium,'&',
+ *   'utm_campaign={campaign}','_',@fechaenvio,'&','utm_content={slug}'))=%%
+ *
+ * Santa Isabel / Spid (deepLink=true) — app deep link, separador %26:
+ * %%=RedirectTo(Concat('https://{appLink}/?link=https://www.{domain}/busca%3Ffq=H%3A{id}%26',
  *   @utm_source,'%26',@utm_medium,'%26','utm_campaign={campaign}','_',@fechaenvio,
  *   '%26','utm_content={slug}','%26','apn={apn}','%26','ibi={ibi}','%26','efr=0','%26','isi={isi}'))=%%
- *
- * - categoryId va embebido dentro del primer string literal
- * - @utm_source, @utm_medium, @fechaenvio son variables AMPscript (sin comillas)
- * - %26 es separador de params, se pasa como string independiente
  */
 export function buildAMPscript(
   brand: BrandConfig,
@@ -73,8 +73,26 @@ export function buildAMPscript(
   slug: string,
   campaign: string,
 ): string {
-  const base = `https://${brand.appLinkDomain}/?link=https://www.${brand.domain}${brand.searchPath}%3Ffq=H%3A${categoryId}%26`;
+  if (!brand.deepLink) {
+    // Formato web directo (Jumbo)
+    const base = `https://www.${brand.domain}${brand.searchPath}?fq=H%3A${categoryId}&`;
+    const args = [
+      `'${base}'`,
+      `@utm_source`,
+      `'&'`,
+      `@utm_medium`,
+      `'&'`,
+      `'utm_campaign=${campaign}'`,
+      `'_'`,
+      `@fechaenvio`,
+      `'&'`,
+      `'utm_content=${slug}'`,
+    ];
+    return `%%=RedirectTo(Concat(${args.join(",")}))=%%`;
+  }
 
+  // Formato app deep link (Santa Isabel, Spid)
+  const base = `https://${brand.appLinkDomain}/?link=https://www.${brand.domain}${brand.searchPath}%3Ffq=H%3A${categoryId}%26`;
   const args = [
     `'${base}'`,
     `@utm_source`,
@@ -95,7 +113,6 @@ export function buildAMPscript(
     `'%26'`,
     `'isi=${brand.isi}'`,
   ];
-
   return `%%=RedirectTo(Concat(${args.join(",")}))=%%`;
 }
 

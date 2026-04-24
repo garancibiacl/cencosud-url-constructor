@@ -11,6 +11,8 @@ export interface BrandConfig {
   ibi: string;             // iOS bundle id
   isi: string;             // iOS App Store ID
   searchPath: string;      // ej: /busca
+  /** true → deep link de app con %26; false → URL web directa con & */
+  deepLink: boolean;
 }
 
 export interface ParsedUrlData {

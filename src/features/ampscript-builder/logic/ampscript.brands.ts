@@ -12,6 +12,7 @@ export const BRAND_CONFIGS: Record<BrandId, BrandConfig> = {
     ibi: "com.cencosud.santaisabel.cl",
     isi: "1585842731",
     searchPath: "/busca",
+    deepLink: true,
   },
   jumbo: {
     id: "jumbo",
@@ -24,6 +25,7 @@ export const BRAND_CONFIGS: Record<BrandId, BrandConfig> = {
     ibi: "com.cencosud.jumbo.cl",
     isi: "1398619622",
     searchPath: "/busca",
+    deepLink: false,
   },
   spid: {
     id: "spid",
@@ -36,6 +38,7 @@ export const BRAND_CONFIGS: Record<BrandId, BrandConfig> = {
     ibi: "com.cencosud.spid.cl",
     isi: "1234567890",
     searchPath: "/busca",
+    deepLink: true,
   },
 };
 
