@@ -8,6 +8,7 @@ export const brandThemes: Record<BrandId, BrandTheme> = {
     primaryForeground: "#FFFFFF",
     fontFamily: "'Montserrat', Arial, sans-serif",
     websiteUrl: "https://www.santaisabel.cl/",
+    logoUrl: "/brands/santa-isabel.png",
   },
   "jumbo": {
     id: "jumbo",
@@ -16,6 +17,7 @@ export const brandThemes: Record<BrandId, BrandTheme> = {
     primaryForeground: "#FFFFFF",
     fontFamily: "'Montserrat', Arial, sans-serif",
     websiteUrl: "https://www.jumbo.cl/",
+    logoUrl: "/brands/jumbo.png",
   },
   "spid": {
     id: "spid",
@@ -24,5 +26,6 @@ export const brandThemes: Record<BrandId, BrandTheme> = {
     primaryForeground: "#FFFFFF",
     fontFamily: "'Montserrat', Arial, sans-serif",
     websiteUrl: "https://www.spid.cl/",
+    logoUrl: "/brands/spid.png",
   },
 };

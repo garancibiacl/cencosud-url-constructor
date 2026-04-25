@@ -7,6 +7,7 @@ export interface BrandTheme {
   primaryForeground: string;
   fontFamily: string;
   websiteUrl: string;
+  logoUrl?: string;
 }
 
 export interface BrandShell {

@@ -210,11 +210,19 @@ function BrandWelcomeScreen({
               className="group relative flex cursor-pointer flex-col gap-4 rounded-2xl border border-border bg-card px-5 py-6 text-left shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
               style={{ borderLeftWidth: "4px", borderLeftColor: theme.primaryColor }}
             >
-              {/* Brand color dot */}
-              <div
-                className="h-10 w-10 rounded-full shadow-sm transition-transform duration-200 group-hover:scale-110"
-                style={{ backgroundColor: theme.primaryColor }}
-              />
+              {/* Brand logo */}
+              {theme.logoUrl ? (
+                <img
+                  src={theme.logoUrl}
+                  alt={theme.name}
+                  className="h-16 w-16 rounded-full object-cover shadow-sm transition-transform duration-200 group-hover:scale-105"
+                />
+              ) : (
+                <div
+                  className="h-16 w-16 rounded-full shadow-sm"
+                  style={{ backgroundColor: theme.primaryColor }}
+                />
+              )}
               {/* Brand name */}
               <div className="flex flex-col gap-1">
                 <span className="text-lg font-bold leading-none text-foreground">{theme.name}</span>
