@@ -5,8 +5,9 @@ import {
   AlertCircle, CheckCircle2, CodeXml, Copy, Download, Eye, FileDown, GripVertical,
   History, Image as ImageIcon, ImagePlus, Loader2, Mail, Monitor, MoreHorizontal,
   MousePointerClick, PenSquare, Plus, RectangleHorizontal, RotateCcw, Save,
-  Settings2, Smartphone, Type, X,
+  Settings2, Smartphone, Trash2, Type, X,
 } from "lucide-react";
+import Swal from "sweetalert2";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -160,6 +161,99 @@ function CanvasEmptyState({
 }
 
 // ---------------------------------------------------------------------------
+// BrandWelcomeScreen — pantalla de bienvenida inicial
+// ---------------------------------------------------------------------------
+
+function BrandWelcomeScreen({
+  onSelectBrand,
+  onNewTemplate,
+  onSkip,
+}: {
+  onSelectBrand: (brandId: BrandId) => void;
+  onNewTemplate: () => void;
+  onSkip: () => void;
+}) {
+  return (
+    <div
+      className="flex flex-1 flex-col items-center justify-center px-8 py-16"
+      style={{
+        backgroundColor: "#F0F0F0",
+        backgroundImage: "radial-gradient(circle, #d4d4d4 1px, transparent 1px)",
+        backgroundSize: "20px 20px",
+      }}
+    >
+      <div className="flex w-full max-w-2xl flex-col items-center gap-8">
+
+        {/* Header text */}
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1 shadow-sm backdrop-blur-sm">
+            <Mail className="h-3.5 w-3.5 text-muted-foreground/60" />
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+              Mailing Builder
+            </span>
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            ¿Con qué marca quieres trabajar?
+          </h1>
+          <p className="max-w-md text-sm text-muted-foreground">
+            Elige una marca para aplicar su identidad o crea una nueva plantilla desde cero.
+          </p>
+        </div>
+
+        {/* Brand cards grid */}
+        <div className="grid w-full grid-cols-3 gap-4">
+          {Object.values(brandThemes).map((theme) => (
+            <button
+              key={theme.id}
+              type="button"
+              onClick={() => onSelectBrand(theme.id as BrandId)}
+              className="group relative flex cursor-pointer flex-col gap-4 rounded-2xl border border-border bg-card px-5 py-6 text-left shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+              style={{ borderLeftWidth: "4px", borderLeftColor: theme.primaryColor }}
+            >
+              {/* Brand color dot */}
+              <div
+                className="h-10 w-10 rounded-full shadow-sm transition-transform duration-200 group-hover:scale-110"
+                style={{ backgroundColor: theme.primaryColor }}
+              />
+              {/* Brand name */}
+              <div className="flex flex-col gap-1">
+                <span className="text-lg font-bold leading-none text-foreground">{theme.name}</span>
+                <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/50 transition-colors duration-150 group-hover:text-muted-foreground/80">
+                  Seleccionar
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Divider */}
+        <div className="flex w-full items-center gap-4">
+          <div className="h-px flex-1 bg-border" />
+          <span className="text-sm text-muted-foreground/60">o</span>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+
+        {/* Nueva plantilla + Comenzar sin marca */}
+        <div className="flex flex-col items-center gap-3">
+          <Button variant="outline" size="default" onClick={onNewTemplate} className="px-6">
+            <Plus className="mr-2 h-4 w-4" />
+            Nueva plantilla
+          </Button>
+          <button
+            type="button"
+            onClick={onSkip}
+            className="text-xs text-muted-foreground/60 underline-offset-4 transition-colors hover:text-muted-foreground hover:underline"
+          >
+            Comenzar sin marca
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // MailingBuilderPage — componente principal
 // ---------------------------------------------------------------------------
 
@@ -209,6 +303,7 @@ export default function MailingBuilderPage() {
   const [assetPickerOpen, setAssetPickerOpen] = useState(false);
   const [showGlobalInspector, setShowGlobalInspector] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
 
   const inspectorRef = useRef<HTMLDivElement | null>(null);
   const globalInspectorButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -582,14 +677,54 @@ export default function MailingBuilderPage() {
                 <DropdownMenuItem onClick={handleSaveAsPdf}>
                   <FileDown className="mr-2 h-4 w-4" />Guardar como PDF
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => {
+                    void Swal.fire({
+                      title: "¿Descartar plantilla?",
+                      text: "Los cambios no guardados se perderán y volverás a la selección de marca.",
+                      icon: "warning",
+                      showCancelButton: true,
+                      confirmButtonText: "Sí, descartar",
+                      cancelButtonText: "Cancelar",
+                      confirmButtonColor: "#ef4444",
+                      cancelButtonColor: "#6b7280",
+                      reverseButtons: true,
+                      focusCancel: true,
+                    }).then((result) => {
+                      if (result.isConfirmed) {
+                        replaceDocument(createDefaultMailing(), null);
+                        setShowWelcome(true);
+                      }
+                    });
+                  }}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />Descartar plantilla
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
       </div>
 
+      {/* ── Welcome screen ─────────────────────────────────────────────────── */}
+      {showWelcome && (
+        <BrandWelcomeScreen
+          onSelectBrand={(brandId) => {
+            updateSettings("brand", brandId);
+            setShowWelcome(false);
+          }}
+          onNewTemplate={() => {
+            setShowNewModal(true);
+            setShowWelcome(false);
+          }}
+          onSkip={() => setShowWelcome(false)}
+        />
+      )}
+
       {/* ── Cuerpo de 3 columnas ────────────────────────────────────────────── */}
-      <div
+      {!showWelcome && <div
         className="grid min-h-0 flex-1 gap-0 transition-all duration-300"
         style={{ gridTemplateColumns: isInspectorOpen ? "272px minmax(0,1fr) 340px" : "272px minmax(0,1fr) 0px" }}
       >
@@ -1117,7 +1252,7 @@ export default function MailingBuilderPage() {
             </>
           )}
         </aside>
-      </div>
+      </div>}
 
       {/* ── Modal: nuevo mailing ────────────────────────────────────────────── */}
       <NewTemplateModal

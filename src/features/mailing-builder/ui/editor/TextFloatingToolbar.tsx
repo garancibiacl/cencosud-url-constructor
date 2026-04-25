@@ -349,7 +349,7 @@ export function TextFloatingToolbar({ containerRef }: { containerRef: RefObject<
         <button
           type="button"
           title="Reducir tamaño"
-          onMouseDown={(e) => { e.preventDefault(); applyFontSize(Math.max(8, fsNum - 1)); }}
+          onMouseDown={(e) => { e.preventDefault(); saveSelection(); applyFontSize(Math.max(8, fsNum - 1)); }}
           className={btn()}
         >
           <Minus className="h-3 w-3" />
@@ -368,7 +368,7 @@ export function TextFloatingToolbar({ containerRef }: { containerRef: RefObject<
         <button
           type="button"
           title="Aumentar tamaño"
-          onMouseDown={(e) => { e.preventDefault(); applyFontSize(Math.min(96, fsNum + 1)); }}
+          onMouseDown={(e) => { e.preventDefault(); saveSelection(); applyFontSize(Math.min(96, fsNum + 1)); }}
           className={btn()}
         >
           <Plus className="h-3 w-3" />

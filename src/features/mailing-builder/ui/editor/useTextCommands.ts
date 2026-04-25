@@ -148,27 +148,33 @@ export function useTextCommands(containerRef: RefObject<HTMLElement | null>): Us
   const applyFontSize = useCallback(
     (px: number) => {
       restoreSelection(containerRef.current);
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount) return;
 
-      // Mark pre-existing font[size="7"] elements so we don't accidentally convert them
-      containerRef.current?.querySelectorAll('font[size="7"]').forEach((el) => {
-        (el as HTMLElement).dataset.ftPre = "1";
-      });
+      const range = sel.getRangeAt(0);
+      if (range.collapsed) return;
 
-      document.execCommand("fontSize", false, "7");
+      const span = document.createElement("span");
+      span.style.fontSize = `${px}px`;
 
-      // Replace only newly created font elements (no data-ft-pre)
-      containerRef.current?.querySelectorAll('font[size="7"]:not([data-ft-pre])').forEach((el) => {
-        const span = document.createElement("span");
-        span.style.fontSize = `${px}px`;
-        el.parentNode?.insertBefore(span, el);
-        while (el.firstChild) span.appendChild(el.firstChild);
-        el.parentNode?.removeChild(el);
-      });
+      try {
+        range.surroundContents(span);
+      } catch {
+        // Selection crosses element boundaries — extract and re-wrap
+        const fragment = range.extractContents();
+        span.appendChild(fragment);
+        range.insertNode(span);
+      }
 
-      // Clean markers
-      containerRef.current?.querySelectorAll("[data-ft-pre]").forEach((el) => {
-        delete (el as HTMLElement).dataset.ftPre;
-      });
+      // Notify the contenteditable onChange handler with the correct HTML
+      containerRef.current?.dispatchEvent(new InputEvent("input", { bubbles: true }));
+
+      // Re-select the new span so consecutive stepper clicks keep working
+      const newRange = document.createRange();
+      newRange.selectNodeContents(span);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      saveSelection();
 
       setFmt((s) => ({ ...s, fontSize: String(px) }));
     },
