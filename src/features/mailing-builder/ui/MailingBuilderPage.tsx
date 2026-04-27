@@ -2,10 +2,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useCanvasDrop } from "./layout/useCanvasDrop";
 import { RowDropIndicator } from "./layout/RowDropIndicator";
 import {
-  AlertCircle, CheckCircle2, CodeXml, Copy, Download, Eye, FileDown, GripVertical,
-  History, Image as ImageIcon, ImagePlus, Loader2, Mail, Monitor, MoreHorizontal,
+  AlertCircle, ArrowLeft, CheckCircle2, CodeXml, Copy, Download, Eye, FileDown, GripVertical,
+  History, Image as ImageIcon, ImagePlus, Inbox, Loader2, Mail, Monitor, MoreHorizontal,
   MousePointerClick, PenSquare, Plus, RectangleHorizontal, RotateCcw, Save,
-  Settings2, Smartphone, Trash2, Type, X,
+  Send, Settings2, Smartphone, Trash2, Type, UserRound, X,
 } from "lucide-react";
 import Swal from "sweetalert2";
 import { Button } from "@/components/ui/button";
@@ -13,12 +13,19 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -262,6 +269,560 @@ function BrandWelcomeScreen({
 }
 
 // ---------------------------------------------------------------------------
+// PreviewTestModal — modal "Vista previa y prueba"
+// State is fully controlled by parent so it persists across open/close cycles
+// and the shared iframe never remounts when switching tabs.
+// ---------------------------------------------------------------------------
+
+type PreviewTab = "preview" | "inbox" | "send";
+
+interface PreviewModalState {
+  tab: PreviewTab;
+  previewAs: "recipient" | "event";
+  contactSearch: string;
+  addJsonData: boolean;
+  jsonPayload: string;
+  testEmail: string;
+}
+
+function usePreviewModalState(): [PreviewModalState, React.Dispatch<React.SetStateAction<PreviewModalState>>] {
+  return useState<PreviewModalState>({
+    tab: "preview",
+    previewAs: "recipient",
+    contactSearch: "",
+    addJsonData: false,
+    jsonPayload: "",
+    testEmail: "",
+  });
+}
+
+function PreviewTestModal({
+  open,
+  onClose,
+  htmlPreview,
+  senderEmail,
+  subject,
+  preheader,
+  state,
+  onStateChange,
+}: {
+  open: boolean;
+  onClose: () => void;
+  htmlPreview: string;
+  senderEmail: string;
+  subject: string;
+  preheader: string;
+  state: PreviewModalState;
+  onStateChange: React.Dispatch<React.SetStateAction<PreviewModalState>>;
+}) {
+  const { toast } = useToast();
+  const [sending, setSending] = useState(false);
+
+  const set = useCallback(
+    <K extends keyof PreviewModalState>(key: K, value: PreviewModalState[K]) =>
+      onStateChange((prev) => ({ ...prev, [key]: value })),
+    [onStateChange],
+  );
+
+  const handleSendTest = async () => {
+    if (!state.testEmail.trim()) return;
+    setSending(true);
+    await new Promise((r) => setTimeout(r, 1200));
+    setSending(false);
+    toast({ title: "Email de prueba enviado", description: `Se envió una prueba a ${state.testEmail}.` });
+    set("testEmail", "");
+  };
+
+  const TAB_DEFS: { id: PreviewTab; icon: React.ElementType; label: string }[] = [
+    { id: "preview", icon: UserRound, label: "Vista previa" },
+    { id: "inbox",   icon: Inbox,     label: "Ver en bandeja de entrada" },
+    { id: "send",    icon: Send,      label: "Enviar email de prueba" },
+  ];
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent
+        className="flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0"
+        style={{ maxWidth: "900px", width: "92vw" }}
+      >
+        {/* ── Header: title + underline tabs ── */}
+        <DialogHeader className="shrink-0 border-b border-border px-7 pt-6 pb-0">
+          <DialogTitle className="mb-4 text-lg font-bold text-foreground">Vista previa y prueba</DialogTitle>
+          <div className="flex gap-0">
+            {TAB_DEFS.map(({ id, icon: Icon, label }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => set("tab", id)}
+                className={`flex items-center gap-2 border-b-2 px-4 pb-3 text-sm font-medium transition-colors ${
+                  state.tab === id
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5 shrink-0" />
+                {label}
+              </button>
+            ))}
+          </div>
+        </DialogHeader>
+
+        {/* ── Body: split layout ── */}
+        {/* Left panel (iframe) is always mounted — never remounts on tab switch */}
+        <div className="flex min-h-0 flex-1 gap-0 overflow-hidden">
+
+          {/* ── Left: email preview — always rendered ── */}
+          <div className="flex min-h-0 flex-1 overflow-y-auto p-7 pr-4">
+            <div className="flex w-full flex-col overflow-hidden rounded-xl border border-border bg-white shadow-sm">
+              {/* Metadata header */}
+              <div className="flex items-start justify-between gap-3 border-b border-border/60 px-5 py-4">
+                <div className="space-y-1 text-sm">
+                  {[
+                    { label: "De:", value: senderEmail },
+                    { label: "Asunto:", value: subject },
+                    { label: "Vista previa:", value: preheader },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="flex gap-2">
+                      <span className="w-24 shrink-0 font-medium text-muted-foreground">{label}</span>
+                      <span className={value ? "text-foreground" : "text-muted-foreground/40"}>{value || "—"}</span>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  title="Copiar HTML"
+                  onClick={() => { void navigator.clipboard.writeText(htmlPreview); toast({ title: "HTML copiado al portapapeles" }); }}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground/50 transition hover:bg-secondary/60 hover:text-foreground"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              {/* iframe — single instance, never unmounts */}
+              <div className="relative overflow-hidden bg-white" style={{ height: "380px" }}>
+                <iframe
+                  title="Email preview"
+                  srcDoc={htmlPreview}
+                  className="block border-0"
+                  style={{ width: "600px", height: "475px", transform: "scale(0.8)", transformOrigin: "top left", pointerEvents: "none" }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ── Right: tab panels — CSS-toggled, never unmounted ── */}
+          <div className="relative w-[280px] shrink-0 overflow-y-auto border-l border-border/60 p-6">
+
+            {/* Panel: Vista previa */}
+            <div style={{ display: state.tab === "preview" ? "flex" : "none" }} className="flex-col gap-5">
+              <p className="text-[15px] font-semibold leading-snug text-foreground">
+                ¿Como quién te gustaría previsualizar este email?
+              </p>
+              <div className="space-y-3">
+                <label className="flex cursor-pointer items-center gap-2.5">
+                  <input
+                    type="radio"
+                    checked={state.previewAs === "recipient"}
+                    onChange={() => set("previewAs", "recipient")}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  <span className="text-sm font-medium text-foreground">Vista previa como destinatario</span>
+                </label>
+
+                <div
+                  style={{ display: state.previewAs === "recipient" ? "flex" : "none" }}
+                  className="ml-6 flex-col gap-3"
+                >
+                  <p className="text-xs font-medium text-foreground/70">Seleccionar un contacto</p>
+                  <div className="relative">
+                    <Mail className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
+                    <Input
+                      value={state.contactSearch}
+                      onChange={(e) => set("contactSearch", e.target.value)}
+                      placeholder="Buscar por email"
+                      className="h-8 pl-8 text-xs"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs text-foreground/70">Datos JSON transaccionales</span>
+                    <Switch checked={state.addJsonData} onCheckedChange={(v) => set("addJsonData", v)} />
+                  </div>
+                  {state.addJsonData && (
+                    <Textarea
+                      rows={4}
+                      value={state.jsonPayload}
+                      onChange={(e) => set("jsonPayload", e.target.value)}
+                      placeholder={'{\n  "nombre": "Juan"\n}'}
+                      className="resize-none font-mono text-xs"
+                    />
+                  )}
+                </div>
+
+                <label className="flex cursor-pointer items-center gap-2.5">
+                  <input
+                    type="radio"
+                    checked={state.previewAs === "event"}
+                    onChange={() => set("previewAs", "event")}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  <span className="text-sm font-medium text-foreground">Vista previa del evento</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Panel: Ver en bandeja */}
+            <div style={{ display: state.tab === "inbox" ? "flex" : "none" }} className="flex-col gap-4">
+              <p className="text-[15px] font-semibold leading-snug text-foreground">Vista en bandeja de entrada</p>
+              <p className="text-sm text-muted-foreground">
+                Así se verá el asunto y el preheader en el cliente de correo del destinatario.
+              </p>
+              <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
+                <div className="mb-3 flex items-center gap-2">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-bold text-primary">
+                    {(senderEmail || "?")[0].toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-semibold text-foreground">{senderEmail || "remitente@marca.cl"}</p>
+                    <p className="text-[10px] text-muted-foreground/60">Ahora</p>
+                  </div>
+                </div>
+                <p className="text-sm font-semibold leading-tight text-foreground">{subject || "(Sin asunto)"}</p>
+                <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground/70">{preheader || "(Sin vista previa)"}</p>
+              </div>
+              <p className="text-[11px] text-muted-foreground/55">
+                Simulación aproximada — el renderizado real varía según el cliente de correo.
+              </p>
+            </div>
+
+            {/* Panel: Enviar prueba */}
+            <div style={{ display: state.tab === "send" ? "flex" : "none" }} className="flex-col gap-5">
+              <div>
+                <p className="text-[15px] font-semibold leading-snug text-foreground">
+                  ¿Con quién quieres probar tu email?
+                </p>
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  Envía el email al destinatario que elijas para verificar el resultado final.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="flex items-center gap-1 text-xs font-medium text-foreground/70">
+                  Destinatario <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  type="email"
+                  value={state.testEmail}
+                  onChange={(e) => set("testEmail", e.target.value)}
+                  placeholder="email@ejemplo.cl"
+                  className="h-9 text-sm"
+                  onKeyDown={(e) => { if (e.key === "Enter") void handleSendTest(); }}
+                />
+              </div>
+              <Button
+                className="w-full rounded-full bg-foreground text-sm font-semibold text-background hover:bg-foreground/90"
+                disabled={sending || !state.testEmail.trim()}
+                onClick={() => void handleSendTest()}
+              >
+                {sending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                Enviar prueba
+              </Button>
+              <p className="text-center text-[11px] text-muted-foreground/55">
+                Se enviará desde <span className="font-medium">{senderEmail || "tu remitente configurado"}</span>
+              </p>
+            </div>
+
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// CampaignSettingsScreen — pantalla de configuración de campaña post-edición
+// ---------------------------------------------------------------------------
+
+function CampaignSettingsScreen({
+  document,
+  htmlPreview,
+  saving,
+  onBack,
+  onSave,
+  onChangeSetting,
+  onChangeName,
+}: {
+  document: import("../logic/schema/mailing.types").MailingDocument;
+  htmlPreview: string;
+  saving: boolean;
+  onBack: () => void;
+  onSave: () => void;
+  onChangeSetting: (key: string, value: string) => void;
+  onChangeName: (name: string) => void;
+}) {
+  const subject = document.settings.subject ?? "";
+  const preheader = document.settings.preheader ?? "";
+  const senderEmail = document.settings.senderEmail ?? "";
+  const senderName = document.settings.senderName ?? "";
+
+  const preheaderLen = preheader.length;
+  const preheaderOver = preheaderLen > 35;
+
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [previewModalState, setPreviewModalState] = usePreviewModalState();
+  const [editingName, setEditingName] = useState(false);
+  const [draftName, setDraftName] = useState(document.name);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  const startEditName = () => {
+    setDraftName(document.name);
+    setEditingName(true);
+    setTimeout(() => nameInputRef.current?.select(), 0);
+  };
+  const confirmName = () => {
+    const trimmed = draftName.trim();
+    if (trimmed) onChangeName(trimmed);
+    setEditingName(false);
+  };
+  const cancelName = () => {
+    setDraftName(document.name);
+    setEditingName(false);
+  };
+
+  return (
+    <div className="flex flex-1 flex-col overflow-hidden">
+      {/* ── Header estilo Brevo ──────────────────────────────────────────────── */}
+      <div className="flex h-[56px] shrink-0 items-center justify-between border-b border-border bg-card px-6">
+
+        {/* Left: back + editable name + status */}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-secondary/60 hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+
+          {editingName ? (
+            <div className="flex items-end gap-2">
+              <div className="flex flex-col gap-0.5">
+                <input
+                  ref={nameInputRef}
+                  type="text"
+                  value={draftName}
+                  onChange={(e) => setDraftName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") confirmName(); if (e.key === "Escape") cancelName(); }}
+                  className="h-8 w-56 rounded-lg border border-border bg-transparent px-3 text-[15px] font-bold text-foreground outline-none ring-2 ring-primary/30 focus:ring-primary/60"
+                  autoFocus
+                />
+                <span className="flex items-center gap-1 pl-0.5 text-[11px] text-muted-foreground/55">
+                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30" />
+                  Inactiva
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={confirmName}
+                className="mb-4 flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary transition hover:bg-primary/20"
+                title="Confirmar"
+              >
+                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M2.5 8l4 4 7-7" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={cancelName}
+                className="mb-4 flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary/60 hover:text-foreground"
+                title="Cancelar"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-2">
+                <span className="text-[15px] font-bold leading-none text-foreground">{document.name}</span>
+                <button
+                  type="button"
+                  onClick={startEditName}
+                  className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground/50 transition hover:text-primary"
+                  title="Editar nombre"
+                >
+                  <PenSquare className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <span className="flex items-center gap-1 text-[11px] text-muted-foreground/55">
+                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30" />
+                Inactiva
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Right: preview button + save dropdown */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 gap-2 rounded-full px-4 text-sm font-medium"
+            onClick={() => setShowPreviewModal(true)}
+          >
+            <Eye className="h-4 w-4" />
+            Vista previa y prueba
+          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                disabled={saving || !subject.trim()}
+                className="h-9 gap-2 rounded-full bg-foreground px-4 text-sm font-semibold text-background hover:bg-foreground/90"
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Guardar
+                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 opacity-70" fill="currentColor">
+                  <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                </svg>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem onClick={onSave}>
+                <Save className="mr-2 h-4 w-4" />Guardar borrador
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Body: preview left + form right */}
+      <div className="flex min-h-0 flex-1 gap-0 overflow-hidden">
+
+        {/* Left: template preview */}
+        <div
+          className="flex flex-1 flex-col items-center justify-start overflow-y-auto px-10 py-8"
+          style={{
+            backgroundColor: "#F0F0F0",
+            backgroundImage: "radial-gradient(circle, #d4d4d4 1px, transparent 1px)",
+            backgroundSize: "20px 20px",
+          }}
+        >
+          <p className="mb-4 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+            Vista previa de la plantilla
+          </p>
+          <div
+            className="overflow-hidden rounded-xl shadow-xl"
+            style={{ width: "480px", boxShadow: "0 4px 24px rgba(0,0,0,0.14)" }}
+          >
+            <iframe
+              title="Vista previa plantilla"
+              srcDoc={htmlPreview}
+              className="block border-0 bg-white"
+              style={{ width: "600px", height: "600px", transform: "scale(0.8)", transformOrigin: "top left", pointerEvents: "none" }}
+            />
+          </div>
+        </div>
+
+        {/* Right: form */}
+        <aside className="flex w-[400px] shrink-0 flex-col gap-0 overflow-y-auto border-l border-border bg-card">
+          <div className="space-y-6 p-7">
+
+            {/* Sender */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/55">Remitente</span>
+                <div className="h-px flex-1 bg-border/60" />
+              </div>
+              <div className="space-y-2">
+                <div className="space-y-1">
+                  <label className="flex items-center gap-1 text-xs font-medium text-foreground/70">
+                    Email de remitente
+                    <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    type="email"
+                    value={senderEmail}
+                    onChange={(e) => onChangeSetting("senderEmail", e.target.value)}
+                    placeholder="hola@marca.cl"
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-foreground/70">Nombre de remitente</label>
+                  <Input
+                    value={senderName}
+                    onChange={(e) => onChangeSetting("senderName", e.target.value)}
+                    placeholder="Cencosud"
+                    className="h-9 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Subject & preheader */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/55">Contenido del sobre</span>
+                <div className="h-px flex-1 bg-border/60" />
+              </div>
+              <div className="space-y-2">
+                <div className="space-y-1">
+                  <label className="flex items-center gap-1 text-xs font-medium text-foreground/70">
+                    Asunto
+                    <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    value={subject}
+                    onChange={(e) => onChangeSetting("subject", e.target.value)}
+                    placeholder="¡Ofertas exclusivas para ti!"
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-foreground/70">Texto de vista previa</label>
+                    <span className={`text-[10px] tabular-nums ${preheaderOver ? "font-semibold text-destructive" : "text-muted-foreground/55"}`}>
+                      {preheaderLen}/35
+                    </span>
+                  </div>
+                  <Textarea
+                    rows={3}
+                    value={preheader}
+                    onChange={(e) => onChangeSetting("preheader", e.target.value)}
+                    placeholder="Descuentos de hasta 50% en toda la tienda..."
+                    className={`resize-none text-sm ${preheaderOver ? "border-destructive focus-visible:ring-destructive/40" : ""}`}
+                  />
+                  {preheaderOver && (
+                    <p className="text-[11px] text-destructive">
+                      Supera los 35 caracteres recomendados — puede verse cortado en algunos clientes de correo.
+                    </p>
+                  )}
+                  {!preheaderOver && (
+                    <p className="text-[11px] text-muted-foreground/55">
+                      Mantenlo por debajo de los 35 caracteres para asegurarte de que no se vea cortado.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </aside>
+      </div>
+
+      <PreviewTestModal
+        open={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+        htmlPreview={htmlPreview}
+        senderEmail={senderEmail}
+        subject={subject}
+        preheader={preheader}
+        state={previewModalState}
+        onStateChange={setPreviewModalState}
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // MailingBuilderPage — componente principal
 // ---------------------------------------------------------------------------
 
@@ -300,6 +861,10 @@ export default function MailingBuilderPage() {
     updateLinkTracking,
     replaceDocument,
     setActiveMailingId,
+    showWelcome,
+    showCampaignSettings,
+    setShowWelcome,
+    setShowCampaignSettings,
   } = useMailingBuilderStore();
 
   const { toast } = useToast();
@@ -311,7 +876,6 @@ export default function MailingBuilderPage() {
   const [assetPickerOpen, setAssetPickerOpen] = useState(false);
   const [showGlobalInspector, setShowGlobalInspector] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(true);
 
   const inspectorRef = useRef<HTMLDivElement | null>(null);
   const globalInspectorButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -480,6 +1044,17 @@ export default function MailingBuilderPage() {
     setActiveMailingId(result.savedId);
     setLastAutosaveAt(new Date().toISOString());
     toast({ title: "Borrador guardado", description: "El mailing quedó almacenado en backend." });
+  };
+
+  const handleSaveAndExit = async () => {
+    if (user) {
+      const result = await saveDraft({ mailingId: activeMailingId, userId: user.id, document });
+      if (result.savedId) {
+        setActiveMailingId(result.savedId);
+        setLastAutosaveAt(new Date().toISOString());
+      }
+    }
+    setShowCampaignSettings(true);
   };
 
   const handleSaveVersion = async () => {
@@ -665,6 +1240,16 @@ export default function MailingBuilderPage() {
               <Download className="mr-1.5 h-3.5 w-3.5" />Descargar
             </Button>
 
+            <Button
+              size="sm"
+              onClick={() => void handleSaveAndExit()}
+              disabled={saving}
+              className="h-8 rounded-full bg-foreground px-4 text-xs font-semibold text-background hover:bg-foreground/90"
+            >
+              {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+              Guardar y salir
+            </Button>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="h-8 w-8">
@@ -702,7 +1287,6 @@ export default function MailingBuilderPage() {
                     }).then((result) => {
                       if (result.isConfirmed) {
                         replaceDocument(createDefaultMailing(), null);
-                        setShowWelcome(true);
                       }
                     });
                   }}
@@ -717,7 +1301,7 @@ export default function MailingBuilderPage() {
       </div>
 
       {/* ── Welcome screen ─────────────────────────────────────────────────── */}
-      {showWelcome && (
+      {showWelcome && !showCampaignSettings && (
         <BrandWelcomeScreen
           onSelectBrand={(brandId) => {
             updateSettings("brand", brandId);
@@ -731,8 +1315,23 @@ export default function MailingBuilderPage() {
         />
       )}
 
+      {/* ── Campaign settings screen ────────────────────────────────────────── */}
+      {showCampaignSettings && (
+        <CampaignSettingsScreen
+          document={document}
+          htmlPreview={htmlPreview}
+          saving={saving}
+          onBack={() => setShowCampaignSettings(false)}
+          onSave={async () => {
+            await handleSaveDraft();
+          }}
+          onChangeSetting={(key, value) => (updateSettings as (k: string, v: string) => void)(key, value)}
+          onChangeName={(name) => updateDocumentName(name)}
+        />
+      )}
+
       {/* ── Cuerpo de 3 columnas ────────────────────────────────────────────── */}
-      {!showWelcome && <div
+      {!showWelcome && !showCampaignSettings && <div
         className="grid min-h-0 flex-1 gap-0 transition-all duration-300"
         style={{ gridTemplateColumns: isInspectorOpen ? "272px minmax(0,1fr) 340px" : "272px minmax(0,1fr) 0px" }}
       >

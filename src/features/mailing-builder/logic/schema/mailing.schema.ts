@@ -146,6 +146,8 @@ export const mailingSettingsSchema = z.object({
   fontFamily:             z.string(),
   preheader:              z.string().optional(),
   subject:                z.string().optional(),
+  senderEmail:            z.string().optional(),
+  senderName:             z.string().optional(),
   linkTracking: z.object({
     enabled:     z.boolean(),
     utmSource:   z.string(),

@@ -11,7 +11,10 @@ export default function RoleGuard({ path, children }: { path: string; children: 
   const { role, loading } = useAuth();
   const mod = appModules.find((m) => m.path === path);
 
-  if (loading) return null;
+  // Only blank on the very first load (role not yet resolved).
+  // Re-auth events (token refresh, tab focus) must not unmount children
+  // since that destroys in-memory editor state.
+  if (loading && role === null) return null;
 
   if (mod && !canAccessModule(mod, role)) {
     const firstAllowed = appModules.find((m) => canAccessModule(m, role));

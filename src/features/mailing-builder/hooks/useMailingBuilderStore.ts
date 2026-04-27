@@ -28,6 +28,12 @@ interface MailingBuilderState {
   devicePreview: "desktop" | "mobile";
   activeMailingId: string | null;
 
+  /** Navigation screens — persisted in store so tab switches don't reset UI */
+  showWelcome: boolean;
+  showCampaignSettings: boolean;
+  setShowWelcome: (v: boolean) => void;
+  setShowCampaignSettings: (v: boolean) => void;
+
   // ── Selección ─────────────────────────────────────────────────────────────
   /** Selecciona un bloque; opcionalmente proporciona contexto row/col. */
   selectBlock: (blockId: string | null, rowId?: string | null, colId?: string | null) => void;
@@ -157,6 +163,10 @@ export const useMailingBuilderStore = create<MailingBuilderState>((set, get) => 
   selectedLevel: null,
   devicePreview: "desktop",
   activeMailingId: null,
+  showWelcome: true,
+  showCampaignSettings: false,
+  setShowWelcome: (v) => set({ showWelcome: v }),
+  setShowCampaignSettings: (v) => set({ showCampaignSettings: v }),
 
   // ── Selección ─────────────────────────────────────────────────────────────
 
@@ -629,14 +639,17 @@ export const useMailingBuilderStore = create<MailingBuilderState>((set, get) => 
   })),
 
   replaceDocument: (document, mailingId = null) =>
-    set({
+    set((state) => ({
       document,
       activeMailingId: mailingId,
       selectedBlockId: null,
       selectedRowId: null,
       selectedColId: null,
       selectedLevel: null,
-    }),
+      // Only reset nav if it's a full discard (null mailingId = new doc from scratch)
+      showWelcome: mailingId === null ? true : state.showWelcome,
+      showCampaignSettings: mailingId === null ? false : state.showCampaignSettings,
+    })),
 
   setActiveMailingId: (mailingId) => set({ activeMailingId: mailingId }),
 }));

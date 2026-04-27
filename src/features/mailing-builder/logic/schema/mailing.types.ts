@@ -7,6 +7,8 @@ export interface MailingSettings {
   fontFamily: string;
   preheader?: string;
   subject?: string;
+  senderEmail?: string;
+  senderName?: string;
   brand?: import("../brands/brand.types").BrandId;
   linkTracking: {
     enabled: boolean;
