@@ -49,8 +49,25 @@ export const escapeHtml = (value: string): string =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 
+/** For href/src attribute values (double-quoted). Single quotes never need escaping. */
+const escapeHtmlAttr = (value: string): string =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+/** True for SFMC AMPscript expressions — must be output verbatim, never HTML-encoded. */
+export const isAMPscript = (value?: string): boolean =>
+  typeof value === "string" && value.trimStart().startsWith("%%=");
+
+/** Escape a URL for use in a double-quoted href attribute. AMPscript is left untouched. */
+export const escapeHref = (value: string): string =>
+  isAMPscript(value) ? value : escapeHtmlAttr(value);
+
 export const sanitizeUrl = (value?: string): string => {
   if (!value) return "#";
+  if (isAMPscript(value)) return value;
   if (/^https?:\/\//i.test(value) || value.startsWith("/") || value.startsWith("mailto:")) return value;
   return `https://${value}`;
 };
@@ -63,7 +80,14 @@ export const buildTrackedUrl = (value: string | undefined, document: MailingDocu
   const sanitized = sanitizeUrl(value);
   const { linkTracking } = document.settings;
 
-  if (!linkTracking.enabled || sanitized === "#" || sanitized.startsWith("mailto:") || sanitized.startsWith("tel:")) {
+  // AMPscript and non-trackable URLs — return verbatim, no UTM injection
+  if (
+    isAMPscript(sanitized) ||
+    !linkTracking.enabled ||
+    sanitized === "#" ||
+    sanitized.startsWith("mailto:") ||
+    sanitized.startsWith("tel:")
+  ) {
     return sanitized;
   }
 

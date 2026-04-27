@@ -25,6 +25,7 @@ import { BRAND_CONFIGS, BRAND_LIST } from "@/features/ampscript-builder/logic/am
 import { parseUrl, generateSlug, generateAMPscript } from "@/features/ampscript-builder/logic/ampscript.engine";
 import { parseSingleWebSpreadsheetPaste } from "@/lib/title-url-app";
 import type { BrandId } from "@/features/ampscript-builder/logic/ampscript.types";
+import { useBrandContext } from "./BrandContext";
 import type {
   ButtonBlock, HeroBlock, ImageBlock, ProductBlock, RawHtmlBlock, SpacerBlock, TextBlock,
 } from "../../logic/schema/block.types";
@@ -159,26 +160,28 @@ function AMPscriptDialog({
   open,
   onClose,
   initialUrl,
+  initialBrand,
   onInsert,
 }: {
   open: boolean;
   onClose: () => void;
   initialUrl: string;
+  initialBrand?: BrandId;
   onInsert: (ampscript: string, categoryId: string) => void;
 }) {
-  const [brandId, setBrandId] = useState<BrandId>("sisa");
+  const [brandId, setBrandId] = useState<BrandId>(initialBrand ?? "sisa");
   const [campaign, setCampaign] = useState("");
   const [description, setDescription] = useState("");
   const [url, setUrl] = useState(initialUrl);
   const [pasteFlash, setPasteFlash] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      setUrl(initialUrl);
-      setDescription("");
-      setCampaign("");
-      setPasteFlash(false);
-    }
+    if (!open) return;
+    // Pre-populate URL from the field only when the URL slot is currently empty (first open).
+    // Description, campaign, and brand are never auto-cleared so the user
+    // can refine the same campaign across multiple opens without losing their work.
+    if (initialUrl && !url) setUrl(initialUrl);
+    setPasteFlash(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -433,6 +436,12 @@ function AMPscriptDialog({
   );
 }
 
+const MAILING_TO_AMPSCRIPT_BRAND: Record<string, BrandId> = {
+  "santa-isabel": "sisa",
+  "jumbo": "jumbo",
+  "spid": "spid",
+};
+
 function AMPscriptUrlInput({
   value,
   onChange,
@@ -442,6 +451,8 @@ function AMPscriptUrlInput({
 }) {
   const [open, setOpen] = useState(false);
   const isAMPscript = value.startsWith("%%=");
+  const mailingBrand = useBrandContext();
+  const documentBrand = mailingBrand ? (MAILING_TO_AMPSCRIPT_BRAND[mailingBrand] ?? "sisa") : undefined;
 
   return (
     <div className="space-y-1">
@@ -490,6 +501,7 @@ function AMPscriptUrlInput({
         open={open}
         onClose={() => setOpen(false)}
         initialUrl={isAMPscript ? "" : value}
+        initialBrand={documentBrand}
         onInsert={(ampscript) => {
           onChange(ampscript);
           setOpen(false);

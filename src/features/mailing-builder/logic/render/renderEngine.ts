@@ -21,6 +21,7 @@ import {
   FALLBACK_COLORS,
   buildTrackedUrl,
   escapeHtml,
+  escapeHref,
   getBlockPadding,
   resolveColor,
 } from "./renderUtils";
@@ -48,12 +49,12 @@ function prepareHero(
   return heroTemplate({
     padding:   getBlockPadding(block),
     bgColor:   resolveColor(block.layout.backgroundColor, "transparent"),
-    imageUrl:  escapeHtml(block.props.imageUrl || "/placeholder.svg"),
+    imageUrl:  escapeHref(block.props.imageUrl || "/placeholder.svg"),
     imageAlt:  escapeHtml(block.props.title),
     title:     escapeHtml(block.props.title),
     subtitle:  block.props.subtitle ? escapeHtml(block.props.subtitle) : "",
     ctaLabel:  block.props.ctaLabel ? escapeHtml(block.props.ctaLabel) : "",
-    ctaHref:   block.props.ctaLabel ? escapeHtml(buildTrackedUrl(block.props.href, doc)) : "#",
+    ctaHref:   block.props.ctaLabel ? escapeHref(buildTrackedUrl(block.props.href, doc)) : "#",
     colors: {
       foreground:        FALLBACK_COLORS.foreground,
       muted:             FALLBACK_COLORS.muted,
@@ -79,9 +80,9 @@ function prepareImage(block: ImageBlock, doc: MailingDocument): ReturnType<typeo
   return imageTemplate({
     padding: getBlockPadding(block),
     bgColor: resolveColor(block.layout.backgroundColor, "transparent"),
-    src:     escapeHtml(block.props.src  || "/placeholder.svg"),
+    src:     escapeHref(block.props.src  || "/placeholder.svg"),
     alt:     escapeHtml(block.props.alt  || "Imagen"),
-    href:    block.props.href ? escapeHtml(buildTrackedUrl(block.props.href, doc)) : "",
+    href:    block.props.href ? escapeHref(buildTrackedUrl(block.props.href, doc)) : "",
   });
 }
 
@@ -96,7 +97,7 @@ function prepareButton(
     padding: getBlockPadding(block),
     bgColor: resolveColor(block.layout.backgroundColor, "transparent"),
     label:   escapeHtml(block.props.label),
-    href:    escapeHtml(buildTrackedUrl(block.props.href, doc)),
+    href:    escapeHref(buildTrackedUrl(block.props.href, doc)),
     align,
     colors: {
       primary:           brandColors?.primary          ?? FALLBACK_COLORS.primary,
@@ -117,12 +118,12 @@ function prepareProduct(
   return productTemplate({
     padding:          getBlockPadding(block),
     bgColor:          resolveColor(block.layout.backgroundColor, "transparent"),
-    imageUrl:         escapeHtml(block.props.imageUrl || "/placeholder.svg"),
+    imageUrl:         escapeHref(block.props.imageUrl || "/placeholder.svg"),
     name:             escapeHtml(block.props.name),
     brand:            escapeHtml(block.props.brand ?? ""),
     price:            escapeHtml(block.props.price),
     unit:             escapeHtml(block.props.unit ?? ""),
-    href:             escapeHtml(buildTrackedUrl(block.props.href, doc)),
+    href:             escapeHref(buildTrackedUrl(block.props.href, doc)),
     ctaLabel:         escapeHtml(block.props.ctaLabel ?? "Agregar"),
     primaryColor:     brandColors?.primary          ?? FALLBACK_COLORS.primary,
     primaryForeground: brandColors?.primaryForeground ?? FALLBACK_COLORS.primaryForeground,

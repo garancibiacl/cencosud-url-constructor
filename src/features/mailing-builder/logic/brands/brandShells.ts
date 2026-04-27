@@ -79,7 +79,7 @@ const SANTA_ISABEL_FOOTER = `<table role="presentation" width="100%" border="0" 
       <table width="600" cellpadding="0" cellspacing="0" border="0" role="presentation" align="center">
         <tr>
           <td align="center">
-            <a href="%%=RedirectTo(Concat('https://sisaapp.page.link/?link=https%3A%2F%2Fwww.santaisabel.cl%2F%3F',@utm_source,'%26',@utm_medium,'%26','utm_campaign%3Ddescargaapp','_',@fechaenvio,'%26','utm_content%3Dhuincha-descarga','&','apn=com.cencosud.cl.sisa','&','ibi=com.cencosud.santaisabel.cl','&','efr=1','&','isi=1585842731'))=%%" target="_blank" style="text-decoration:none;display:block;">
+            <a href="%%=RedirectTo(Concat('https://sisaapp.page.link/?link=https://www.santaisabel.cl/%3F',@utm_source,'%26',@utm_medium,'%26','utm_campaign=descargaapp','_',@fechaenvio,'%26','utm_content=huincha-descarga','%26','apn=com.cencosud.cl.sisa','%26','ibi=com.cencosud.santaisabel.cl','%26','efr=1','%26','isi=1585842731'))=%%" target="_blank" style="text-decoration:none;display:block;">
               <img src="https://image.contenido.cencosud.cl/lib/fe9112727d63007e75/m/1/c7f4e36f-d75d-4f5d-8d4c-7ac592cfc851.jpg" alt="" width="600" style="display:block;width:100%;height:auto;border:0;">
             </a>
           </td>

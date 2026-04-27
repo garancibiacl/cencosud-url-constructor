@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import html2canvas from "html2canvas";
 import { useCanvasDrop } from "./layout/useCanvasDrop";
 import { RowDropIndicator } from "./layout/RowDropIndicator";
 import {
-  AlertCircle, ArrowLeft, CheckCircle2, CodeXml, Copy, Download, Eye, FileDown, GripVertical,
+  AlertCircle, ArrowLeft, CheckCircle2, CodeXml, Copy, Download, Eye, FileCode2, FileDown,
+  FileImage, GripVertical,
   History, Image as ImageIcon, ImagePlus, Inbox, Loader2, Mail, Monitor, MoreHorizontal,
   MousePointerClick, PenSquare, Plus, RectangleHorizontal, RotateCcw, Save,
   Send, Settings2, Smartphone, Trash2, Type, UserRound, X,
@@ -992,16 +994,103 @@ export default function MailingBuilderPage() {
     toast({ title: "HTML copiado", description: "El mailing quedó listo para pegar o enviar a desarrollo." });
   };
 
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [downloadingJpg, setDownloadingJpg]       = useState(false);
+  const [jpgDone, setJpgDone]                     = useState(false);
+  const fileName = document.name.trim().toLowerCase().replace(/\s+/g, "-") || "mailing";
+
   const handleDownloadHtml = () => {
     const html = renderMailingHtml(document);
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
+    const url  = URL.createObjectURL(blob);
     const link = window.document.createElement("a");
-    link.href = url;
-    link.download = `${document.name.trim().toLowerCase().replace(/\s+/g, "-") || "mailing"}.html`;
+    link.href     = url;
+    link.download = `${fileName}.html`;
     link.click();
     URL.revokeObjectURL(url);
+    setShowDownloadModal(false);
     toast({ title: "HTML descargado", description: "Se descargó una versión email-safe del mailing." });
+  };
+
+  const handleDownloadJpg = async () => {
+    setDownloadingJpg(true);
+    const MARGIN    = 40;
+    const wrapper   = window.document.createElement("div");
+    const container = window.document.createElement("div");
+    try {
+      const html = renderMailingHtml(document);
+
+      const headContent = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i)?.[1] ?? "";
+      const styles      = [...headContent.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)]
+        .map((m) => `<style>${m[1]}</style>`).join("\n");
+      const bodyTag     = html.match(/<body([^>]*)>/i)?.[1] ?? "";
+      const bodyBg      = bodyTag.match(/background-color:\s*([^;"]+)/i)?.[1]?.trim() ?? "#f5f7fb";
+      const bodyContent = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)?.[1] ?? "";
+
+      container.style.cssText = `width:600px;background-color:${bodyBg};`;
+      container.innerHTML     = styles + bodyContent;
+
+      wrapper.style.cssText = [
+        "position:fixed", "top:0", "left:-9999px",
+        `width:${600 + MARGIN * 2}px`, `padding:${MARGIN}px`,
+        "background-color:#ffffff", "box-sizing:border-box",
+        "z-index:-9999", "pointer-events:none",
+      ].join(";");
+      wrapper.appendChild(container);
+      window.document.body.appendChild(wrapper);
+
+      // Route every <img> through /api/proxy-img so the browser fetches
+      // from same origin → no CORS restriction → html2canvas can read pixels.
+      const imgs = Array.from(container.querySelectorAll<HTMLImageElement>("img"));
+      await Promise.allSettled(imgs.map(async (imgEl) => {
+        let src = imgEl.getAttribute("src") ?? "";
+        if (!src || src.startsWith("data:") || src.startsWith("blob:")) return;
+        src = src.replace(/^http:\/\//i, "https://");
+        const proxyUrl = `/api/proxy-img?url=${encodeURIComponent(src)}`;
+        try {
+          const res = await fetch(proxyUrl, { cache: "force-cache" });
+          if (!res.ok) return;
+          const blob = await res.blob();
+          imgEl.src = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload  = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        } catch { /* keep original src */ }
+      }));
+
+      await new Promise((r) => requestAnimationFrame(r));
+      await new Promise((r) => setTimeout(r, 80));
+
+      const totalWidth  = 600 + MARGIN * 2;
+      const totalHeight = wrapper.scrollHeight;
+
+      const canvas = await html2canvas(wrapper, {
+        useCORS: true, allowTaint: true, backgroundColor: "#ffffff",
+        scale: 1, width: totalWidth, height: totalHeight,
+        windowWidth: totalWidth, windowHeight: totalHeight,
+        x: 0, y: 0, scrollX: 0, scrollY: 0, logging: false,
+      });
+
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const url  = URL.createObjectURL(blob);
+        const link = window.document.createElement("a");
+        link.href     = url;
+        link.download = `${fileName}.jpg`;
+        link.click();
+        URL.revokeObjectURL(url);
+        setShowDownloadModal(false);
+        toast({ title: "JPG descargado", description: `${totalWidth} × ${totalHeight}px — mailing completo.` });
+      }, "image/jpeg", 0.95);
+    } catch (err) {
+      console.error("[JPG export]", err);
+      toast({ title: "Error al generar JPG", description: "Inténtalo nuevamente.", variant: "destructive" });
+    } finally {
+      if (wrapper.parentNode) window.document.body.removeChild(wrapper);
+      setDownloadingJpg(false);
+    }
   };
 
   const handleSaveAsPdf = () => {
@@ -1236,7 +1325,7 @@ export default function MailingBuilderPage() {
             <Button variant="outline" size="sm" onClick={() => void handleCopyHtml()} className="h-8 px-3 text-xs">
               <Copy className="mr-1.5 h-3.5 w-3.5" />Copiar HTML
             </Button>
-            <Button size="sm" onClick={handleDownloadHtml} className="h-8 px-3 text-xs">
+            <Button size="sm" onClick={() => setShowDownloadModal(true)} className="h-8 px-3 text-xs">
               <Download className="mr-1.5 h-3.5 w-3.5" />Descargar
             </Button>
 
@@ -1878,6 +1967,159 @@ export default function MailingBuilderPage() {
       />
 
       <AssetPickerDialog open={assetPickerOpen} onOpenChange={setAssetPickerOpen} onSelect={handleSelectAsset} />
+
+      {/* ── Modal: descargar ─────────────────────────────────────────────────── */}
+      <Dialog
+        open={showDownloadModal}
+        onOpenChange={(v) => {
+          if (downloadingJpg) return;
+          setShowDownloadModal(v);
+          if (!v) setJpgDone(false);
+        }}
+      >
+        <DialogContent className="gap-0 p-0 overflow-hidden max-w-md">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/50">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
+                <Download className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-sm font-semibold leading-none">Exportar mailing</DialogTitle>
+                <p className="mt-1 text-[12px] text-muted-foreground">Elige el formato de descarga</p>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {/* ── Thumbnail preview ── */}
+          <div className="px-6 pt-5 pb-3">
+            {/* iframe container: 220px wide, ~300px tall. The iframe is rendered at
+                600px and scaled down via CSS transform so layout is accurate. */}
+            <div
+              className="relative mx-auto overflow-hidden rounded-xl border border-border/60 bg-muted/30 shadow-sm"
+              style={{ width: 220, height: 300 }}
+            >
+              <div style={{ width: 600, height: 300 / (220 / 600), transformOrigin: "top left", transform: `scale(${220 / 600})`, pointerEvents: "none" }}>
+                <iframe
+                  srcDoc={htmlPreview}
+                  title="Vista previa del mailing"
+                  scrolling="no"
+                  style={{
+                    width: 600,
+                    height: 300 / (220 / 600),
+                    border: "none",
+                    display: "block",
+                    pointerEvents: "none",
+                  }}
+                />
+              </div>
+
+              {/* Overlay while generating */}
+              {downloadingJpg && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-xl bg-background/70 backdrop-blur-[2px]">
+                  <Loader2 className="h-7 w-7 animate-spin text-violet-500" />
+                  <span className="text-[11px] font-medium text-foreground/70">Generando imagen…</span>
+                </div>
+              )}
+
+              {/* Done overlay */}
+              {jpgDone && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-xl bg-emerald-500/10 backdrop-blur-[2px]">
+                  <CheckCircle2 className="h-7 w-7 text-emerald-500" />
+                  <span className="text-[11px] font-medium text-emerald-600">¡Descargado!</span>
+                </div>
+              )}
+            </div>
+
+            {/* Metadata line below thumbnail */}
+            <p className="mt-2 text-center text-[11px] text-muted-foreground truncate">
+              {`${document.settings.width + 80}px · JPG · ${document.name || "mailing"}`}
+            </p>
+          </div>
+
+          <div className="px-4 pb-3 space-y-2.5">
+            {/* HTML */}
+            <button
+              type="button"
+              onClick={handleDownloadHtml}
+              className="group w-full flex items-center gap-4 rounded-xl border border-border bg-card px-4 py-3.5 text-left transition-all hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm active:scale-[0.99]"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-secondary/60 transition-colors group-hover:border-primary/30 group-hover:bg-primary/10">
+                <FileCode2 className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-[13px] font-semibold text-foreground">Archivo HTML</span>
+                  <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-600">Recomendado</span>
+                </div>
+                <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">Email-safe listo para SFMC / Brevo</p>
+              </div>
+              <Download className="h-4 w-4 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-primary" />
+            </button>
+
+            {/* JPG */}
+            <button
+              type="button"
+              disabled={downloadingJpg || jpgDone}
+              onClick={() => {
+                void (async () => {
+                  await handleDownloadJpg();
+                  setJpgDone(true);
+                  setTimeout(() => {
+                    setShowDownloadModal(false);
+                    setJpgDone(false);
+                  }, 1500);
+                })();
+              }}
+              className={[
+                "group w-full flex items-center gap-4 rounded-xl border px-4 py-3.5 text-left transition-all",
+                jpgDone
+                  ? "border-emerald-400/50 bg-emerald-500/5 cursor-default"
+                  : "border-border bg-card hover:border-violet-400/40 hover:bg-violet-500/5 hover:shadow-sm active:scale-[0.99] disabled:cursor-wait disabled:opacity-60",
+              ].join(" ")}
+            >
+              <div
+                className={[
+                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border transition-colors",
+                  jpgDone
+                    ? "border-emerald-400/30 bg-emerald-500/10"
+                    : "border-border bg-secondary/60 group-hover:border-violet-400/30 group-hover:bg-violet-500/10",
+                ].join(" ")}
+              >
+                {jpgDone
+                  ? <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                  : downloadingJpg
+                    ? <Loader2 className="h-5 w-5 animate-spin text-violet-500" />
+                    : <FileImage className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-violet-500" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className={["text-[13px] font-semibold", jpgDone ? "text-emerald-600" : "text-foreground"].join(" ")}>
+                    {jpgDone ? "¡Listo!" : downloadingJpg ? "Generando…" : "Descargar JPG"}
+                  </span>
+                  {!jpgDone && !downloadingJpg && (
+                    <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-medium text-violet-600">JPG</span>
+                  )}
+                </div>
+                <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">Captura visual para revisión y aprobación</p>
+              </div>
+              {!downloadingJpg && !jpgDone && (
+                <Download className="h-4 w-4 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-violet-500" />
+              )}
+            </button>
+          </div>
+
+          <div className="px-4 pb-4">
+            <button
+              type="button"
+              onClick={() => { setShowDownloadModal(false); setJpgDone(false); }}
+              disabled={downloadingJpg}
+              className="w-full rounded-lg border border-border py-2 text-xs text-muted-foreground transition hover:bg-secondary/60 disabled:opacity-40"
+            >
+              Cancelar
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

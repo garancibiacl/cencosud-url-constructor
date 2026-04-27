@@ -4,7 +4,7 @@
  * Single source of truth for all routes.
  * Role-based access is enforced by RoleGuard per module.
  */
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, Component, type ReactNode, type ErrorInfo } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import AppShell from "./AppShell";
 import NotFound from "@/pages/NotFound";
@@ -32,6 +32,36 @@ const FileBankPage = lazy(() => import("@/features/file-bank/ui/FileBankPage"));
 const SharedFilePage = lazy(() => import("@/features/file-bank/ui/SharedFilePage"));
 const PublicFilePage = lazy(() => import("@/features/file-bank/ui/PublicFilePage"));
 
+class RouteErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error, info: ErrorInfo) { console.error("[RouteErrorBoundary]", error, info); }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
+          <p className="text-sm font-semibold text-destructive">Error al cargar el módulo</p>
+          <pre className="max-w-xl overflow-auto rounded-lg border border-border bg-secondary/40 p-4 text-left text-xs text-foreground/80">
+            {this.state.error.message}
+            {"\n\n"}
+            {this.state.error.stack?.split("\n").slice(0, 8).join("\n")}
+          </pre>
+          <button
+            className="rounded-md border border-border px-4 py-2 text-sm hover:bg-secondary"
+            onClick={() => this.setState({ error: null })}
+          >
+            Reintentar
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function PageLoader() {
   return (
     <div className="flex h-full min-h-[200px] items-center justify-center">
@@ -45,7 +75,7 @@ function Lazy({ children }: { children: React.ReactNode }) {
 }
 
 function Guarded({ path, children }: { path: string; children: React.ReactNode }) {
-  return <RoleGuard path={path}><Lazy>{children}</Lazy></RoleGuard>;
+  return <RouteErrorBoundary><RoleGuard path={path}><Lazy>{children}</Lazy></RoleGuard></RouteErrorBoundary>;
 }
 
 /** Redirects to the first module the current user's role can access */
