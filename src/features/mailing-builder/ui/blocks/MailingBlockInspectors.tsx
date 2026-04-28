@@ -987,8 +987,7 @@ function ColorSwatch({
                 title={b.label}
                 active={display?.toLowerCase() === b.color.toLowerCase()}
                 onClick={() => {
-                  handlePickerChange(b.color);
-                  setHexInput(b.color);
+                  applyHex(b.color);
                 }}
               />
             ))}
@@ -1008,8 +1007,7 @@ function ColorSwatch({
                   color={c}
                   active={display?.toLowerCase() === c.toLowerCase()}
                   onClick={() => {
-                    handlePickerChange(c);
-                    setHexInput(c);
+                    applyHex(c);
                   }}
                 />
               ))}

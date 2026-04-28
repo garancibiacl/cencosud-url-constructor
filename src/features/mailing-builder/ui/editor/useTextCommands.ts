@@ -12,10 +12,18 @@ export function saveSelection(): void {
   if (sel?.rangeCount) _saved = sel.getRangeAt(0).cloneRange();
 }
 
-/** Focuses containerEl (if provided) then restores the last saved range. */
+/** Focuses the actual contenteditable that owns the saved range, then restores it. */
 export function restoreSelection(containerEl?: HTMLElement | null): void {
-  if (containerEl) containerEl.focus({ preventScroll: true });
   if (!_saved) return;
+  // Walk up from the saved range's anchor to find the nearest contenteditable
+  const anchor = _saved.commonAncestorContainer;
+  const editEl = (anchor instanceof Element ? anchor : anchor.parentElement)
+    ?.closest('[contenteditable="true"]') as HTMLElement | null;
+  if (editEl) {
+    editEl.focus({ preventScroll: true });
+  } else if (containerEl) {
+    containerEl.focus({ preventScroll: true });
+  }
   const sel = window.getSelection();
   try {
     sel?.removeAllRanges();
@@ -210,6 +218,9 @@ export function useTextCommands(containerRef: RefObject<HTMLElement | null>): Us
     (color: string) => {
       restoreSelection(containerRef.current);
       css("foreColor", color);
+      // Re-save after execCommand modifies the DOM (span insertion invalidates
+      // the previous range — without this, every subsequent drag call fails).
+      saveSelection();
       setFmt((s) => ({ ...s, textColor: color }));
     },
     [containerRef],
@@ -219,6 +230,7 @@ export function useTextCommands(containerRef: RefObject<HTMLElement | null>): Us
     (color: string) => {
       restoreSelection(containerRef.current);
       css("hiliteColor", color);
+      saveSelection();
     },
     [containerRef],
   );

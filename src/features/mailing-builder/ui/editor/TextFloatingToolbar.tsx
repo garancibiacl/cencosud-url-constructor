@@ -260,7 +260,7 @@ function ColorPopover({ mode, currentColor, anchorTop, anchorLeft, onSelect, onC
         <button
           type="button"
           title="Restablecer color original"
-          onMouseDown={(e) => { e.preventDefault(); handlePicker(initialColor.current); }}
+          onMouseDown={(e) => { e.preventDefault(); applyHex(initialColor.current); }}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-white/10 text-zinc-500 transition hover:border-white/20 hover:text-zinc-300"
         >
           <RotateCcw className="h-3.5 w-3.5" />
@@ -280,8 +280,7 @@ function ColorPopover({ mode, currentColor, anchorTop, anchorLeft, onSelect, onC
               title={label}
               onMouseDown={(e) => {
                 e.preventDefault();
-                handlePicker(color);
-                setHexInput(color);
+                applyHex(color);
               }}
               className={`h-6 w-6 rounded-md border-2 transition-transform hover:scale-110 ${
                 pickerColor.toLowerCase() === color.toLowerCase()
@@ -308,8 +307,7 @@ function ColorPopover({ mode, currentColor, anchorTop, anchorLeft, onSelect, onC
                 title={c}
                 onMouseDown={(e) => {
                   e.preventDefault();
-                  handlePicker(c);
-                  setHexInput(c);
+                  applyHex(c);
                 }}
                 className={`h-6 w-6 rounded-md border-2 transition-transform hover:scale-110 ${
                   pickerColor.toLowerCase() === c.toLowerCase()
