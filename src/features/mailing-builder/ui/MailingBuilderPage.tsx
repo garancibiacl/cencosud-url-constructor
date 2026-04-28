@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import html2canvas from "html2canvas";
+import { toJpeg } from "html-to-image";
 import { useCanvasDrop } from "./layout/useCanvasDrop";
 import { RowDropIndicator } from "./layout/RowDropIndicator";
 import {
@@ -1020,34 +1020,37 @@ export default function MailingBuilderPage() {
 
   const handleDownloadJpg = async () => {
     setDownloadingJpg(true);
-    const MARGIN    = 40;
-    const wrapper   = window.document.createElement("div");
-    const container = window.document.createElement("div");
+    const docWidth = document.settings.width;
+
+    const iframe = window.document.createElement("iframe");
+    iframe.setAttribute("scrolling", "no");
+    iframe.style.cssText = [
+      "position:fixed", "top:0", `left:${-(docWidth + 400)}px`,
+      `width:${docWidth}px`, "height:1px",
+      "border:none", "overflow:visible",
+      "z-index:-9999", "pointer-events:none", "visibility:hidden",
+    ].join(";");
+    window.document.body.appendChild(iframe);
+
     try {
       const html = renderMailingHtml(document);
 
-      const headContent = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i)?.[1] ?? "";
-      const styles      = [...headContent.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)]
-        .map((m) => `<style>${m[1]}</style>`).join("\n");
-      const bodyTag     = html.match(/<body([^>]*)>/i)?.[1] ?? "";
-      const bodyBg      = bodyTag.match(/background-color:\s*([^;"]+)/i)?.[1]?.trim() ?? "#f5f7fb";
-      const bodyContent = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)?.[1] ?? "";
+      await new Promise<void>((resolve) => {
+        iframe.onload = () => resolve();
+        setTimeout(resolve, 4000);
+        iframe.srcdoc = html;
+      });
 
-      container.style.cssText = `width:600px;background-color:${bodyBg};`;
-      container.innerHTML     = styles + bodyContent;
+      const iframeDoc = iframe.contentDocument!;
 
-      wrapper.style.cssText = [
-        "position:fixed", "top:0", "left:-9999px",
-        `width:${600 + MARGIN * 2}px`, `padding:${MARGIN}px`,
-        "background-color:#ffffff", "box-sizing:border-box",
-        "z-index:-9999", "pointer-events:none",
-      ].join(";");
-      wrapper.appendChild(container);
-      window.document.body.appendChild(wrapper);
+      await (iframeDoc as Document & { fonts?: FontFaceSet }).fonts?.ready;
+      await new Promise((r) => requestAnimationFrame(r));
+      await new Promise((r) => setTimeout(r, 350));
 
-      // Route every <img> through /api/proxy-img so the browser fetches
-      // from same origin → no CORS restriction → html2canvas can read pixels.
-      const imgs = Array.from(container.querySelectorAll<HTMLImageElement>("img"));
+      const contentHeight = iframeDoc.documentElement.scrollHeight;
+
+      // Proxy imágenes → data URLs para evitar restricciones CORS
+      const imgs = Array.from(iframeDoc.querySelectorAll<HTMLImageElement>("img"));
       await Promise.allSettled(imgs.map(async (imgEl) => {
         let src = imgEl.getAttribute("src") ?? "";
         if (!src || src.startsWith("data:") || src.startsWith("blob:")) return;
@@ -1063,38 +1066,35 @@ export default function MailingBuilderPage() {
             reader.onerror = reject;
             reader.readAsDataURL(blob);
           });
-        } catch { /* keep original src */ }
+        } catch { /* conservar src original */ }
       }));
 
+      iframe.style.height   = `${contentHeight}px`;
+      iframe.style.overflow = "hidden";
       await new Promise((r) => requestAnimationFrame(r));
-      await new Promise((r) => setTimeout(r, 80));
+      await new Promise((r) => setTimeout(r, 100));
 
-      const totalWidth  = 600 + MARGIN * 2;
-      const totalHeight = wrapper.scrollHeight;
-
-      const canvas = await html2canvas(wrapper, {
-        useCORS: true, allowTaint: true, backgroundColor: "#ffffff",
-        scale: 1, width: totalWidth, height: totalHeight,
-        windowWidth: totalWidth, windowHeight: totalHeight,
-        x: 0, y: 0, scrollX: 0, scrollY: 0, logging: false,
+      const dataUrl = await toJpeg(iframeDoc.body, {
+        quality: 0.95,
+        backgroundColor: "#ffffff",
+        width: docWidth,
+        height: contentHeight,
+        pixelRatio: 1,
+        skipFonts: false,
+        fetchRequestInit: { cache: "force-cache" },
       });
 
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        const url  = URL.createObjectURL(blob);
-        const link = window.document.createElement("a");
-        link.href     = url;
-        link.download = `${fileName}.jpg`;
-        link.click();
-        URL.revokeObjectURL(url);
-        setShowDownloadModal(false);
-        toast({ title: "JPG descargado", description: `${totalWidth} × ${totalHeight}px — mailing completo.` });
-      }, "image/jpeg", 0.95);
+      const link = window.document.createElement("a");
+      link.href     = dataUrl;
+      link.download = `${fileName}.jpg`;
+      link.click();
+      setShowDownloadModal(false);
+      toast({ title: "JPG descargado", description: `${docWidth} × ${contentHeight}px — mailing completo.` });
     } catch (err) {
       console.error("[JPG export]", err);
       toast({ title: "Error al generar JPG", description: "Inténtalo nuevamente.", variant: "destructive" });
     } finally {
-      if (wrapper.parentNode) window.document.body.removeChild(wrapper);
+      if (iframe.parentNode) window.document.body.removeChild(iframe);
       setDownloadingJpg(false);
     }
   };
@@ -1759,26 +1759,47 @@ export default function MailingBuilderPage() {
                     </div>
                   ) : null}
 
-                  {/* Vista previa — solo iframe renderizado */}
-                  {previewMode === "split" ? (
-                    <div className={`mx-auto transition-all duration-300 ${
-                      devicePreview === "mobile"
-                        ? "w-[407px] rounded-[2rem] border-2 border-border bg-background p-2"
-                        : "w-full"
-                    }`}>
-                      {devicePreview === "mobile" && (
-                        <div className="mb-2 flex justify-center pt-1">
-                          <div className="h-1 w-12 rounded-full bg-border" />
+                  {/* Vista previa — iframe escalado según devicePreview */}
+                  {previewMode === "split" ? (() => {
+                    const docWidth   = document.settings.width ?? 600;
+                    const mobileW    = 375;
+                    const isMobile   = devicePreview === "mobile";
+                    const scale      = isMobile ? mobileW / docWidth : 1;
+                    const iframeH    = 900;
+                    const clipH      = Math.round(iframeH * scale);
+                    return (
+                      <div className={`mx-auto transition-all duration-300 ${
+                        isMobile
+                          ? "w-[407px] rounded-[2rem] border-2 border-border bg-background p-2"
+                          : "w-full"
+                      }`}>
+                        {isMobile && (
+                          <div className="mb-2 flex justify-center pt-1">
+                            <div className="h-1 w-12 rounded-full bg-border" />
+                          </div>
+                        )}
+                        {/* Clip container — recorta al alto escalado para evitar espacio vacío */}
+                        <div
+                          className="relative overflow-hidden rounded-md bg-white"
+                          style={isMobile ? { width: `${mobileW}px`, height: `${clipH}px`, margin: "0 auto" } : {}}
+                        >
+                          <iframe
+                            title="Vista previa"
+                            className="border-0 bg-white"
+                            style={{
+                              width:  `${docWidth}px`,
+                              height: `${iframeH}px`,
+                              transform: isMobile ? `scale(${scale})` : undefined,
+                              transformOrigin: "top left",
+                              display: "block",
+                              ...(!isMobile ? { width: "100%", maxWidth: "100%" } : {}),
+                            }}
+                            srcDoc={htmlPreview}
+                          />
                         </div>
-                      )}
-                      <iframe
-                        title="Vista previa"
-                        className="h-[600px] w-full rounded-md border-0 bg-white"
-                        style={{ maxWidth: devicePreview === "mobile" ? "375px" : "100%" }}
-                        srcDoc={htmlPreview}
-                      />
-                    </div>
-                  ) : null}
+                      </div>
+                    );
+                  })() : null}
 
                   {/* HTML + compatibilidad */}
                   {previewMode === "html" ? (
@@ -2015,7 +2036,7 @@ export default function MailingBuilderPage() {
 
             {/* Metadata line below thumbnail */}
             <p className="mt-2 text-center text-[11px] text-muted-foreground truncate">
-              {`${document.settings.width + 80}px · JPG · ${document.name || "mailing"}`}
+              {`${document.settings.width}px · JPG · ${document.name || "mailing"}`}
             </p>
           </div>
 

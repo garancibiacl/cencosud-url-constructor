@@ -38,6 +38,31 @@ const LEVEL = {
 } as const;
 
 // ---------------------------------------------------------------------------
+// InsertionGap — drop zone visible entre bloques durante un drag
+// ---------------------------------------------------------------------------
+
+function InsertionGap({
+  isActive,
+  isDragging,
+  isLast = false,
+}: {
+  isActive: boolean;
+  isDragging: boolean;
+  isLast?: boolean;
+}) {
+  if (!isDragging && !isActive) return null;
+  if (isActive) return <BlockDropIndicator />;
+  return (
+    <div
+      aria-hidden
+      className={`pointer-events-none flex items-center px-0.5 ${isLast ? "h-12" : "h-4"}`}
+    >
+      <span className="h-px flex-1 rounded-full border-t border-dashed border-violet-300/40 dark:border-violet-700/30" />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Block label map
 // ---------------------------------------------------------------------------
 
@@ -180,6 +205,14 @@ export const RowCanvas = memo(function RowCanvas({
 }: RowCanvasProps) {
   const [showPresetPicker, setShowPresetPicker] = useState(false);
   const [dropTargetColId, setDropTargetColId] = useState<string | null>(null);
+  const [appendDragOver, setAppendDragOver] = useState(false);
+
+  // Reset all drag state on dragend (cancelled drags, drops with stopPropagation).
+  useEffect(() => {
+    const reset = () => { setAppendDragOver(false); setDropTargetColId(null); };
+    document.addEventListener("dragend", reset);
+    return () => document.removeEventListener("dragend", reset);
+  }, []);
 
   const isThisRowActive = selectedRowId === row.id;
   const isRowLevel = isThisRowActive && selectedLevel === "row";
@@ -249,6 +282,49 @@ export const RowCanvas = memo(function RowCanvas({
       onMoveBlockWithinColumn(currentRow.id, toColId, src.srcIndex, insertAt);
     } else {
       onMoveBlockToColumn(src.blockId, currentRow.id, toColId, insertAt);
+    }
+    dragRef.current = null;
+  }, [dragRef, onInsertBlock, onMoveBlockWithinColumn, onMoveBlockToColumn]);
+
+  // ── Append zone: catches block drops below all columns (adds to widest col)
+  const handleAppendDragOver = useCallback((e: React.DragEvent) => {
+    const { types } = e.dataTransfer;
+    if (!types.includes(BLOCK_DRAG_TYPE)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = "copy";
+    setAppendDragOver(true);
+  }, []);
+
+  const handleAppendDragLeave = useCallback(() => setAppendDragOver(false), []);
+
+  const handleAppendDrop = useCallback((e: React.DragEvent) => {
+    const { types } = e.dataTransfer;
+    if (!types.includes(BLOCK_DRAG_TYPE)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setAppendDragOver(false);
+
+    const data = e.dataTransfer.getData("text/plain");
+    const currentRow = rowRef.current;
+    // Target the widest column (or first if all equal)
+    const targetCol = currentRow.columns.reduce((best, col) =>
+      col.colSpan >= best.colSpan ? col : best, currentRow.columns[0]);
+    const insertAt = targetCol.blocks.length;
+
+    if (data.startsWith("new:")) {
+      const type = data.slice(4) as MailingBlockType;
+      onInsertBlock(type, currentRow.id, targetCol.id, insertAt);
+      dragRef.current = null;
+      return;
+    }
+
+    const src = dragRef.current;
+    if (!src) return;
+    if (src.srcRowId === currentRow.id && src.srcColId === targetCol.id) {
+      onMoveBlockWithinColumn(currentRow.id, targetCol.id, src.srcIndex, insertAt);
+    } else {
+      onMoveBlockToColumn(src.blockId, currentRow.id, targetCol.id, insertAt);
     }
     dragRef.current = null;
   }, [dragRef, onInsertBlock, onMoveBlockWithinColumn, onMoveBlockToColumn]);
@@ -483,6 +559,26 @@ export const RowCanvas = memo(function RowCanvas({
           );
         })}
       </div>
+
+      {/* Zona de arrastre inferior — visible cuando un bloque pasa por aquí */}
+      <div
+        onDragOver={handleAppendDragOver}
+        onDragLeave={handleAppendDragLeave}
+        onDrop={handleAppendDrop}
+        className={`mx-2 mb-2 overflow-hidden rounded-md border border-dashed transition-all duration-150 ${
+          appendDragOver
+            ? "h-10 border-violet-400 bg-violet-50/60 dark:bg-violet-950/30"
+            : "h-3 border-violet-200/50 dark:border-violet-800/30"
+        }`}
+      >
+        {appendDragOver && (
+          <div className="flex h-full items-center justify-center gap-1.5">
+            <span className="text-[10px] font-semibold text-violet-500">
+              Agregar en esta sección
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 });
@@ -552,6 +648,13 @@ const ColumnCanvas = memo(function ColumnCanvas({
   // ── Block drop indicator state ────────────────────────────────────────────
   const colRef = useRef<HTMLDivElement>(null);
   const [blockDropIndex, setBlockDropIndex] = useState<number | null>(null);
+
+  // Reset on dragend — covers cancelled drags and drops that call stopPropagation.
+  useEffect(() => {
+    const reset = () => setBlockDropIndex(null);
+    document.addEventListener("dragend", reset);
+    return () => document.removeEventListener("dragend", reset);
+  }, []);
 
   const resolveBlockDropIndex = useCallback((clientY: number): number => {
     const el = colRef.current;
@@ -650,10 +753,13 @@ const ColumnCanvas = memo(function ColumnCanvas({
         </div>
       )}
 
-      {/* Bloques con indicador de posición entre ellos */}
+      {/* Bloques con zonas de inserción entre ellos */}
       {col.blocks.map((block, index) => (
         <React.Fragment key={block.id}>
-          {blockDropIndex === index && <BlockDropIndicator />}
+          <InsertionGap
+            isActive={blockDropIndex === index}
+            isDragging={blockDropIndex !== null}
+          />
           <BlockItem
             block={block}
             index={index}
@@ -675,8 +781,12 @@ const ColumnCanvas = memo(function ColumnCanvas({
         </React.Fragment>
       ))}
 
-      {/* Indicador al final de la lista (después del último bloque, o en columna vacía) */}
-      {blockDropIndex === col.blocks.length && <BlockDropIndicator />}
+      {/* Zona de inserción al final (después del último bloque) — isLast para área mayor */}
+      <InsertionGap
+        isActive={blockDropIndex === col.blocks.length}
+        isDragging={blockDropIndex !== null}
+        isLast
+      />
 
       {/* Zona vacía si la columna no tiene bloques */}
       {col.blocks.length === 0 && (
@@ -873,7 +983,7 @@ const BlockItem = memo(function BlockItem({
         onClick={handleSelect}
       >
         <div className="p-1.5">
-          <BlockView block={block} isSelected={isSelected} onChange={handleChange} />
+          <BlockView block={block} isSelected={isSelected} onChange={handleChange as never} />
         </div>
       </div>
     </div>

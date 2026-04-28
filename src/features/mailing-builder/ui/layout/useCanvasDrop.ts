@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export const SECTION_DRAG_TYPE = "application/mailing-section";
 export const ROW_DRAG_TYPE     = "application/mailing-row";
@@ -36,6 +36,13 @@ export function useCanvasDrop({
 }) {
   const [dropIndex, setDropIndex] = useState<number | null>(null);
   const rowDragRef = useRef<RowDragMeta | null>(null);
+
+  // Reset indicator when any drag ends (covers drops inside columns that call stopPropagation).
+  useEffect(() => {
+    const reset = () => { setDropIndex(null); rowDragRef.current = null; };
+    document.addEventListener("dragend", reset);
+    return () => document.removeEventListener("dragend", reset);
+  }, []);
 
   // Gap index closest to clientY within the rows container.
   const resolveIndex = useCallback((clientY: number): number => {
