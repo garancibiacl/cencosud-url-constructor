@@ -1,6 +1,6 @@
 import type { BlockLayout } from "./layout.types";
 
-export type MailingBlockType = "hero" | "text" | "image" | "button" | "spacer" | "product" | "raw-html";
+export type MailingBlockType = "hero" | "text" | "image" | "button" | "spacer" | "product" | "product-dd" | "raw-html";
 
 export interface BaseBlock<TType extends MailingBlockType, TProps> {
   id: string;
@@ -55,10 +55,40 @@ export interface ProductBlock extends BaseBlock<"product", {
   ctaLabel?: string;
 }> {}
 
+export interface ProductDdBlock extends BaseBlock<"product-dd", {
+  // ── Imagen del producto ───────────────────────────────────────────
+  imageUrl: string;
+  // ── Badge principal (draggable dentro de la imagen) ──────────────
+  discountLabel: string;
+  discountBadgeBg: string;
+  discountBadgeFg: string;
+  badgeTop: number;          // posición vertical en % dentro de la imagen (0-100)
+  badgeLeft: number;         // posición horizontal en % (0-100)
+  // ── Badge secundaria (esquina superior derecha imagen) ───────────
+  secondBadge?: string;
+  secondBadgeBg?: string;
+  secondBadgeFg?: string;
+  // ── Precios ───────────────────────────────────────────────────────
+  originalPrice: string;     // precio tachado
+  price: string;             // precio con descuento
+  priceColor: string;        // color del precio descontado
+  // ── Info del producto ─────────────────────────────────────────────
+  name: string;
+  brand?: string;
+  unit?: string;
+  // ── Logo de marca (esquina derecha panel) ────────────────────────
+  logoUrl?: string;
+  logoSize?: number;         // ancho en px (default 60)
+  logoAlign?: "left" | "center" | "right";
+  // ── CTA ──────────────────────────────────────────────────────────
+  ctaLabel?: string;
+  href: string;
+}> {}
+
 export interface RawHtmlBlock extends BaseBlock<"raw-html", {
   html: string;
   presetId?: string;
   presetLabel?: string;
 }> {}
 
-export type MailingBlock = HeroBlock | TextBlock | ImageBlock | ButtonBlock | SpacerBlock | ProductBlock | RawHtmlBlock;
+export type MailingBlock = HeroBlock | TextBlock | ImageBlock | ButtonBlock | SpacerBlock | ProductBlock | ProductDdBlock | RawHtmlBlock;

@@ -9,7 +9,7 @@
  */
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, GripHorizontal } from "lucide-react";
+import { ChevronDown, ChevronRight, GripHorizontal, ImageIcon } from "lucide-react";
 import { layoutRegistry } from "../../logic/registry/layoutRegistry";
 import { presetSections } from "../../logic/registry/presetSections";
 import { useMailingBuilderStore } from "../../hooks/useMailingBuilderStore";
@@ -88,6 +88,26 @@ table{border-collapse:collapse;width:100%;}
 }
 
 // ---------------------------------------------------------------------------
+// ProductDdMiniThumb — mini preview for "Producto más descuento doble"
+// ---------------------------------------------------------------------------
+
+function ProductDdMiniThumb() {
+  return (
+    <div className="mx-3 mb-3 h-[110px] overflow-hidden rounded-md border border-border/60 bg-white p-2 text-[8px] font-sans">
+      <div className="flex gap-1 mb-1.5">
+        <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[7px] font-bold text-white leading-none">Descuento Doble</span>
+      </div>
+      <div className="mb-1 flex items-center justify-center bg-gray-50 rounded h-[44px]">
+        <ImageIcon className="h-5 w-5 text-gray-200" />
+      </div>
+      <div className="text-[7px] text-gray-400 line-through leading-none">$ 19.990</div>
+      <div className="text-[8px] font-bold text-red-600 leading-none mb-1">$ 9.990</div>
+      <div className="h-4 w-full rounded bg-primary/20" />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // SectionLayoutPicker
 // ---------------------------------------------------------------------------
 
@@ -128,9 +148,11 @@ function SectionHeader({
 export function SectionLayoutPicker() {
   const addRowFromLayout = useMailingBuilderStore((s) => s.addRowFromLayout);
   const insertPresetBlockAsRowAt = useMailingBuilderStore((s) => s.insertPresetBlockAsRowAt);
+  const insertBlockAsNewRowAt = useMailingBuilderStore((s) => s.insertBlockAsNewRowAt);
   const rowCount = useMailingBuilderStore((s) => s.document.rows.length);
 
   const [headersOpen, setHeadersOpen] = useState(true);
+  const [productsOpen, setProductsOpen] = useState(true);
   const [layoutsOpen, setLayoutsOpen] = useState(true);
 
   return (
@@ -168,6 +190,38 @@ export function SectionLayoutPicker() {
                 </div>
               </button>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Productos ─────────────────────────────────────────────────────── */}
+      <div>
+        <SectionHeader
+          label="Productos"
+          open={productsOpen}
+          onToggle={() => setProductsOpen((v) => !v)}
+        />
+        {productsOpen && (
+          <div className="mt-1 space-y-2">
+            <button
+              type="button"
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData("text/plain", "new:product-dd");
+                e.dataTransfer.setData(BLOCK_DRAG_TYPE, "new:product-dd");
+                e.dataTransfer.effectAllowed = "copy";
+              }}
+              onClick={() => insertBlockAsNewRowAt("product-dd", rowCount)}
+              className="group w-full overflow-hidden cursor-pointer rounded-xl border border-border bg-secondary/30 pt-2 text-left transition-all duration-150 hover:border-primary/30 hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              <div className="flex justify-center pb-1.5">
+                <GripHorizontal className="h-3.5 w-3.5 text-muted-foreground/30 transition-colors group-hover:text-primary/60" />
+              </div>
+              <ProductDdMiniThumb />
+              <div className="px-3 pb-2.5">
+                <p className="text-[11px] font-medium text-foreground/80">Producto más descuento doble</p>
+              </div>
+            </button>
           </div>
         )}
       </div>

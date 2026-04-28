@@ -99,12 +99,42 @@ const spacerBlockSchema = z.object({
   }),
 });
 
+const productDdBlockSchema = z.object({
+  id:     z.string(),
+  type:   z.literal("product-dd"),
+  layout: blockLayoutSchema,
+  meta:   blockMetaSchema,
+  props: z.object({
+    imageUrl:        z.string(),
+    discountLabel:   z.string(),
+    discountBadgeBg: z.string(),
+    discountBadgeFg: z.string(),
+    badgeTop:        z.number(),
+    badgeLeft:       z.number(),
+    secondBadge:     z.string().optional(),
+    secondBadgeBg:   z.string().optional(),
+    secondBadgeFg:   z.string().optional(),
+    originalPrice:   z.string(),
+    price:           z.string(),
+    priceColor:      z.string(),
+    name:            z.string(),
+    brand:           z.string().optional(),
+    unit:            z.string().optional(),
+    logoUrl:         z.string().optional(),
+    logoSize:        z.number().optional(),
+    logoAlign:       z.enum(["left", "center", "right"]).optional(),
+    ctaLabel:        z.string().optional(),
+    href:            z.string(),
+  }),
+});
+
 export const mailingBlockSchema = z.discriminatedUnion("type", [
   heroBlockSchema,
   textBlockSchema,
   imageBlockSchema,
   buttonBlockSchema,
   spacerBlockSchema,
+  productDdBlockSchema,
 ]);
 
 // ---------------------------------------------------------------------------

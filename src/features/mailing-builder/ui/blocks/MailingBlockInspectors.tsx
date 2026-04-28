@@ -4,9 +4,9 @@ import {
   AlignCenter, AlignJustify, AlignLeft, AlignRight,
   ArrowDown, ArrowLeft, ArrowRight, ArrowUp,
   ArrowLeftRight, ArrowUpDown,
-  AlertCircle, Check, ChevronRight, ChevronsUpDown, ClipboardPaste,
+  AlertCircle, Check, ChevronDown, ChevronRight, ChevronsUpDown, ClipboardPaste,
   Image as ImageIcon, Link2, Monitor,
-  MonitorSmartphone, PenLine, Plus, Settings2, Smartphone,
+  MonitorSmartphone, PenLine, PenSquare, Plus, Settings2, Smartphone,
   Zap,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -27,7 +27,7 @@ import { parseSingleWebSpreadsheetPaste } from "@/lib/title-url-app";
 import type { BrandId } from "@/features/ampscript-builder/logic/ampscript.types";
 import { useBrandContext } from "./BrandContext";
 import type {
-  ButtonBlock, HeroBlock, ImageBlock, ProductBlock, RawHtmlBlock, SpacerBlock, TextBlock,
+  ButtonBlock, HeroBlock, ImageBlock, ProductBlock, ProductDdBlock, RawHtmlBlock, SpacerBlock, TextBlock,
 } from "../../logic/schema/block.types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1432,6 +1432,294 @@ export function RawHtmlBlockInspector({ block }: { block: RawHtmlBlock; onChange
           Esta sección es un bloque HTML estandarizado de marca. No es editable desde el canvas.
         </p>
       </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// InspField — input con floating label estilo Material Design outlined
+// ─────────────────────────────────────────────────────────────────────────────
+
+function InspField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  onEditClick,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  onEditClick?: () => void;
+  type?: string;
+}) {
+  return (
+    <div className="relative rounded-md border border-border bg-card transition-colors focus-within:border-primary/60">
+      <span className="pointer-events-none absolute -top-[9px] left-2.5 bg-card px-1 text-[10px] font-medium leading-none text-muted-foreground/70">
+        {label}
+      </span>
+      <div className="flex items-center">
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="w-full rounded-md bg-transparent px-3 py-[9px] text-[13px] text-foreground outline-none placeholder:text-muted-foreground/40"
+        />
+        {onEditClick && (
+          <button
+            type="button"
+            onClick={onEditClick}
+            className="mr-2 flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground/40 transition-colors hover:bg-secondary hover:text-foreground"
+            tabIndex={-1}
+          >
+            <PenSquare className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// InspSectionCollapsible — InspSection con cabecera colapsable
+// ─────────────────────────────────────────────────────────────────────────────
+
+function InspSectionCollapsible({
+  title,
+  children,
+  defaultOpen = true,
+}: {
+  title: string;
+  children: ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between border-b border-border/50 bg-secondary/30 px-4 py-2.5 transition-colors hover:bg-secondary/50"
+      >
+        <span className="text-[13px] font-bold tracking-tight text-foreground">{title}</span>
+        <ChevronDown
+          className={`h-4 w-4 text-muted-foreground/60 transition-transform duration-200 ${open ? "" : "-rotate-90"}`}
+        />
+      </button>
+      {open && <div className="space-y-3 p-4">{children}</div>}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ProductDdBlockInspector
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function ProductDdBlockInspector({ block, onChange }: SharedProps<ProductDdBlock>) {
+  const setProps = (patch: Partial<typeof block.props>) =>
+    onChange({ ...block, props: { ...block.props, ...patch } });
+
+  return (
+    <div className="space-y-2.5">
+
+      {/* 1. Imagen */}
+      <InspSectionCollapsible title="Imagen del producto">
+        {block.props.imageUrl && (
+          <div className="overflow-hidden rounded-lg border border-border bg-secondary/30">
+            <img src={block.props.imageUrl} alt="preview" className="h-28 w-full object-contain" />
+          </div>
+        )}
+        <InspField
+          label="URL de imagen"
+          value={block.props.imageUrl ?? ""}
+          onChange={(v) => setProps({ imageUrl: v })}
+          placeholder="https://..."
+        />
+      </InspSectionCollapsible>
+
+      {/* 2. Badge principal */}
+      <InspSectionCollapsible title="Badge principal">
+        <InspField
+          label="Texto del badge"
+          value={block.props.discountLabel}
+          onChange={(v) => setProps({ discountLabel: v })}
+          placeholder="Descuento Doble"
+        />
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-medium text-muted-foreground/70">Color fondo</span>
+            <ColorSwatch
+              value={block.props.discountBadgeBg}
+              onChange={(v) => setProps({ discountBadgeBg: v ?? "#E8001D" })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-medium text-muted-foreground/70">Color texto</span>
+            <ColorSwatch
+              value={block.props.discountBadgeFg}
+              onChange={(v) => setProps({ discountBadgeFg: v ?? "#FFFFFF" })}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2.5">
+          <InspRow label="Pos. vertical (%)">
+            <PxStepper value={block.props.badgeTop} onChange={(v) => setProps({ badgeTop: v })} min={0} max={100} unit="%" />
+          </InspRow>
+          <InspRow label="Pos. horizontal (%)">
+            <PxStepper value={block.props.badgeLeft} onChange={(v) => setProps({ badgeLeft: v })} min={0} max={100} unit="%" />
+          </InspRow>
+        </div>
+      </InspSectionCollapsible>
+
+      {/* 3. Badge secundaria */}
+      <InspSectionCollapsible title="Badge secundaria" defaultOpen={false}>
+        <InspField
+          label="Texto (opcional)"
+          value={block.props.secondBadge ?? ""}
+          onChange={(v) => setProps({ secondBadge: v })}
+          placeholder="Ej: Solo Hoy, -50%..."
+        />
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-medium text-muted-foreground/70">Color fondo</span>
+            <ColorSwatch value={block.props.secondBadgeBg} onChange={(v) => setProps({ secondBadgeBg: v })} />
+          </div>
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-medium text-muted-foreground/70">Color texto</span>
+            <ColorSwatch value={block.props.secondBadgeFg} onChange={(v) => setProps({ secondBadgeFg: v })} />
+          </div>
+        </div>
+      </InspSectionCollapsible>
+
+      {/* 4. Precios */}
+      <InspSectionCollapsible title="Precios">
+        <InspField
+          label="Precio original (tachado)"
+          value={block.props.originalPrice}
+          onChange={(v) => setProps({ originalPrice: v })}
+          placeholder="$ 19.990"
+        />
+        <InspField
+          label="Precio oferta"
+          value={block.props.price}
+          onChange={(v) => setProps({ price: v })}
+          placeholder="$ 9.990"
+        />
+        <InspRow label="Color precio oferta">
+          <ColorSwatch
+            value={block.props.priceColor}
+            onChange={(v) => setProps({ priceColor: v ?? "#E8001D" })}
+          />
+        </InspRow>
+      </InspSectionCollapsible>
+
+      {/* 5. Producto */}
+      <InspSectionCollapsible title="Producto">
+        <InspField
+          label="Nombre del producto"
+          value={block.props.name}
+          onChange={(v) => setProps({ name: v })}
+          placeholder="Nombre del producto"
+        />
+        <InspField
+          label="Marca / variante"
+          value={block.props.brand ?? ""}
+          onChange={(v) => setProps({ brand: v })}
+          placeholder="Ej: Nestlé, 500g, Rojo..."
+        />
+        <div className="grid grid-cols-2 gap-2.5">
+          <InspField
+            label="Unidad"
+            value={block.props.unit ?? ""}
+            onChange={(v) => setProps({ unit: v })}
+            placeholder="c/u, kg..."
+          />
+          <InspField
+            label="Texto botón CTA"
+            value={block.props.ctaLabel ?? ""}
+            onChange={(v) => setProps({ ctaLabel: v })}
+            placeholder="Agregar"
+          />
+        </div>
+      </InspSectionCollapsible>
+
+      {/* 6. Logo de marca */}
+      <InspSectionCollapsible title="Logo de marca" defaultOpen={false}>
+        {block.props.logoUrl && (
+          <div className="overflow-hidden rounded-lg border border-border bg-secondary/30 p-2">
+            <img src={block.props.logoUrl} alt="logo" className="mx-auto h-12 object-contain" />
+          </div>
+        )}
+        <InspField
+          label="URL del logo (opcional)"
+          value={block.props.logoUrl ?? ""}
+          onChange={(v) => setProps({ logoUrl: v })}
+          placeholder="https://..."
+        />
+        <div className="grid grid-cols-2 gap-2.5 items-end">
+          <InspRow label="Tamaño">
+            <PxStepper value={block.props.logoSize ?? 60} onChange={(v) => setProps({ logoSize: v })} min={20} max={200} />
+          </InspRow>
+          <InspRow label="Alineación">
+            <SegmentedAlign value={block.props.logoAlign ?? "left"} onChange={(v) => setProps({ logoAlign: v })} />
+          </InspRow>
+        </div>
+      </InspSectionCollapsible>
+
+      {/* 7. Enlace */}
+      <InspSectionCollapsible title="Enlace">
+        <AMPscriptUrlInput
+          value={block.props.href ?? ""}
+          onChange={(href) => setProps({ href })}
+        />
+      </InspSectionCollapsible>
+
+      {/* 8. Espaciado */}
+      <InspSectionCollapsible title="Espaciado" defaultOpen={false}>
+        <PaddingEditor
+          value={padVal(block)}
+          onChange={(padding) => onChange({ ...block, layout: { ...block.layout, padding } })}
+        />
+      </InspSectionCollapsible>
+
+      {/* 9. Apariencia del bloque */}
+      <InspSectionCollapsible title="Apariencia del bloque" defaultOpen={true}>
+        <InspRow label="Color de fondo">
+          <ColorSwatch
+            value={block.layout.backgroundColor}
+            onChange={(v) => onChange({ ...block, layout: { ...block.layout, backgroundColor: v } })}
+          />
+        </InspRow>
+        <InspRow label="Radio de borde">
+          <PxStepper
+            value={block.layout.borderRadius ?? 0}
+            onChange={(v) => onChange({ ...block, layout: { ...block.layout, borderRadius: v } })}
+            min={0}
+            max={48}
+          />
+        </InspRow>
+        <InspRow label="Grosor del borde">
+          <PxStepper
+            value={block.layout.borderWidth ?? 0}
+            onChange={(v) => onChange({ ...block, layout: { ...block.layout, borderWidth: v } })}
+            min={0}
+            max={20}
+          />
+        </InspRow>
+        {(block.layout.borderWidth ?? 0) > 0 && (
+          <InspRow label="Color del borde">
+            <ColorSwatch
+              value={block.layout.borderColor}
+              onChange={(v) => onChange({ ...block, layout: { ...block.layout, borderColor: v } })}
+            />
+          </InspRow>
+        )}
+      </InspSectionCollapsible>
+
     </div>
   );
 }

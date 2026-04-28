@@ -35,7 +35,8 @@ import { imageTemplate } from "./templates/block/image.template";
 import { buttonTemplate } from "./templates/block/button.template";
 import { spacerTemplate } from "./templates/block/spacer.template";
 import { productTemplate } from "./templates/block/product.template";
-import type { HeroBlock, TextBlock, ImageBlock, ButtonBlock, SpacerBlock, ProductBlock, RawHtmlBlock } from "../schema/block.types";
+import { productDdTemplate } from "./templates/block/product-dd.template";
+import type { HeroBlock, TextBlock, ImageBlock, ButtonBlock, SpacerBlock, ProductBlock, ProductDdBlock, RawHtmlBlock } from "../schema/block.types";
 
 // ---------------------------------------------------------------------------
 // Preparadores de datos por bloque (lógica ≠ template)
@@ -130,6 +131,40 @@ function prepareProduct(
   });
 }
 
+function prepareProductDd(
+  block: ProductDdBlock,
+  doc: MailingDocument,
+  brandColors?: { primary: string; primaryForeground: string },
+): ReturnType<typeof productDdTemplate> {
+  return productDdTemplate({
+    padding:          getBlockPadding(block),
+    bgColor:          resolveColor(block.layout.backgroundColor, "#ffffff"),
+    borderRadius:     block.layout.borderRadius ?? 0,
+    borderWidth:      block.layout.borderWidth  ?? 0,
+    borderColor:      block.layout.borderColor  ?? "#e5e7eb",
+    imageUrl:         escapeHref(block.props.imageUrl || "/placeholder.svg"),
+    discountLabel:    escapeHtml(block.props.discountLabel),
+    discountBadgeBg:  block.props.discountBadgeBg,
+    discountBadgeFg:  block.props.discountBadgeFg,
+    secondBadge:      escapeHtml(block.props.secondBadge ?? ""),
+    secondBadgeBg:    block.props.secondBadgeBg ?? "#F97316",
+    secondBadgeFg:    block.props.secondBadgeFg ?? "#FFFFFF",
+    originalPrice:    escapeHtml(block.props.originalPrice),
+    price:            escapeHtml(block.props.price),
+    priceColor:       block.props.priceColor,
+    name:             escapeHtml(block.props.name),
+    brand:            escapeHtml(block.props.brand ?? ""),
+    unit:             escapeHtml(block.props.unit ?? ""),
+    logoUrl:          escapeHref(block.props.logoUrl ?? ""),
+    logoSize:         block.props.logoSize ?? 60,
+    logoAlign:        block.props.logoAlign ?? "left",
+    href:             escapeHref(buildTrackedUrl(block.props.href, doc)),
+    ctaLabel:         escapeHtml(block.props.ctaLabel ?? "Agregar"),
+    primaryColor:     brandColors?.primary           ?? FALLBACK_COLORS.primary,
+    primaryForeground: brandColors?.primaryForeground ?? FALLBACK_COLORS.primaryForeground,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // RenderEngine
 // ---------------------------------------------------------------------------
@@ -150,8 +185,9 @@ export class RenderEngine {
       case "image":   return prepareImage(block, doc);
       case "button":  return prepareButton(block, doc, brandColors);
       case "spacer":  return prepareSpacer(block);
-      case "product":  return prepareProduct(block, doc, brandColors);
-      case "raw-html": return (block as RawHtmlBlock).props.html;
+      case "product":    return prepareProduct(block, doc, brandColors);
+      case "product-dd": return prepareProductDd(block, doc, brandColors);
+      case "raw-html":   return (block as RawHtmlBlock).props.html;
       default:
         return "";
     }

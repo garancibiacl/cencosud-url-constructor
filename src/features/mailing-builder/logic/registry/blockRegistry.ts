@@ -24,6 +24,7 @@ import type {
   MailingBlock,
   MailingBlockType,
   ProductBlock,
+  ProductDdBlock,
   RawHtmlBlock,
   SpacerBlock,
   TextBlock,
@@ -40,6 +41,7 @@ import {
   HeroBlockInspector,
   ImageBlockInspector,
   ProductBlockInspector,
+  ProductDdBlockInspector,
   RawHtmlBlockInspector,
   SpacerBlockInspector,
   TextBlockInspector,
@@ -49,11 +51,13 @@ import {
   HeroBlockView,
   ImageBlockView,
   ProductBlockView,
+  ProductDdBlockView,
   RawHtmlBlockView,
   SpacerBlockView,
   TextBlockView,
 } from "../../ui/blocks/MailingBlockViews";
 import { productTemplate } from "../render/templates/block/product.template";
+import { productDdTemplate } from "../render/templates/block/product-dd.template";
 import { brandThemes } from "../brands/brandThemes";
 
 // ---------------------------------------------------------------------------
@@ -331,6 +335,72 @@ export const blockRegistry: BlockRegistryMap = {
         ctaLabel:         escapeHtml(block.props.ctaLabel ?? "Agregar"),
         primaryColor:     theme?.primaryColor          ?? FALLBACK_COLORS.primary,
         primaryForeground: theme?.primaryForeground    ?? FALLBACK_COLORS.primaryForeground,
+      });
+    },
+  }),
+
+  // ── Product + Descuento Doble ─────────────────────────────────────────────
+  "product-dd": defineBlock<ProductDdBlock>({
+    type: "product-dd",
+    label: "Producto + Descuento Doble",
+    category: "content",
+    defaultProps: {
+      imageUrl:        "",
+      discountLabel:   "Descuento Doble",
+      discountBadgeBg: "#E8001D",
+      discountBadgeFg: "#FFFFFF",
+      badgeTop:        10,
+      badgeLeft:       50,
+      secondBadge:     "",
+      secondBadgeBg:   "#F97316",
+      secondBadgeFg:   "#FFFFFF",
+      originalPrice:   "$ 19.990",
+      price:           "$ 9.990",
+      priceColor:      "#E8001D",
+      name:            "Nombre del producto",
+      brand:           "",
+      unit:            "c/u",
+      logoUrl:         "",
+      logoSize:        60,
+      logoAlign:       "left",
+      ctaLabel:        "Agregar",
+      href:            "",
+    },
+    defaultLayout: { colSpan: 12, padding: { top: 0, right: 0, bottom: 0, left: 0 } },
+    View: ProductDdBlockView,
+    Inspector: ProductDdBlockInspector,
+    renderHtml: (block, doc) => {
+      const brandId = doc.settings.brand;
+      const theme = brandId ? brandThemes[brandId] : undefined;
+      const padding = {
+        top:    block.layout.padding?.top    ?? 0,
+        right:  block.layout.padding?.right  ?? 0,
+        bottom: block.layout.padding?.bottom ?? 0,
+        left:   block.layout.padding?.left   ?? 0,
+      };
+      return productDdTemplate({
+        padding,
+        bgColor:           block.layout.backgroundColor ?? "transparent",
+        imageUrl:          escapeHtml(block.props.imageUrl || "/placeholder.svg"),
+        discountLabel:     escapeHtml(block.props.discountLabel),
+        discountBadgeBg:   block.props.discountBadgeBg,
+        discountBadgeFg:   block.props.discountBadgeFg,
+        secondBadge:       escapeHtml(block.props.secondBadge ?? ""),
+        secondBadgeBg:     block.props.secondBadgeBg ?? "#F97316",
+        secondBadgeFg:     block.props.secondBadgeFg ?? "#FFFFFF",
+        originalPrice:     escapeHtml(block.props.originalPrice),
+        price:             escapeHtml(block.props.price),
+        priceColor:        block.props.priceColor,
+        name:              escapeHtml(block.props.name),
+        brand:             escapeHtml(block.props.brand ?? ""),
+        unit:              escapeHtml(block.props.unit ?? ""),
+        logoUrl:           escapeHtml(block.props.logoUrl ?? ""),
+        logoSize:          block.props.logoSize ?? 60,
+        logoAlign:         block.props.logoAlign ?? "left",
+        href:              escapeHtml(buildTrackedUrl(block.props.href, doc)),
+        ctaLabel:          escapeHtml(block.props.ctaLabel ?? "Agregar"),
+        primaryColor:      theme?.primaryColor          ?? FALLBACK_COLORS.primary,
+        primaryForeground: theme?.primaryForeground     ?? FALLBACK_COLORS.primaryForeground,
       });
     },
   }),

@@ -2,7 +2,7 @@ import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { CodeXml, ImageIcon, ImageOff, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import type { ButtonBlock, HeroBlock, ImageBlock, MailingBlock, ProductBlock, RawHtmlBlock, SpacerBlock, TextBlock } from "../../logic/schema/block.types";
+import type { ButtonBlock, HeroBlock, ImageBlock, MailingBlock, ProductBlock, ProductDdBlock, RawHtmlBlock, SpacerBlock, TextBlock } from "../../logic/schema/block.types";
 import { TextFloatingToolbar } from "../editor/TextFloatingToolbar";
 
 const getPaddingStyle = (block: MailingBlock): CSSProperties => ({
@@ -566,6 +566,253 @@ export function ProductBlockView({ block, isSelected, onChange }: { block: Produ
           <div className="flex h-9 w-40 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
             {block.props.ctaLabel || "Agregar"}
           </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+export function ProductDdBlockView({ block, isSelected, onChange }: {
+  block: ProductDdBlock;
+  isSelected?: boolean;
+  onChange?: (nextBlock: ProductDdBlock) => void;
+}) {
+  const imageContainerRef = useRef<HTMLDivElement>(null);
+  const isDraggingBadge = useRef(false);
+  const [imgError, setImgError] = useState(false);
+  useEffect(() => { setImgError(false); }, [block.props.imageUrl]);
+
+  function handleBadgeDragStart(e: React.MouseEvent) {
+    if (!onChange || !isSelected) return;
+    e.preventDefault();
+    e.stopPropagation();
+    isDraggingBadge.current = true;
+
+    const handleMouseMove = (ev: MouseEvent) => {
+      if (!isDraggingBadge.current || !imageContainerRef.current) return;
+      const rect = imageContainerRef.current.getBoundingClientRect();
+      const left = Math.min(100, Math.max(0, ((ev.clientX - rect.left) / rect.width) * 100));
+      const top  = Math.min(100, Math.max(0, ((ev.clientY - rect.top)  / rect.height) * 100));
+      onChange({ ...block, props: { ...block.props, badgeTop: top, badgeLeft: left } });
+    };
+
+    const handleMouseUp = () => {
+      isDraggingBadge.current = false;
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  }
+
+  const logoAlignClass = (
+    { left: "justify-start", center: "justify-center", right: "justify-end" } as const
+  )[block.props.logoAlign ?? "left"];
+
+  const cardStyle: React.CSSProperties = {
+    minHeight: 220,
+    backgroundColor: block.layout.backgroundColor ?? "#ffffff",
+    borderRadius: block.layout.borderRadius ? `${block.layout.borderRadius}px` : undefined,
+    border: block.layout.borderWidth
+      ? `${block.layout.borderWidth}px solid ${block.layout.borderColor ?? "#e5e7eb"}`
+      : undefined,
+  };
+
+  return (
+    <article
+      className={canvasShell(isSelected)}
+      style={{
+        paddingTop: block.layout.padding?.top ?? 0,
+        paddingRight: block.layout.padding?.right ?? 0,
+        paddingBottom: block.layout.padding?.bottom ?? 0,
+        paddingLeft: block.layout.padding?.left ?? 0,
+      }}
+    >
+      <div className="flex overflow-hidden font-sans" style={cardStyle}>
+
+        {/* ── LEFT COLUMN: imagen + badge ───────────────────────────── */}
+        <div
+          ref={imageContainerRef}
+          className="relative shrink-0 bg-[#f9fafb] flex items-center justify-center overflow-hidden group/img"
+          style={{ width: "48%" }}
+        >
+          {/* Imagen */}
+          {block.props.imageUrl && imgError ? (
+            <div className="flex flex-col items-center gap-1.5 text-muted-foreground/40">
+              <ImageOff className="h-6 w-6" />
+              <span className="text-[10px]">Sin imagen</span>
+            </div>
+          ) : (
+            <img
+              src={block.props.imageUrl || "/placeholder.svg"}
+              alt={block.props.name}
+              className="max-h-[200px] max-w-[90%] object-contain"
+              onError={() => setImgError(true)}
+            />
+          )}
+
+          {/* Badge principal — draggable */}
+          <span
+            className="absolute cursor-grab select-none rounded-full px-2 py-1 text-[10px] font-bold leading-none shadow-md active:cursor-grabbing"
+            style={{
+              top: `${block.props.badgeTop}%`,
+              left: `${block.props.badgeLeft}%`,
+              backgroundColor: block.props.discountBadgeBg,
+              color: block.props.discountBadgeFg,
+              transform: "translate(-50%, -50%)",
+              userSelect: "none",
+            }}
+            onMouseDown={handleBadgeDragStart}
+          >
+            {block.props.discountLabel || "Descuento Doble"}
+          </span>
+
+          {/* Badge secundaria — fija esquina superior derecha */}
+          {block.props.secondBadge && (
+            <span
+              className="absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold leading-none"
+              style={{
+                backgroundColor: block.props.secondBadgeBg ?? "#F97316",
+                color: block.props.secondBadgeFg ?? "#FFFFFF",
+              }}
+            >
+              {block.props.secondBadge}
+            </span>
+          )}
+
+          {/* ImageEditOverlay cuando seleccionado */}
+          {isSelected && onChange && (
+            <ImageEditOverlay
+              src={block.props.imageUrl ?? ""}
+              onChange={(imageUrl) => onChange({ ...block, props: { ...block.props, imageUrl } })}
+            />
+          )}
+        </div>
+
+        {/* ── RIGHT COLUMN: logo + precios + info + CTA ─────────────── */}
+        <div className="flex flex-1 flex-col justify-between py-3 pl-3 pr-4">
+
+          {/* Logo si existe */}
+          {block.props.logoUrl && (
+            <div className={`mb-2 flex ${logoAlignClass}`}>
+              <img
+                src={block.props.logoUrl}
+                alt="logo"
+                style={{ width: block.props.logoSize ?? 60 }}
+                className="h-auto object-contain"
+              />
+            </div>
+          )}
+
+          {/* Precios */}
+          <div>
+            {/* Precio original tachado */}
+            <div className="text-[11px] text-[#9ca3af] line-through">
+              {isSelected && onChange ? (
+                <span
+                  contentEditable
+                  suppressContentEditableWarning
+                  onBlur={(e) =>
+                    onChange({ ...block, props: { ...block.props, originalPrice: e.currentTarget.textContent ?? block.props.originalPrice } })
+                  }
+                  className="outline-none focus:ring-1 focus:ring-ring/50 rounded px-0.5"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {block.props.originalPrice}
+                </span>
+              ) : (
+                <span>{block.props.originalPrice}</span>
+              )}
+            </div>
+
+            {/* Precio con descuento */}
+            <div className="text-xl font-bold leading-tight">
+              {isSelected && onChange ? (
+                <span
+                  contentEditable
+                  suppressContentEditableWarning
+                  onBlur={(e) =>
+                    onChange({ ...block, props: { ...block.props, price: e.currentTarget.textContent ?? block.props.price } })
+                  }
+                  className="outline-none focus:ring-1 focus:ring-ring/50 rounded px-0.5"
+                  style={{ color: block.props.priceColor }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {block.props.price}
+                </span>
+              ) : (
+                <span style={{ color: block.props.priceColor }}>{block.props.price}</span>
+              )}
+            </div>
+
+            {/* Unit badge */}
+            {block.props.unit && (
+              <span className="mt-1 inline-block rounded-full bg-[#f3f4f6] px-1.5 py-0.5 text-[10px] text-black">
+                {block.props.unit}
+              </span>
+            )}
+          </div>
+
+          {/* Brand */}
+          <div className="mt-1 min-h-[20px] text-[12px] text-[#6b7280]">
+            {isSelected && onChange ? (
+              <span
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={(e) =>
+                  onChange({ ...block, props: { ...block.props, brand: e.currentTarget.textContent ?? block.props.brand } })
+                }
+                className="outline-none focus:ring-1 focus:ring-ring/50 rounded px-0.5"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {block.props.brand ?? ""}
+              </span>
+            ) : (
+              <span>{block.props.brand}</span>
+            )}
+          </div>
+
+          {/* Name */}
+          <div className="mt-1 text-[13px] font-normal leading-[18px] text-black line-clamp-3">
+            {isSelected && onChange ? (
+              <span
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={(e) =>
+                  onChange({ ...block, props: { ...block.props, name: e.currentTarget.textContent ?? block.props.name } })
+                }
+                className="outline-none focus:ring-1 focus:ring-ring/50 rounded px-0.5"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {block.props.name}
+              </span>
+            ) : (
+              <span>{block.props.name}</span>
+            )}
+          </div>
+
+          {/* CTA */}
+          <div className="mt-3">
+            <div className="inline-flex h-8 min-w-[120px] items-center justify-center rounded-lg bg-primary px-4 text-[12px] font-bold text-primary-foreground">
+              {isSelected && onChange ? (
+                <span
+                  contentEditable
+                  suppressContentEditableWarning
+                  onBlur={(e) =>
+                    onChange({ ...block, props: { ...block.props, ctaLabel: e.currentTarget.textContent ?? block.props.ctaLabel } })
+                  }
+                  className="outline-none"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {block.props.ctaLabel ?? "Agregar"}
+                </span>
+              ) : (
+                <span>{block.props.ctaLabel ?? "Agregar"}</span>
+              )}
+            </div>
+          </div>
+
         </div>
       </div>
     </article>
