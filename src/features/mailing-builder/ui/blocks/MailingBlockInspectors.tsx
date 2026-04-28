@@ -1438,6 +1438,15 @@ export function RawHtmlBlockInspector({ block }: { block: RawHtmlBlock; onChange
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
+// Strips HTML tags to plain text — used for inspector fields that display
+// HTML-formatted values (prices, names) edited via the canvas toolbar.
+function htmlToText(html: string): string {
+  if (!html || !html.includes("<")) return html;
+  const div = document.createElement("div");
+  div.innerHTML = html;
+  return div.textContent ?? "";
+}
+
 // InspField — input con floating label estilo Material Design outlined
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1599,13 +1608,13 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
       <InspSectionCollapsible title="Precios">
         <InspField
           label="Precio original (tachado)"
-          value={block.props.originalPrice}
+          value={htmlToText(block.props.originalPrice)}
           onChange={(v) => setProps({ originalPrice: v })}
           placeholder="$ 19.990"
         />
         <InspField
           label="Precio oferta"
-          value={block.props.price}
+          value={htmlToText(block.props.price)}
           onChange={(v) => setProps({ price: v })}
           placeholder="$ 9.990"
         />
@@ -1621,13 +1630,13 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
       <InspSectionCollapsible title="Producto">
         <InspField
           label="Nombre del producto"
-          value={block.props.name}
+          value={htmlToText(block.props.name)}
           onChange={(v) => setProps({ name: v })}
           placeholder="Nombre del producto"
         />
         <InspField
           label="Marca / variante"
-          value={block.props.brand ?? ""}
+          value={htmlToText(block.props.brand ?? "")}
           onChange={(v) => setProps({ brand: v })}
           placeholder="Ej: Nestlé, 500g, Rojo..."
         />

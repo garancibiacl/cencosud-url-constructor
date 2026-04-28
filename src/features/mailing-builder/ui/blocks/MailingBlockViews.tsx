@@ -578,6 +578,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
   onChange?: (nextBlock: ProductDdBlock) => void;
 }) {
   const imageContainerRef = useRef<HTMLDivElement>(null);
+  const editorAreaRef = useRef<HTMLDivElement>(null);
   const isDraggingBadge = useRef(false);
   const [imgError, setImgError] = useState(false);
   useEffect(() => { setImgError(false); }, [block.props.imageUrl]);
@@ -691,11 +692,13 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
         </div>
 
         {/* ── RIGHT COLUMN: logo + precios + info + CTA ─────────────── */}
-        <div className="flex flex-1 flex-col justify-between py-3 pl-3 pr-4">
-
-          {/* Logo si existe */}
+        <div
+          ref={editorAreaRef}
+          className="flex flex-1 flex-col gap-1.5 py-3 pl-3 pr-4"
+        >
+          {/* Logo */}
           {block.props.logoUrl && (
-            <div className={`mb-2 flex ${logoAlignClass}`}>
+            <div className={`flex ${logoAlignClass}`}>
               <img
                 src={block.props.logoUrl}
                 alt="logo"
@@ -705,113 +708,82 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
             </div>
           )}
 
-          {/* Precios */}
-          <div>
-            {/* Precio original tachado */}
-            <div className="text-[11px] text-[#9ca3af] line-through">
-              {isSelected && onChange ? (
-                <span
-                  contentEditable
-                  suppressContentEditableWarning
-                  onBlur={(e) =>
-                    onChange({ ...block, props: { ...block.props, originalPrice: e.currentTarget.textContent ?? block.props.originalPrice } })
-                  }
-                  className="outline-none focus:ring-1 focus:ring-ring/50 rounded px-0.5"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {block.props.originalPrice}
-                </span>
-              ) : (
-                <span>{block.props.originalPrice}</span>
-              )}
-            </div>
-
-            {/* Precio con descuento */}
-            <div className="text-xl font-bold leading-tight">
-              {isSelected && onChange ? (
-                <span
-                  contentEditable
-                  suppressContentEditableWarning
-                  onBlur={(e) =>
-                    onChange({ ...block, props: { ...block.props, price: e.currentTarget.textContent ?? block.props.price } })
-                  }
-                  className="outline-none focus:ring-1 focus:ring-ring/50 rounded px-0.5"
-                  style={{ color: block.props.priceColor }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {block.props.price}
-                </span>
-              ) : (
-                <span style={{ color: block.props.priceColor }}>{block.props.price}</span>
-              )}
-            </div>
-
-            {/* Unit badge */}
-            {block.props.unit && (
-              <span className="mt-1 inline-block rounded-full bg-[#f3f4f6] px-1.5 py-0.5 text-[10px] text-black">
-                {block.props.unit}
-              </span>
+          {/* Precio original tachado */}
+          <div className="text-[11px] text-[#9ca3af] line-through leading-tight">
+            {isSelected && onChange ? (
+              <ContentEditableDiv
+                html={block.props.originalPrice}
+                onChange={(html) => onChange({ ...block, props: { ...block.props, originalPrice: html } })}
+                className="min-w-[40px] rounded px-0.5 outline-none focus:ring-1 focus:ring-ring/50"
+              />
+            ) : (
+              <span dangerouslySetInnerHTML={{ __html: block.props.originalPrice }} />
             )}
           </div>
+
+          {/* Precio con descuento */}
+          <div className="text-xl font-bold leading-tight" style={{ color: block.props.priceColor }}>
+            {isSelected && onChange ? (
+              <ContentEditableDiv
+                html={block.props.price}
+                onChange={(html) => onChange({ ...block, props: { ...block.props, price: html } })}
+                className="min-w-[40px] rounded px-0.5 outline-none focus:ring-1 focus:ring-ring/50"
+              />
+            ) : (
+              <span dangerouslySetInnerHTML={{ __html: block.props.price }} />
+            )}
+          </div>
+
+          {/* Unit badge */}
+          {block.props.unit && (
+            <span className="inline-block self-start rounded-full bg-[#f3f4f6] px-1.5 py-0.5 text-[10px] text-black">
+              {block.props.unit}
+            </span>
+          )}
 
           {/* Brand */}
-          <div className="mt-1 min-h-[20px] text-[12px] text-[#6b7280]">
+          <div className="min-h-[18px] text-[12px] text-[#6b7280]">
             {isSelected && onChange ? (
-              <span
-                contentEditable
-                suppressContentEditableWarning
-                onBlur={(e) =>
-                  onChange({ ...block, props: { ...block.props, brand: e.currentTarget.textContent ?? block.props.brand } })
-                }
-                className="outline-none focus:ring-1 focus:ring-ring/50 rounded px-0.5"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {block.props.brand ?? ""}
-              </span>
+              <ContentEditableDiv
+                html={block.props.brand ?? ""}
+                onChange={(html) => onChange({ ...block, props: { ...block.props, brand: html } })}
+                className="min-h-[18px] min-w-[40px] rounded px-0.5 outline-none focus:ring-1 focus:ring-ring/50"
+              />
             ) : (
-              <span>{block.props.brand}</span>
+              <span dangerouslySetInnerHTML={{ __html: block.props.brand ?? "" }} />
             )}
           </div>
 
-          {/* Name */}
-          <div className="mt-1 text-[13px] font-normal leading-[18px] text-black line-clamp-3">
+          {/* Nombre del producto */}
+          <div className="text-[13px] font-normal leading-[18px] text-black">
             {isSelected && onChange ? (
-              <span
-                contentEditable
-                suppressContentEditableWarning
-                onBlur={(e) =>
-                  onChange({ ...block, props: { ...block.props, name: e.currentTarget.textContent ?? block.props.name } })
-                }
-                className="outline-none focus:ring-1 focus:ring-ring/50 rounded px-0.5"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {block.props.name}
-              </span>
+              <ContentEditableDiv
+                html={block.props.name}
+                onChange={(html) => onChange({ ...block, props: { ...block.props, name: html } })}
+                className="min-h-[36px] min-w-[60px] rounded px-0.5 outline-none focus:ring-1 focus:ring-ring/50"
+              />
             ) : (
-              <span>{block.props.name}</span>
+              <span dangerouslySetInnerHTML={{ __html: block.props.name }} />
             )}
           </div>
 
-          {/* CTA */}
-          <div className="mt-3">
+          {/* CTA button */}
+          <div className="mt-1">
             <div className="inline-flex h-8 min-w-[120px] items-center justify-center rounded-lg bg-primary px-4 text-[12px] font-bold text-primary-foreground">
               {isSelected && onChange ? (
-                <span
-                  contentEditable
-                  suppressContentEditableWarning
-                  onBlur={(e) =>
-                    onChange({ ...block, props: { ...block.props, ctaLabel: e.currentTarget.textContent ?? block.props.ctaLabel } })
-                  }
+                <ContentEditableDiv
+                  html={block.props.ctaLabel ?? "Agregar"}
+                  onChange={(html) => onChange({ ...block, props: { ...block.props, ctaLabel: html } })}
                   className="outline-none"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {block.props.ctaLabel ?? "Agregar"}
-                </span>
+                />
               ) : (
-                <span>{block.props.ctaLabel ?? "Agregar"}</span>
+                <span dangerouslySetInnerHTML={{ __html: block.props.ctaLabel ?? "Agregar" }} />
               )}
             </div>
           </div>
+
+          {/* Floating toolbar — aparece al seleccionar texto en cualquier campo */}
+          {isSelected && onChange && <TextFloatingToolbar containerRef={editorAreaRef} />}
 
         </div>
       </div>

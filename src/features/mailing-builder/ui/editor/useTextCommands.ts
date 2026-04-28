@@ -83,9 +83,25 @@ function rgbToHex(rgb: string): string {
 }
 
 function getAlignment(): "left" | "center" | "right" | "justify" {
-  if (document.queryCommandState("justifyCenter")) return "center";
-  if (document.queryCommandState("justifyRight")) return "right";
-  if (document.queryCommandState("justifyFull")) return "justify";
+  const sel = window.getSelection();
+  const node = sel?.focusNode;
+  let el: Element | null = node instanceof Element ? node : (node?.parentElement ?? null);
+  while (el) {
+    const ta = (el as HTMLElement).style?.textAlign;
+    if (ta === "center") return "center";
+    if (ta === "right") return "right";
+    if (ta === "justify") return "justify";
+    if (ta === "left") return "left";
+    el = el.parentElement;
+  }
+  // Fallback to computed style of focus node
+  if (node) {
+    const computed = window.getComputedStyle(node instanceof Element ? node : (node.parentElement as Element));
+    const ta = computed?.textAlign;
+    if (ta === "center") return "center";
+    if (ta === "right") return "right";
+    if (ta === "justify") return "justify";
+  }
   return "left";
 }
 
@@ -209,14 +225,34 @@ export function useTextCommands(containerRef: RefObject<HTMLElement | null>): Us
 
   const applyAlignment = useCallback(
     (align: "left" | "center" | "right" | "justify") => {
-      restoreSelection(containerRef.current);
-      const map = {
-        left: "justifyLeft",
-        center: "justifyCenter",
-        right: "justifyRight",
-        justify: "justifyFull",
-      } as const;
-      document.execCommand(map[align], false);
+      const container = containerRef.current;
+      if (!container) return;
+      restoreSelection(container);
+
+      const sel = window.getSelection();
+      const anchorNode = sel?.anchorNode;
+
+      // Walk up from the selection anchor to find the nearest block-level
+      // element that lives inside the container, then set textAlign on it.
+      // This avoids execCommand("justifyX") which wraps content in <div> blocks.
+      const BLOCK_TAGS = new Set(["DIV", "P", "H1", "H2", "H3", "H4", "H5", "H6", "LI", "TD", "BLOCKQUOTE"]);
+      let node: Node | null = anchorNode instanceof Element ? anchorNode : (anchorNode?.parentElement ?? null);
+      let blockEl: HTMLElement | null = null;
+
+      while (node && node !== container) {
+        if (node instanceof HTMLElement && BLOCK_TAGS.has(node.tagName)) {
+          blockEl = node;
+          break;
+        }
+        node = node.parentElement;
+      }
+
+      // If no block child found, apply directly to the container so the whole
+      // field aligns — this is the common case for single-line price/name fields.
+      const target = blockEl ?? container;
+      target.style.textAlign = align;
+
+      container.dispatchEvent(new InputEvent("input", { bubbles: true }));
       setFmt((s) => ({ ...s, alignment: align }));
     },
     [containerRef],
