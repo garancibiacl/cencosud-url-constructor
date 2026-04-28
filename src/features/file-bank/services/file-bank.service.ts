@@ -173,6 +173,20 @@ export async function listFiles(): Promise<FileRecord[]> {
   return (data ?? []) as FileRecord[];
 }
 
+/**
+ * Convierte una URL de Supabase Storage en una URL de thumbnail CDN.
+ * Solo actúa sobre URLs del propio bucket; URLs externas se devuelven intactas.
+ * El thumbnail es generado y cacheado por el CDN de Supabase (sin costo extra).
+ */
+export function getThumbnailUrl(fileUrl: string, width = 240, quality = 75): string {
+  if (!fileUrl.includes("/storage/v1/object/public/")) return fileUrl;
+  const transformed = fileUrl.replace(
+    "/storage/v1/object/public/",
+    "/storage/v1/render/image/public/",
+  );
+  return `${transformed}?width=${width}&quality=${quality}&resize=cover`;
+}
+
 export async function getFileBySlug(slug: string): Promise<FileRecord | null> {
   const { data, error } = await supabase
     .from("files")

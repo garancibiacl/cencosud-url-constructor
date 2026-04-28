@@ -66,7 +66,7 @@ export function columnTemplate({
 }: ColumnTemplateData): string {
   const innerHtml = blocksHtml || '<tr><td style="height:16px; line-height:16px; font-size:0;">&nbsp;</td></tr>';
 
-  return `<td width="${columnWidth}" valign="top" align="left"
+  return `<td class="mc" width="${columnWidth}" valign="top" align="left"
    style="width:${columnWidth}px; max-width:${columnWidth}px; ${colPadStyle}background-color:${colBg};">
   <!--[if mso]>
   <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="${columnWidth}">

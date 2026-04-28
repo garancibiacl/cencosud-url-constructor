@@ -34,6 +34,10 @@ interface MailingBuilderState {
   setShowWelcome: (v: boolean) => void;
   setShowCampaignSettings: (v: boolean) => void;
 
+  imageLibrary: { open: boolean; targetBlockId: string | null; targetField: string | null };
+  openImageLibrary: (blockId: string, field: string) => void;
+  closeImageLibrary: () => void;
+
   // ── Selección ─────────────────────────────────────────────────────────────
   /** Selecciona un bloque; opcionalmente proporciona contexto row/col. */
   selectBlock: (blockId: string | null, rowId?: string | null, colId?: string | null) => void;
@@ -167,6 +171,12 @@ export const useMailingBuilderStore = create<MailingBuilderState>((set, get) => 
   showCampaignSettings: false,
   setShowWelcome: (v) => set({ showWelcome: v }),
   setShowCampaignSettings: (v) => set({ showCampaignSettings: v }),
+
+  imageLibrary: { open: false, targetBlockId: null, targetField: null },
+  openImageLibrary: (targetBlockId, targetField) =>
+    set({ imageLibrary: { open: true, targetBlockId, targetField } }),
+  closeImageLibrary: () =>
+    set({ imageLibrary: { open: false, targetBlockId: null, targetField: null } }),
 
   // ── Selección ─────────────────────────────────────────────────────────────
 

@@ -1,8 +1,9 @@
 import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { CodeXml, ImageIcon, ImageOff, Upload } from "lucide-react";
+import { CodeXml, ImageIcon, ImageOff, LayoutGrid, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { ButtonBlock, HeroBlock, ImageBlock, MailingBlock, ProductBlock, ProductDdBlock, RawHtmlBlock, SpacerBlock, TextBlock } from "../../logic/schema/block.types";
+import { imageLibraryBridge } from "../imageLibraryBridge";
 import { TextFloatingToolbar } from "../editor/TextFloatingToolbar";
 
 const getPaddingStyle = (block: MailingBlock): CSSProperties => ({
@@ -82,15 +83,18 @@ const ContentEditableDiv = forwardRef<HTMLDivElement, {
 function ImageEditOverlay({
   src,
   onChange,
+  blockId,
+  libraryField,
 }: {
   src: string;
   onChange: (src: string) => void;
+  blockId?: string;
+  libraryField?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const handleImageClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     setOpen(true);
@@ -109,7 +113,6 @@ function ImageEditOverlay({
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) readFileAsDataUrl(file);
-    // Reset so the same file can be re-selected
     e.target.value = "";
   }, [readFileAsDataUrl]);
 
@@ -148,7 +151,7 @@ function ImageEditOverlay({
         </div>
       )}
 
-      {/* Overlay con input URL y carga de archivo */}
+      {/* Overlay con input URL, biblioteca y carga de archivo */}
       {open && (
         <div
           className={`absolute inset-0 flex items-center justify-center backdrop-blur-[1px] transition-colors ${isDragOver ? "bg-blue-500/30" : "bg-black/40"}`}
@@ -163,7 +166,7 @@ function ImageEditOverlay({
               <span className="text-xs font-medium text-blue-600">Suelta la imagen aquí</span>
             </div>
           ) : (
-            <div className="mx-4 flex w-full max-w-xs items-center gap-2 rounded-lg bg-card px-3 py-2.5 shadow-xl ring-1 ring-border">
+            <div className="mx-4 flex w-full max-w-xs items-center gap-1.5 rounded-lg bg-card px-3 py-2.5 shadow-xl ring-1 ring-border">
               <ImageIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               <input
                 ref={inputRef}
@@ -176,6 +179,21 @@ function ImageEditOverlay({
                 placeholder="https://..."
                 onClick={(e) => e.stopPropagation()}
               />
+              {blockId && libraryField && (
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpen(false);
+                    imageLibraryBridge.open(blockId, libraryField);
+                  }}
+                  className="shrink-0 rounded p-0.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  title="Elegir desde biblioteca"
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                </button>
+              )}
               <button
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
@@ -270,6 +288,8 @@ export function HeroBlockView({ block, isSelected, onChange }: { block: HeroBloc
           <ImageEditOverlay
             src={block.props.imageUrl ?? ""}
             onChange={(imageUrl) => onChange({ ...block, props: { ...block.props, imageUrl } })}
+            blockId={block.id}
+            libraryField="imageUrl"
           />
         )}
       </div>
@@ -383,6 +403,8 @@ export function ImageBlockView({ block, isSelected, onChange }: { block: ImageBl
           <ImageEditOverlay
             src={block.props.src ?? ""}
             onChange={(src) => onChange({ ...block, props: { ...block.props, src } })}
+            blockId={block.id}
+            libraryField="src"
           />
         )}
       </div>
@@ -533,6 +555,8 @@ export function ProductBlockView({ block, isSelected, onChange }: { block: Produ
             <ImageEditOverlay
               src={block.props.imageUrl ?? ""}
               onChange={(imageUrl) => onChange({ ...block, props: { ...block.props, imageUrl } })}
+              blockId={block.id}
+              libraryField="imageUrl"
             />
           )}
         </div>
@@ -687,6 +711,8 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
             <ImageEditOverlay
               src={block.props.imageUrl ?? ""}
               onChange={(imageUrl) => onChange({ ...block, props: { ...block.props, imageUrl } })}
+              blockId={block.id}
+              libraryField="imageUrl"
             />
           )}
         </div>

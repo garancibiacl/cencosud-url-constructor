@@ -69,7 +69,15 @@ export function documentTemplate({
       </o:OfficeDocumentSettings>
     </xml>
   </noscript>
-  <![endif]-->${headExtras ? `\n${headExtras}` : ""}
+  <![endif]-->
+  <style>
+    @media only screen and (max-width:600px) {
+      .mc { display:block !important; width:100% !important; max-width:100% !important; min-width:100% !important; box-sizing:border-box !important; }
+      .mc-img img { max-width:100% !important; height:auto !important; width:100% !important; }
+      img { max-width:100% !important; height:auto !important; }
+      body { -webkit-text-size-adjust:100% !important; -ms-text-size-adjust:100% !important; }
+    }
+  </style>${headExtras ? `\n${headExtras}` : ""}
 </head>
 <body style="margin:0; padding:0; word-spacing:normal; background-color:${bodyBg}; font-family:${fontFamily};">
   <!-- Preheader: visible en bandeja, oculto en body -->

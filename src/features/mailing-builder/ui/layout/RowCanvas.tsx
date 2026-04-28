@@ -68,6 +68,7 @@ export interface RowCanvasProps {
   selectedColId: string | null;
   selectedRowId: string | null;
   selectedLevel: "row" | "col" | "block" | null;
+  devicePreview?: "desktop" | "mobile";
   onSelectBlock: (blockId: string, rowId: string, colId: string) => void;
   onSelectRow: (rowId: string) => void;
   onSelectCol: (colId: string, rowId: string) => void;
@@ -159,6 +160,7 @@ export const RowCanvas = memo(function RowCanvas({
   selectedColId,
   selectedRowId,
   selectedLevel,
+  devicePreview,
   onSelectBlock,
   onSelectRow,
   onSelectCol,
@@ -441,7 +443,11 @@ export const RowCanvas = memo(function RowCanvas({
 
       {/* Grid de columnas */}
       <div
-        className="flex gap-0 divide-x divide-dashed divide-border/50 p-2"
+        className={`flex gap-0 divide-dashed divide-border/50 p-2 ${
+          devicePreview === "mobile" && row.columns.length > 1
+            ? "flex-col divide-y"
+            : "divide-x"
+        }`}
         onClick={handleSelectRow}
       >
         {row.columns.map((col, colIndex) => {
@@ -459,6 +465,7 @@ export const RowCanvas = memo(function RowCanvas({
               selectedColId={selectedColId}
               selectedLevel={selectedLevel}
               isRowActive={isThisRowActive}
+              devicePreview={devicePreview}
               onSelectBlock={onSelectBlock}
               onSelectCol={(colId) => onSelectCol(colId, row.id)}
               onSelectRow={handleSelectRow}
@@ -495,6 +502,7 @@ interface ColumnCanvasProps {
   selectedBlockId: string | null;
   selectedColId: string | null;
   selectedLevel: "row" | "col" | "block" | null;
+  devicePreview?: "desktop" | "mobile";
   onSelectBlock: (blockId: string, rowId: string, colId: string) => void;
   onSelectCol: (colId: string) => void;
   onSelectRow: () => void;
@@ -521,6 +529,7 @@ const ColumnCanvas = memo(function ColumnCanvas({
   selectedBlockId,
   selectedColId,
   selectedLevel,
+  devicePreview,
   onSelectBlock,
   onSelectCol,
   onSelectRow,
@@ -583,7 +592,7 @@ const ColumnCanvas = memo(function ColumnCanvas({
 
   // Column outline style
   const colStyle: React.CSSProperties = {
-    width: fraction,
+    width: devicePreview === "mobile" ? "100%" : fraction,
     minWidth: 0,
     ...(isDropTarget ? {
       backgroundColor: "var(--mb-brand-10)",

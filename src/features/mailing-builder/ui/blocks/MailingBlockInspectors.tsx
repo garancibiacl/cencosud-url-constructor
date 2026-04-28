@@ -8,6 +8,7 @@ import {
   AlertCircle, Check, ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown, ClipboardPaste,
   Image as ImageIcon, Link2, Monitor,
   MonitorSmartphone, PenLine, PenSquare, Plus, RotateCcw, Settings2, Smartphone,
+  Upload,
   Zap,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,7 @@ import { useBrandContext } from "./BrandContext";
 import type {
   ButtonBlock, HeroBlock, ImageBlock, ProductBlock, ProductDdBlock, RawHtmlBlock, SpacerBlock, TextBlock,
 } from "../../logic/schema/block.types";
+import { imageLibraryBridge } from "../imageLibraryBridge";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AMPscript Dialog + UrlInput
@@ -1140,6 +1142,77 @@ function padVal(block: { layout: { padding?: Partial<PaddingValue> } }): Padding
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ImageFieldInput — URL input + library button + local upload
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ImageFieldInput({
+  label,
+  value,
+  onChange,
+  blockId,
+  field,
+  placeholder = "https://...",
+}: {
+  label?: string;
+  value: string;
+  onChange: (v: string) => void;
+  blockId: string;
+  field: string;
+  placeholder?: string;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => onChange(ev.target?.result as string);
+      reader.readAsDataURL(file);
+      e.target.value = "";
+    },
+    [onChange],
+  );
+
+  return (
+    <div className="space-y-1">
+      {label && <span className="text-xs text-foreground/60">{label}</span>}
+      <div className="flex items-center gap-1">
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="h-7 flex-1 text-xs"
+        />
+        <button
+          type="button"
+          onClick={() => imageLibraryBridge.open(blockId, field)}
+          title="Elegir desde biblioteca"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-card text-muted-foreground/60 transition hover:bg-secondary/60 hover:text-foreground"
+        >
+          <ImageIcon className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          title="Subir desde disco"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-card text-muted-foreground/60 transition hover:bg-secondary/60 hover:text-foreground"
+        >
+          <Upload className="h-3.5 w-3.5" />
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // HeroBlockInspector
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1153,15 +1226,13 @@ export function HeroBlockInspector({ block, onChange }: SharedProps<HeroBlock>) 
             <img src={block.props.imageUrl} alt="preview" className="h-24 w-full object-cover" />
           </div>
         )}
-        <div className="space-y-1">
-          <span className="text-xs text-foreground/60">URL de imagen</span>
-          <Input
-            value={block.props.imageUrl ?? ""}
-            onChange={(e) => onChange({ ...block, props: { ...block.props, imageUrl: e.target.value } })}
-            placeholder="https://..."
-            className="h-7 text-xs"
-          />
-        </div>
+        <ImageFieldInput
+          label="URL de imagen"
+          value={block.props.imageUrl ?? ""}
+          onChange={(imageUrl) => onChange({ ...block, props: { ...block.props, imageUrl } })}
+          blockId={block.id}
+          field="imageUrl"
+        />
       </InspSection>
 
       <InspSection title="Contenido">
@@ -1313,24 +1384,13 @@ export function TextBlockInspector({ block, onChange }: SharedProps<TextBlock>) 
             Añadir imagen
           </button>
         </InspRow>
-        <div className="space-y-1">
-          <span className="text-xs text-foreground/60">URL de la imagen</span>
-          <div className="flex items-center gap-1">
-            <Input
-              value={block.layout.backgroundImage ?? ""}
-              onChange={(e) => setLayout({ backgroundImage: e.target.value })}
-              placeholder="https://..."
-              className="h-7 flex-1 text-xs"
-            />
-            <button
-              type="button"
-              title="Insertar variable"
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-card font-mono text-[10px] text-muted-foreground/60 transition hover:bg-secondary/60"
-            >
-              {"{}"}
-            </button>
-          </div>
-        </div>
+        <ImageFieldInput
+          label="URL de la imagen de fondo"
+          value={block.layout.backgroundImage ?? ""}
+          onChange={(backgroundImage) => setLayout({ backgroundImage })}
+          blockId={block.id}
+          field="backgroundImage"
+        />
       </InspSection>
 
       {/* ── Esquinas redondeadas ───────────────────────────────────────────── */}
@@ -1434,16 +1494,13 @@ export function ImageBlockInspector({ block, onChange }: SharedProps<ImageBlock>
             <img src={block.props.src} alt={block.props.alt || "preview"} className="h-24 w-full object-cover" />
           </div>
         )}
-        <div className="space-y-1">
-          <span className="text-xs text-foreground/60">URL de imagen</span>
-          <Input
-            value={block.props.src}
-            onChange={(e) => onChange({ ...block, props: { ...block.props, src: e.target.value } })}
-            placeholder="https://..."
-            className="h-7 text-xs"
-            autoFocus
-          />
-        </div>
+        <ImageFieldInput
+          label="URL de imagen"
+          value={block.props.src}
+          onChange={(src) => onChange({ ...block, props: { ...block.props, src } })}
+          blockId={block.id}
+          field="src"
+        />
       </InspSection>
 
       <InspSection title="Accesibilidad">
@@ -1556,16 +1613,13 @@ export function ProductBlockInspector({ block, onChange }: SharedProps<ProductBl
             <img src={block.props.imageUrl} alt="preview" className="h-24 w-full object-contain" />
           </div>
         )}
-        <div className="space-y-1">
-          <span className="text-xs text-foreground/60">URL de imagen</span>
-          <Input
-            value={block.props.imageUrl ?? ""}
-            onChange={(e) => setProps({ imageUrl: e.target.value })}
-            placeholder="https://..."
-            className="h-7 text-xs"
-            autoFocus
-          />
-        </div>
+        <ImageFieldInput
+          label="URL de imagen"
+          value={block.props.imageUrl ?? ""}
+          onChange={(imageUrl) => setProps({ imageUrl })}
+          blockId={block.id}
+          field="imageUrl"
+        />
       </InspSection>
 
       <InspSection title="Producto">
@@ -1771,11 +1825,12 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
             <img src={block.props.imageUrl} alt="preview" className="h-28 w-full object-contain" />
           </div>
         )}
-        <InspField
+        <ImageFieldInput
           label="URL de imagen"
           value={block.props.imageUrl ?? ""}
-          onChange={(v) => setProps({ imageUrl: v })}
-          placeholder="https://..."
+          onChange={(imageUrl) => setProps({ imageUrl })}
+          blockId={block.id}
+          field="imageUrl"
         />
       </InspSectionCollapsible>
 
@@ -1892,11 +1947,12 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
             <img src={block.props.logoUrl} alt="logo" className="mx-auto h-12 object-contain" />
           </div>
         )}
-        <InspField
+        <ImageFieldInput
           label="URL del logo (opcional)"
           value={block.props.logoUrl ?? ""}
-          onChange={(v) => setProps({ logoUrl: v })}
-          placeholder="https://..."
+          onChange={(logoUrl) => setProps({ logoUrl })}
+          blockId={block.id}
+          field="logoUrl"
         />
         <div className="grid grid-cols-2 gap-2.5 items-end">
           <InspRow label="Tamaño">

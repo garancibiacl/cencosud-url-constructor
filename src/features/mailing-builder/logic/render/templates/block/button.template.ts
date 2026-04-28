@@ -33,11 +33,11 @@ export function buttonTemplate({
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr>
         <td align="${align}">
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="display:inline-table;">
             <tr>
-              <td bgcolor="${colors.primary}" style="border-radius:6px; mso-padding-alt:0;">
+              <td bgcolor="${colors.primary}" style="border-radius:6px; mso-padding-alt:0; width:1%; white-space:nowrap;">
                 <a href="${href}"
-                   style="display:inline-block; padding:14px 28px; font-size:14px; line-height:20px; font-weight:700; color:${colors.primaryForeground}; text-decoration:none; border-radius:6px; mso-hide:none;">
+                   style="display:inline-block; padding:14px 28px; font-size:14px; line-height:20px; font-weight:700; color:${colors.primaryForeground}; text-decoration:none; border-radius:6px; white-space:nowrap; mso-hide:none;">
                   <!--[if mso]><i style="letter-spacing:25px; mso-font-width:-100%; mso-text-raise:30pt;">&nbsp;</i><![endif]-->
                   ${label}
                   <!--[if mso]><i style="letter-spacing:25px; mso-font-width:-100%;">&nbsp;</i><![endif]-->

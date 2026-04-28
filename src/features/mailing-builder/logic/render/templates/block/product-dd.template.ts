@@ -128,12 +128,12 @@ export function productDdTemplate({
           <!-- Nombre del producto -->
           <div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#000000;font-weight:normal;line-height:18px;margin-top:4px;">${name}</div>
           <!-- CTA -->
-          <table border="0" cellspacing="0" cellpadding="0" role="presentation" style="margin-top:12px;">
+          <table border="0" cellspacing="0" cellpadding="0" role="presentation" style="margin-top:12px;display:inline-table;">
             <tr>
-              <td align="center" bgcolor="${primaryColor}" style="border-radius:8px;">
+              <td align="center" bgcolor="${primaryColor}" style="border-radius:8px;width:1%;white-space:nowrap;">
                 <a href="${href}"
                    target="_blank"
-                   style="background-color:${primaryColor};color:${primaryForeground};display:block;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;line-height:32px;text-align:center;text-decoration:none;min-width:120px;padding:0 16px;border-radius:8px;-webkit-text-size-adjust:none;">
+                   style="background-color:${primaryColor};color:${primaryForeground};display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;line-height:32px;text-align:center;text-decoration:none;min-width:120px;padding:0 16px;border-radius:8px;white-space:nowrap;-webkit-text-size-adjust:none;">
                   ${ctaLabel}
                 </a>
               </td>

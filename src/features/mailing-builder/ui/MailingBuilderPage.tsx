@@ -5,7 +5,7 @@ import { RowDropIndicator } from "./layout/RowDropIndicator";
 import {
   AlertCircle, ArrowLeft, CheckCircle2, CodeXml, Copy, Download, Eye, FileCode2, FileDown,
   FileImage, GripVertical,
-  History, Image as ImageIcon, ImagePlus, Inbox, Loader2, Mail, Monitor, MoreHorizontal,
+  History, Image as ImageIcon, Inbox, Loader2, Mail, Monitor, MoreHorizontal,
   MousePointerClick, PenSquare, Plus, RectangleHorizontal, RotateCcw, Save,
   Send, Settings2, Smartphone, Trash2, Type, UserRound, X,
 } from "lucide-react";
@@ -41,11 +41,10 @@ import { useDebounce } from "../hooks/useDebounce";
 import { mailingTemplates } from "../logic/templates/mailingTemplates";
 import { SectionLayoutPicker } from "./sidebar/SectionLayoutPicker";
 import { RowCanvas, AddRowButton } from "./layout/RowCanvas";
-import { AssetPickerDialog } from "./AssetPickerDialog";
+import { ImageLibraryModal } from "./ImageLibraryModal";
+import { imageLibraryBridge } from "./imageLibraryBridge";
 import { NewTemplateModal } from "./NewTemplateModal";
 import type { ScratchMode } from "./NewTemplateModal";
-import type { FileRecord } from "@/features/file-bank/logic/file-bank.types";
-import type { MailingBlock } from "../logic/schema/block.types";
 import type { BrandId } from "../logic/brands/brand.types";
 import { brandThemes } from "../logic/brands/brandThemes";
 
@@ -869,13 +868,20 @@ export default function MailingBuilderPage() {
     setShowCampaignSettings,
   } = useMailingBuilderStore();
 
+  const openImageLibrary = useMailingBuilderStore((s) => s.openImageLibrary);
+
+  // Wire bridge so Inspector/View components (which can't import the store directly
+  // due to circular deps via blockRegistry) can still trigger the image library.
+  React.useEffect(() => {
+    imageLibraryBridge.register(openImageLibrary);
+  }, [openImageLibrary]);
+
   const { toast } = useToast();
   const { mailings, versions, loading, saving, refreshMailings, loadVersions, saveDraft, saveVersion, scheduleAutosave, cancelAutosave } = useMailings();
   const [versionNote, setVersionNote] = useState("");
   const [previewMode, setPreviewMode] = useState<"canvas" | "split" | "html">("canvas");
   const [devicePreview, setDevicePreview] = useState<"desktop" | "mobile">("desktop");
   const [lastAutosaveAt, setLastAutosaveAt] = useState<string | null>(null);
-  const [assetPickerOpen, setAssetPickerOpen] = useState(false);
   const [showGlobalInspector, setShowGlobalInspector] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
 
@@ -1184,7 +1190,6 @@ export default function MailingBuilderPage() {
 
   // ── Inspector ─────────────────────────────────────────────────────────────
 
-  const canPickImageAsset = selectedBlock?.type === "hero" || selectedBlock?.type === "image";
   const isInspectorOpen = showGlobalInspector || !!selectedBlock;
 
   const handleOpenGlobalInspector = () => { selectBlock(null); setShowGlobalInspector(true); };
@@ -1197,17 +1202,6 @@ export default function MailingBuilderPage() {
     button: { icon: MousePointerClick,   label: "Botón",        detail: "label, href, alineación" },
     spacer: { icon: RectangleHorizontal, label: "Espaciador",   detail: "altura" },
   }[selectedBlock.type] : null;
-
-  const handleSelectAsset = (file: FileRecord) => {
-    if (!selectedBlock) return;
-    if (selectedBlock.type === "hero") {
-      updateBlock({ ...selectedBlock, props: { ...selectedBlock.props, imageUrl: file.file_url } });
-      return;
-    }
-    if (selectedBlock.type === "image") {
-      updateBlock({ ...selectedBlock, props: { ...selectedBlock.props, src: file.file_url, alt: selectedBlock.props.alt || file.title } } as MailingBlock);
-    }
-  };
 
   useEffect(() => {
     if (!isInspectorOpen) return;
@@ -1730,6 +1724,7 @@ export default function MailingBuilderPage() {
                                     selectedColId={selectedColId}
                                     selectedRowId={selectedRowId}
                                     selectedLevel={selectedLevel}
+                                    devicePreview={devicePreview}
                                     dragRef={dragRef}
                                     rowDragRef={rowDragRef}
                                     onSelectBlock={handleSelectBlockInCanvas}
@@ -1867,18 +1862,6 @@ export default function MailingBuilderPage() {
                   {/* Inspector de bloque seleccionado */}
                   {selectedBlock ? (
                     <>
-                      {/* Banco de archivos (imagen/hero) */}
-                      {canPickImageAsset && (
-                        <button
-                          type="button"
-                          onClick={() => setAssetPickerOpen(true)}
-                          className="flex w-full items-center gap-2 rounded-lg border border-border bg-secondary/30 px-3 py-2.5 text-left text-xs font-medium text-foreground/70 transition hover:border-primary/40 hover:bg-primary/5 hover:text-foreground"
-                        >
-                          <ImagePlus className="h-3.5 w-3.5 shrink-0 text-primary/60" />
-                          Elegir desde Banco de Archivos
-                        </button>
-                      )}
-
                       {/* Inspector específico del bloque */}
                       {SelectedInspector && (
                         <SelectedInspector block={selectedBlock as never} onChange={updateBlock} />
@@ -1966,7 +1949,7 @@ export default function MailingBuilderPage() {
         loadingSaved={loading}
       />
 
-      <AssetPickerDialog open={assetPickerOpen} onOpenChange={setAssetPickerOpen} onSelect={handleSelectAsset} />
+      <ImageLibraryModal />
 
       {/* ── Modal: descargar ─────────────────────────────────────────────────── */}
       <Dialog
