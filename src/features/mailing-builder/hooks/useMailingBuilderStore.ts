@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import type { MailingBlock, MailingBlockType } from "../logic/schema/block.types";
 import type { ColumnPreset, MailingColumn, MailingRow } from "../logic/schema/row.types";
 import { presetSectionsMap } from "../logic/registry/presetSections";
@@ -159,7 +160,9 @@ const cloneBlock = (block: MailingBlock): MailingBlock =>
 // Store
 // ---------------------------------------------------------------------------
 
-export const useMailingBuilderStore = create<MailingBuilderState>((set, get) => ({
+export const useMailingBuilderStore = create<MailingBuilderState>()(
+  persist(
+    (set, get) => ({
   document: createDefaultMailing(),
   selectedBlockId: null,
   selectedRowId: null,
@@ -662,4 +665,15 @@ export const useMailingBuilderStore = create<MailingBuilderState>((set, get) => 
     })),
 
   setActiveMailingId: (mailingId) => set({ activeMailingId: mailingId }),
-}));
+    }),
+    {
+      name: "mailing-builder-draft",
+      partialize: (state) => ({
+        document: state.document,
+        activeMailingId: state.activeMailingId,
+        showWelcome: state.showWelcome,
+        showCampaignSettings: state.showCampaignSettings,
+      }),
+    },
+  ),
+);
