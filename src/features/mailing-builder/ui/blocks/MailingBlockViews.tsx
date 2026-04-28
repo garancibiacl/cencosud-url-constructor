@@ -4,6 +4,7 @@ import { CodeXml, ImageIcon, ImageOff, LayoutGrid, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { ButtonBlock, HeroBlock, ImageBlock, MailingBlock, ProductBlock, ProductDdBlock, RawHtmlBlock, SpacerBlock, TextBlock } from "../../logic/schema/block.types";
 import { imageLibraryBridge } from "../imageLibraryBridge";
+import { inspectorFocusBridge } from "../inspectorFocusBridge";
 import { TextFloatingToolbar } from "../editor/TextFloatingToolbar";
 
 const getPaddingStyle = (block: MailingBlock): CSSProperties => ({
@@ -635,14 +636,28 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
     { left: "justify-start", center: "justify-center", right: "justify-end" } as const
   )[block.props.logoAlign ?? "left"];
 
+  const base = block.layout.borderRadius ?? 0;
+  const tl = block.layout.borderRadiusTL ?? base;
+  const tr = block.layout.borderRadiusTR ?? base;
+  const brr = block.layout.borderRadiusBR ?? base;
+  const bl = block.layout.borderRadiusBL ?? base;
+  const hasRadius = tl > 0 || tr > 0 || brr > 0 || bl > 0;
+
   const cardStyle: React.CSSProperties = {
     minHeight: 220,
     backgroundColor: block.layout.backgroundColor ?? "#ffffff",
-    borderRadius: block.layout.borderRadius ? `${block.layout.borderRadius}px` : undefined,
+    borderRadius: hasRadius ? `${tl}px ${tr}px ${brr}px ${bl}px` : undefined,
     border: block.layout.borderWidth
       ? `${block.layout.borderWidth}px solid ${block.layout.borderColor ?? "#e5e7eb"}`
       : undefined,
+    overflow: hasRadius ? "hidden" : undefined,
   };
+  const leftColStyle: React.CSSProperties = hasRadius
+    ? { borderRadius: `${tl}px 0 0 ${bl}px`, overflow: "hidden" }
+    : {};
+  const rightColStyle: React.CSSProperties = hasRadius
+    ? { borderRadius: `0 ${tr}px ${brr}px 0`, overflow: "hidden" }
+    : {};
 
   return (
     <article
@@ -653,14 +668,19 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
         paddingBottom: block.layout.padding?.bottom ?? 0,
         paddingLeft: block.layout.padding?.left ?? 0,
       }}
+      onClick={(e) => {
+        const section = (e.target as HTMLElement).closest("[data-focus-section]")?.getAttribute("data-focus-section");
+        if (section) inspectorFocusBridge.focus(block.id, section);
+      }}
     >
       <div className="flex overflow-hidden font-sans" style={cardStyle}>
 
         {/* ── LEFT COLUMN: imagen + badge ───────────────────────────── */}
         <div
           ref={imageContainerRef}
+          data-focus-section="imagen"
           className="relative shrink-0 bg-[#f9fafb] flex items-center justify-center overflow-hidden group/img"
-          style={{ width: "48%" }}
+          style={{ width: "48%", ...leftColStyle }}
         >
           {/* Imagen */}
           {block.props.imageUrl && imgError ? (
@@ -688,6 +708,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
               transform: "translate(-50%, -50%)",
               userSelect: "none",
             }}
+            data-focus-section="badge-principal"
             onMouseDown={handleBadgeDragStart}
           >
             {block.props.discountLabel || "Descuento Doble"}
@@ -717,14 +738,20 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
           )}
         </div>
 
-        {/* ── RIGHT COLUMN: logo + precios + info + CTA ─────────────── */}
+        {/* ── RIGHT COLUMN: fondo de color, precio grande, ahorro, desde ── */}
         <div
           ref={editorAreaRef}
-          className="flex flex-1 flex-col gap-1.5 py-3 pl-3 pr-4"
+          className="flex flex-1 flex-col justify-center"
+          style={{
+            backgroundColor: block.props.rightBgColor ?? "#3DBE4A",
+            padding: "12px 14px",
+            gap: "6px",
+            ...rightColStyle,
+          }}
         >
           {/* Logo */}
           {block.props.logoUrl && (
-            <div className={`flex ${logoAlignClass}`}>
+            <div className={`flex ${logoAlignClass}`} data-focus-section="logo" style={{ marginBottom: 4 }}>
               <img
                 src={block.props.logoUrl}
                 alt="logo"
@@ -734,78 +761,152 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
             </div>
           )}
 
-          {/* Precio original tachado */}
-          <div className="text-[11px] text-[#9ca3af] line-through leading-tight">
+          {/* Precio original tachado — blanco semitransparente */}
+          <div className="text-[11px] leading-tight line-through" data-focus-section="precios" style={{ color: "rgba(255,255,255,0.7)" }}>
             {isSelected && onChange ? (
               <ContentEditableDiv
                 html={block.props.originalPrice}
                 onChange={(html) => onChange({ ...block, props: { ...block.props, originalPrice: html } })}
-                className="min-w-[40px] rounded px-0.5 outline-none focus:ring-1 focus:ring-ring/50"
+                className="min-w-[40px] rounded px-0.5 outline-none focus:ring-1 focus:ring-white/40"
               />
             ) : (
               <span dangerouslySetInnerHTML={{ __html: block.props.originalPrice }} />
             )}
           </div>
 
-          {/* Precio con descuento */}
-          <div className="text-xl font-bold leading-tight" style={{ color: block.props.priceColor }}>
-            {isSelected && onChange ? (
-              <ContentEditableDiv
-                html={block.props.price}
-                onChange={(html) => onChange({ ...block, props: { ...block.props, price: html } })}
-                className="min-w-[40px] rounded px-0.5 outline-none focus:ring-1 focus:ring-ring/50"
-              />
-            ) : (
-              <span dangerouslySetInnerHTML={{ __html: block.props.price }} />
+          {/* Precio grande + unidad inline */}
+          <div className="flex items-baseline leading-none" data-focus-section="precios">
+            <div
+              className="font-bold leading-none"
+              style={{
+                fontSize: block.props.priceSize ?? 50,
+                color: block.props.priceFg ?? "#ffffff",
+              }}
+            >
+              {isSelected && onChange ? (
+                <ContentEditableDiv
+                  html={block.props.price}
+                  onChange={(html) => onChange({ ...block, props: { ...block.props, price: html } })}
+                  className="min-w-[40px] rounded px-0.5 outline-none focus:ring-1 focus:ring-white/40"
+                />
+              ) : (
+                <span dangerouslySetInnerHTML={{ __html: block.props.price }} />
+              )}
+            </div>
+            {block.props.unit && (
+              <span
+                className="ml-1 text-[18px] font-bold leading-none"
+                style={{ color: block.props.priceFg ?? "#ffffff" }}
+              >
+                {block.props.unit}
+              </span>
             )}
           </div>
 
-          {/* Unit badge */}
-          {block.props.unit && (
-            <span className="inline-block self-start rounded-full bg-[#f3f4f6] px-1.5 py-0.5 text-[10px] text-black">
-              {block.props.unit}
-            </span>
+          {/* Split badge (etiqueta dual de precio) */}
+          {block.props.priceTagShow && (
+            <div
+              className="mt-1 flex"
+              data-focus-section="precio-tag"
+              style={{
+                justifyContent:
+                  block.props.priceTagAlign === "center" ? "center"
+                  : block.props.priceTagAlign === "right" ? "flex-end"
+                  : "flex-start",
+              }}
+            >
+            <div className="flex items-stretch" style={{ maxWidth: 220 }}>
+              {/* Parte izquierda — label */}
+              <div
+                className="flex items-center px-2 py-0.5 text-[13px] font-black leading-tight"
+                style={{
+                  backgroundColor: block.props.priceTagLabelBg ?? "#ffffff",
+                  color: block.props.priceTagLabelFg ?? "#23af3d",
+                  borderRadius: `${block.props.priceTagRadius ?? 10}px 0 0 ${block.props.priceTagRadius ?? 10}px`,
+                }}
+              >
+                {isSelected && onChange ? (
+                  <ContentEditableDiv
+                    html={block.props.priceTagLabel ?? "Ahorro"}
+                    onChange={(html) => onChange({ ...block, props: { ...block.props, priceTagLabel: html } })}
+                    className="outline-none min-w-[30px] whitespace-nowrap"
+                  />
+                ) : (
+                  <span dangerouslySetInnerHTML={{ __html: block.props.priceTagLabel ?? "Ahorro" }} />
+                )}
+              </div>
+              {/* Parte derecha — valor */}
+              <div
+                className="flex items-center px-2.5 py-0.5 text-[16px] font-black leading-tight"
+                style={{
+                  backgroundColor: block.props.priceTagValueBg ?? "#000000",
+                  color: block.props.priceTagValueFg ?? "#ffffff",
+                  borderRadius: `0 ${block.props.priceTagRadius ?? 10}px ${block.props.priceTagRadius ?? 10}px 0`,
+                }}
+              >
+                {isSelected && onChange ? (
+                  <ContentEditableDiv
+                    html={block.props.priceTagValue ?? "$ 1.640"}
+                    onChange={(html) => onChange({ ...block, props: { ...block.props, priceTagValue: html } })}
+                    className="outline-none min-w-[40px] whitespace-nowrap"
+                  />
+                ) : (
+                  <span dangerouslySetInnerHTML={{ __html: block.props.priceTagValue ?? "$ 1.640" }} />
+                )}
+              </div>
+            </div>
+            </div>
           )}
 
-          {/* Brand */}
-          <div className="min-h-[18px] text-[12px] text-[#6b7280]">
-            {isSelected && onChange ? (
-              <ContentEditableDiv
-                html={block.props.brand ?? ""}
-                onChange={(html) => onChange({ ...block, props: { ...block.props, brand: html } })}
-                className="min-h-[18px] min-w-[40px] rounded px-0.5 outline-none focus:ring-1 focus:ring-ring/50"
-              />
-            ) : (
-              <span dangerouslySetInnerHTML={{ __html: block.props.brand ?? "" }} />
-            )}
-          </div>
+          {/* Badge ahorro */}
+          {block.props.ahorroLabel && (
+            <div data-focus-section="col-derecha">
+              <span
+                className="inline-block rounded-[6px] px-2.5 py-1 text-[13px] font-bold text-white leading-tight"
+                style={{ background: "rgba(0,0,0,0.2)" }}
+              >
+                {isSelected && onChange ? (
+                  <>
+                    Ahorro{" "}
+                    <ContentEditableDiv
+                      html={block.props.ahorroLabel}
+                      onChange={(html) => onChange({ ...block, props: { ...block.props, ahorroLabel: html } })}
+                      className="inline min-w-[30px] outline-none focus:ring-1 focus:ring-white/40"
+                    />
+                  </>
+                ) : (
+                  <>Ahorro <span dangerouslySetInnerHTML={{ __html: block.props.ahorroLabel }} /></>
+                )}
+              </span>
+            </div>
+          )}
+
+          {/* Desde label */}
+          {block.props.desdeLabel !== undefined && (
+            <div className="text-[11px] leading-tight" style={{ color: "rgba(255,255,255,0.85)" }}>
+              {isSelected && onChange ? (
+                <ContentEditableDiv
+                  html={block.props.desdeLabel ?? ""}
+                  onChange={(html) => onChange({ ...block, props: { ...block.props, desdeLabel: html } })}
+                  className="min-w-[60px] rounded px-0.5 outline-none focus:ring-1 focus:ring-white/40"
+                />
+              ) : (
+                <span dangerouslySetInnerHTML={{ __html: block.props.desdeLabel ?? "" }} />
+              )}
+            </div>
+          )}
 
           {/* Nombre del producto */}
-          <div className="text-[13px] font-normal leading-[18px] text-black">
+          <div className="text-[12px] leading-snug" data-focus-section="producto" style={{ color: "rgba(255,255,255,0.9)", marginTop: 6 }}>
             {isSelected && onChange ? (
               <ContentEditableDiv
                 html={block.props.name}
                 onChange={(html) => onChange({ ...block, props: { ...block.props, name: html } })}
-                className="min-h-[36px] min-w-[60px] rounded px-0.5 outline-none focus:ring-1 focus:ring-ring/50"
+                className="min-h-[30px] min-w-[60px] rounded px-0.5 outline-none focus:ring-1 focus:ring-white/40"
               />
             ) : (
               <span dangerouslySetInnerHTML={{ __html: block.props.name }} />
             )}
-          </div>
-
-          {/* CTA button */}
-          <div className="mt-1">
-            <div className="inline-flex h-8 min-w-[120px] items-center justify-center rounded-lg bg-primary px-4 text-[12px] font-bold text-primary-foreground">
-              {isSelected && onChange ? (
-                <ContentEditableDiv
-                  html={block.props.ctaLabel ?? "Agregar"}
-                  onChange={(html) => onChange({ ...block, props: { ...block.props, ctaLabel: html } })}
-                  className="outline-none"
-                />
-              ) : (
-                <span dangerouslySetInnerHTML={{ __html: block.props.ctaLabel ?? "Agregar" }} />
-              )}
-            </div>
           </div>
 
           {/* Floating toolbar — aparece al seleccionar texto en cualquier campo */}

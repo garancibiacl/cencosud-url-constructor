@@ -113,6 +113,17 @@ export const buildTrackedUrl = (value: string | undefined, document: MailingDocu
 // Primitivo de envoltura table-based (email-safe layout)
 // ---------------------------------------------------------------------------
 
+/** Resuelve los 4 radios de esquina de un bloque, soportando valor único o por-esquina. */
+export const getBlockRadii = (block: MailingBlock) => {
+  const base = block.layout.borderRadius ?? 0;
+  return {
+    tl: block.layout.borderRadiusTL ?? base,
+    tr: block.layout.borderRadiusTR ?? base,
+    br: block.layout.borderRadiusBR ?? base,
+    bl: block.layout.borderRadiusBL ?? base,
+  };
+};
+
 export const getBlockPadding = (block: MailingBlock) => ({
   top: block.layout.padding?.top ?? 0,
   right: block.layout.padding?.right ?? 0,

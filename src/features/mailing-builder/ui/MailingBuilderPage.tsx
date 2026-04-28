@@ -1825,7 +1825,7 @@ export default function MailingBuilderPage() {
         {/* ── Panel derecho — inspector ────────────────────────────────────── */}
         <aside
           ref={inspectorRef}
-          className={`flex flex-col overflow-hidden border-l border-border bg-card transition-all duration-300 ${
+          className={`flex flex-col overflow-hidden border-l border-border bg-card ${
             isInspectorOpen ? "opacity-100" : "pointer-events-none opacity-0"
           }`}
         >

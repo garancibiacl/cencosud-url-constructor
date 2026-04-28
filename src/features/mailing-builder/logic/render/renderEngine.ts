@@ -23,6 +23,7 @@ import {
   escapeHtml,
   escapeHref,
   getBlockPadding,
+  getBlockRadii,
   resolveColor,
 } from "./renderUtils";
 import { documentTemplate } from "./templates/document.template";
@@ -140,6 +141,7 @@ function prepareProductDd(
     padding:          getBlockPadding(block),
     bgColor:          resolveColor(block.layout.backgroundColor, "#ffffff"),
     borderRadius:     block.layout.borderRadius ?? 0,
+    ...(() => { const rc = getBlockRadii(block); return { borderRadiusTL: rc.tl, borderRadiusTR: rc.tr, borderRadiusBR: rc.br, borderRadiusBL: rc.bl }; })(),
     borderWidth:      block.layout.borderWidth  ?? 0,
     borderColor:      block.layout.borderColor  ?? "#e5e7eb",
     imageUrl:         escapeHref(block.props.imageUrl || "/placeholder.svg"),
@@ -162,6 +164,20 @@ function prepareProductDd(
     ctaLabel:         escapeHtml(block.props.ctaLabel ?? "Agregar"),
     primaryColor:     brandColors?.primary           ?? FALLBACK_COLORS.primary,
     primaryForeground: brandColors?.primaryForeground ?? FALLBACK_COLORS.primaryForeground,
+    rightBgColor:     block.props.rightBgColor  ?? "#3DBE4A",
+    priceSize:        block.props.priceSize      ?? 50,
+    priceFg:          block.props.priceFg        ?? "#ffffff",
+    ahorroLabel:      escapeHtml(block.props.ahorroLabel ?? ""),
+    desdeLabel:       escapeHtml(block.props.desdeLabel  ?? ""),
+    priceTagShow:    block.props.priceTagShow    ?? false,
+    priceTagLabel:   escapeHtml(block.props.priceTagLabel   ?? "Ahorro"),
+    priceTagLabelBg: block.props.priceTagLabelBg ?? "#ffffff",
+    priceTagLabelFg: block.props.priceTagLabelFg ?? "#23af3d",
+    priceTagValue:   escapeHtml(block.props.priceTagValue   ?? "$ 1.640"),
+    priceTagValueBg: block.props.priceTagValueBg ?? "#000000",
+    priceTagValueFg: block.props.priceTagValueFg ?? "#ffffff",
+    priceTagRadius:  block.props.priceTagRadius  ?? 10,
+    priceTagAlign:   block.props.priceTagAlign   ?? "left",
   });
 }
 

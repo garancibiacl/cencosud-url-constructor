@@ -12,6 +12,10 @@ export interface BlockLayout {
   backgroundColor?: string;
   backgroundImage?: string;
   borderRadius?: number;
+  borderRadiusTL?: number;
+  borderRadiusTR?: number;
+  borderRadiusBR?: number;
+  borderRadiusBL?: number;
   borderWidth?: number;
   borderColor?: string;
   borderAll?: boolean;

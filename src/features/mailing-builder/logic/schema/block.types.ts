@@ -83,6 +83,22 @@ export interface ProductDdBlock extends BaseBlock<"product-dd", {
   // ── CTA ──────────────────────────────────────────────────────────
   ctaLabel?: string;
   href: string;
+  // ── Columna derecha ───────────────────────────────────────────────
+  rightBgColor?: string;  // fondo columna derecha (default verde #3DBE4A)
+  priceSize?: number;     // font-size del precio en px (default 50)
+  priceFg?: string;       // color del precio (default #ffffff)
+  ahorroLabel?: string;   // ej: "$ 1.640" — si vacío no se muestra
+  desdeLabel?: string;    // ej: "Desde $6.459 x kg" — si vacío no se muestra
+  // ── Etiqueta dual de precio (split badge) ────────────────────────
+  priceTagShow?:    boolean;
+  priceTagLabel?:   string;
+  priceTagLabelBg?: string;
+  priceTagLabelFg?: string;
+  priceTagValue?:   string;
+  priceTagValueBg?: string;
+  priceTagValueFg?: string;
+  priceTagRadius?:  number;
+  priceTagAlign?:   "left" | "center" | "right";
 }> {}
 
 export interface RawHtmlBlock extends BaseBlock<"raw-html", {

@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import React from "react";
+import { inspectorFocusBridge } from "../inspectorFocusBridge";
 import { ColorPickerCanvas, hexToHsv, hsvToHex } from "../editor/ColorPickerCanvas";
 import type { ReactNode } from "react";
 import {
@@ -12,6 +14,7 @@ import {
   Zap,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -1784,14 +1787,23 @@ function InspSectionCollapsible({
   title,
   children,
   defaultOpen = true,
+  forceOpen,
+  sectionRef,
 }: {
   title: string;
   children: ReactNode;
   defaultOpen?: boolean;
+  forceOpen?: boolean;
+  sectionRef?: React.RefObject<HTMLDivElement>;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+
+  useEffect(() => {
+    if (forceOpen) setOpen(true);
+  }, [forceOpen]);
+
   return (
-    <div className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
+    <div ref={sectionRef} className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -1808,6 +1820,141 @@ function InspSectionCollapsible({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// BorderRadiusEditor — control de 4 esquinas con toggle vincular/desvincular
+// ─────────────────────────────────────────────────────────────────────────────
+
+function CornerIcon({ corner }: { corner: "tl" | "tr" | "br" | "bl" }) {
+  // Cada ícono: dos líneas rectas (lados del cuadrado) + arco en la esquina correspondiente
+  const paths: Record<string, string> = {
+    tl: "M4 14 L4 7 Q4 4 7 4 L14 4",
+    tr: "M10 4 L17 4 Q20 4 20 7 L20 14",
+    br: "M20 10 L20 17 Q20 20 17 20 L10 20",
+    bl: "M14 20 L7 20 Q4 20 4 17 L4 10",
+  };
+  return (
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d={paths[corner]} />
+    </svg>
+  );
+}
+
+function BorderRadiusEditor({
+  layout,
+  onChange,
+}: {
+  layout: import("../../logic/schema/layout.types").BlockLayout;
+  onChange: (patch: Partial<import("../../logic/schema/layout.types").BlockLayout>) => void;
+}) {
+  const base = layout.borderRadius ?? 0;
+  const tl = layout.borderRadiusTL ?? base;
+  const tr = layout.borderRadiusTR ?? base;
+  const br = layout.borderRadiusBR ?? base;
+  const bl = layout.borderRadiusBL ?? base;
+  const linked = layout.borderRadiusTL === undefined && layout.borderRadiusTR === undefined &&
+    layout.borderRadiusBR === undefined && layout.borderRadiusBL === undefined;
+
+  const setLinked = (v: number) => onChange({
+    borderRadius: v,
+    borderRadiusTL: undefined, borderRadiusTR: undefined,
+    borderRadiusBR: undefined, borderRadiusBL: undefined,
+  });
+
+  const setCorner = (corner: "TL" | "TR" | "BR" | "BL", v: number) => onChange({
+    borderRadiusTL: corner === "TL" ? v : tl,
+    borderRadiusTR: corner === "TR" ? v : tr,
+    borderRadiusBR: corner === "BR" ? v : br,
+    borderRadiusBL: corner === "BL" ? v : bl,
+  });
+
+  const toggleLink = () => {
+    if (linked) {
+      onChange({ borderRadiusTL: base, borderRadiusTR: base, borderRadiusBR: base, borderRadiusBL: base });
+    } else {
+      setLinked(tl);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      {linked ? (
+        /* Modo vinculado — un solo stepper */
+        <div className="flex items-center gap-2">
+          <div className="flex flex-1 items-center gap-1.5">
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="5" ry="5" />
+            </svg>
+            <PxStepper value={base} onChange={setLinked} min={0} max={60} />
+          </div>
+          <button
+            type="button"
+            onClick={toggleLink}
+            title="Desvincular esquinas"
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-secondary/40 text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+          >
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+          </button>
+        </div>
+      ) : (
+        /* Modo desvinculado — 4 esquinas */
+        <div className="space-y-1.5">
+          <div className="grid grid-cols-2 gap-1.5">
+            {/* Top-left */}
+            <div className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/20 px-2 py-1">
+              <CornerIcon corner="tl" />
+              <input
+                type="number" min={0} max={60} value={tl}
+                onChange={(e) => setCorner("TL", Math.min(60, Math.max(0, Number(e.target.value))))}
+                className="w-full bg-transparent text-center text-[12px] font-medium text-foreground outline-none"
+              />
+            </div>
+            {/* Top-right */}
+            <div className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/20 px-2 py-1">
+              <CornerIcon corner="tr" />
+              <input
+                type="number" min={0} max={60} value={tr}
+                onChange={(e) => setCorner("TR", Math.min(60, Math.max(0, Number(e.target.value))))}
+                className="w-full bg-transparent text-center text-[12px] font-medium text-foreground outline-none"
+              />
+            </div>
+            {/* Bottom-left */}
+            <div className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/20 px-2 py-1">
+              <CornerIcon corner="bl" />
+              <input
+                type="number" min={0} max={60} value={bl}
+                onChange={(e) => setCorner("BL", Math.min(60, Math.max(0, Number(e.target.value))))}
+                className="w-full bg-transparent text-center text-[12px] font-medium text-foreground outline-none"
+              />
+            </div>
+            {/* Bottom-right */}
+            <div className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/20 px-2 py-1">
+              <CornerIcon corner="br" />
+              <input
+                type="number" min={0} max={60} value={br}
+                onChange={(e) => setCorner("BR", Math.min(60, Math.max(0, Number(e.target.value))))}
+                className="w-full bg-transparent text-center text-[12px] font-medium text-foreground outline-none"
+              />
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={toggleLink}
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-border/60 py-1 text-[11px] font-medium text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+          >
+            <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8h1a4 4 0 0 1 0 8h-1" /><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" /><line x1="6" y1="1" x2="6" y2="4" /><line x1="10" y1="1" x2="10" y2="4" /><line x1="14" y1="1" x2="14" y2="4" />
+            </svg>
+            Vincular esquinas
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ProductDdBlockInspector
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1815,11 +1962,45 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
   const setProps = (patch: Partial<typeof block.props>) =>
     onChange({ ...block, props: { ...block.props, ...patch } });
 
+  // ── Foco inteligente desde el canvas ──────────────────────────────────────
+  const [focusedSection, setFocusedSection] = useState<string | null>(null);
+  const sectionRefs: Record<string, React.RefObject<HTMLDivElement>> = {
+    imagen:        useRef<HTMLDivElement>(null),
+    "badge-principal": useRef<HTMLDivElement>(null),
+    precios:       useRef<HTMLDivElement>(null),
+    "precio-tag":  useRef<HTMLDivElement>(null),
+    "col-derecha": useRef<HTMLDivElement>(null),
+    producto:      useRef<HTMLDivElement>(null),
+    logo:          useRef<HTMLDivElement>(null),
+  };
+
+  useEffect(() => {
+    inspectorFocusBridge.register((blockId, section) => {
+      if (blockId !== block.id) return;
+      setFocusedSection(section);
+      // Doble rAF: primer frame aplica forceOpen (expande sección), segundo frame hace scroll ya con el DOM expandido
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const el = sectionRefs[section]?.current;
+        if (!el) return;
+        const viewport = el.closest("[data-radix-scroll-area-viewport]") as HTMLElement | null;
+        if (viewport) {
+          const elTop = el.getBoundingClientRect().top;
+          const vpTop = viewport.getBoundingClientRect().top;
+          viewport.scrollBy({ top: elTop - vpTop - 12, behavior: "smooth" });
+        } else {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        setFocusedSection(null);
+      }));
+    });
+    return () => inspectorFocusBridge.unregister();
+  }, [block.id]);
+
   return (
     <div className="space-y-2.5">
 
       {/* 1. Imagen */}
-      <InspSectionCollapsible title="Imagen del producto">
+      <InspSectionCollapsible title="Imagen del producto" sectionRef={sectionRefs["imagen"]} forceOpen={focusedSection === "imagen"}>
         {block.props.imageUrl && (
           <div className="overflow-hidden rounded-lg border border-border bg-secondary/30">
             <img src={block.props.imageUrl} alt="preview" className="h-28 w-full object-contain" />
@@ -1835,7 +2016,7 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
       </InspSectionCollapsible>
 
       {/* 2. Badge principal */}
-      <InspSectionCollapsible title="Badge principal">
+      <InspSectionCollapsible title="Badge principal" sectionRef={sectionRefs["badge-principal"]} forceOpen={focusedSection === "badge-principal"}>
         <InspField
           label="Texto del badge"
           value={block.props.discountLabel}
@@ -1889,7 +2070,7 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
       </InspSectionCollapsible>
 
       {/* 4. Precios */}
-      <InspSectionCollapsible title="Precios">
+      <InspSectionCollapsible title="Precios" sectionRef={sectionRefs["precios"]} forceOpen={focusedSection === "precios"}>
         <InspField
           label="Precio original (tachado)"
           value={htmlToText(block.props.originalPrice)}
@@ -1902,16 +2083,130 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
           onChange={(v) => setProps({ price: v })}
           placeholder="$ 9.990"
         />
-        <InspRow label="Color precio oferta">
-          <ColorSwatch
-            value={block.props.priceColor}
-            onChange={(v) => setProps({ priceColor: v ?? "#E8001D" })}
-          />
+        <InspRow label="Tamaño precio (px)">
+          <PxStepper value={block.props.priceSize ?? 50} onChange={(v) => setProps({ priceSize: v })} min={20} max={80} />
+        </InspRow>
+        <InspRow label="Color del texto precio">
+          <ColorSwatch value={block.props.priceFg ?? "#ffffff"} onChange={(v) => setProps({ priceFg: v ?? "#ffffff" })} />
         </InspRow>
       </InspSectionCollapsible>
 
+      {/* 4b. Etiqueta dual de precio */}
+      <InspSectionCollapsible title="Etiqueta bajo precio" defaultOpen={false} sectionRef={sectionRefs["precio-tag"]} forceOpen={focusedSection === "precio-tag"}>
+        {/* Toggle principal */}
+        <div className="flex items-center justify-between">
+          <span className="text-[12px] font-medium text-foreground">Mostrar etiqueta</span>
+          <Switch
+            checked={block.props.priceTagShow ?? false}
+            onCheckedChange={(v) => setProps({ priceTagShow: v })}
+          />
+        </div>
+
+        {(block.props.priceTagShow ?? false) && (
+          <>
+            {/* Preview del badge */}
+            <div className="flex items-stretch overflow-hidden rounded-lg" style={{ maxWidth: 200 }}>
+              <div
+                className="px-2 py-1 text-[12px] font-black"
+                style={{
+                  backgroundColor: block.props.priceTagLabelBg ?? "#ffffff",
+                  color: block.props.priceTagLabelFg ?? "#23af3d",
+                  borderRadius: `${block.props.priceTagRadius ?? 10}px 0 0 ${block.props.priceTagRadius ?? 10}px`,
+                }}
+              >
+                {block.props.priceTagLabel ?? "Ahorro"}
+              </div>
+              <div
+                className="px-2.5 py-1 text-[14px] font-black"
+                style={{
+                  backgroundColor: block.props.priceTagValueBg ?? "#000000",
+                  color: block.props.priceTagValueFg ?? "#ffffff",
+                  borderRadius: `0 ${block.props.priceTagRadius ?? 10}px ${block.props.priceTagRadius ?? 10}px 0`,
+                }}
+              >
+                {block.props.priceTagValue ?? "$ 1.640"}
+              </div>
+            </div>
+
+            {/* Parte izquierda */}
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Parte izquierda</p>
+            <InspField
+              label="Texto"
+              value={block.props.priceTagLabel ?? "Ahorro"}
+              onChange={(v) => setProps({ priceTagLabel: v })}
+              placeholder="Ahorro"
+            />
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-medium text-muted-foreground/70">Color fondo</span>
+                <ColorSwatch value={block.props.priceTagLabelBg ?? "#ffffff"} onChange={(v) => setProps({ priceTagLabelBg: v ?? "#ffffff" })} />
+              </div>
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-medium text-muted-foreground/70">Color texto</span>
+                <ColorSwatch value={block.props.priceTagLabelFg ?? "#23af3d"} onChange={(v) => setProps({ priceTagLabelFg: v ?? "#23af3d" })} />
+              </div>
+            </div>
+
+            {/* Parte derecha */}
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Parte derecha</p>
+            <InspField
+              label="Texto"
+              value={block.props.priceTagValue ?? "$ 1.640"}
+              onChange={(v) => setProps({ priceTagValue: v })}
+              placeholder="$ 1.640"
+            />
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-medium text-muted-foreground/70">Color fondo</span>
+                <ColorSwatch value={block.props.priceTagValueBg ?? "#000000"} onChange={(v) => setProps({ priceTagValueBg: v ?? "#000000" })} />
+              </div>
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-medium text-muted-foreground/70">Color texto</span>
+                <ColorSwatch value={block.props.priceTagValueFg ?? "#ffffff"} onChange={(v) => setProps({ priceTagValueFg: v ?? "#ffffff" })} />
+              </div>
+            </div>
+
+            {/* Radio */}
+            <InspRow label="Radio de esquinas">
+              <PxStepper
+                value={block.props.priceTagRadius ?? 10}
+                onChange={(v) => setProps({ priceTagRadius: v })}
+                min={0}
+                max={30}
+              />
+            </InspRow>
+            {/* Alineación */}
+            <InspRow label="Alineación">
+              <SegmentedAlign
+                value={block.props.priceTagAlign ?? "left"}
+                onChange={(v) => setProps({ priceTagAlign: v })}
+              />
+            </InspRow>
+          </>
+        )}
+      </InspSectionCollapsible>
+
+      {/* 4c. Columna derecha */}
+      <InspSectionCollapsible title="Columna derecha" sectionRef={sectionRefs["col-derecha"]} forceOpen={focusedSection === "col-derecha"}>
+        <InspRow label="Fondo columna derecha">
+          <ColorSwatch value={block.props.rightBgColor ?? "#3DBE4A"} onChange={(v) => setProps({ rightBgColor: v ?? "#3DBE4A" })} />
+        </InspRow>
+        <InspField
+          label="Ahorro (ej: $ 1.640)"
+          value={htmlToText(block.props.ahorroLabel ?? "")}
+          onChange={(v) => setProps({ ahorroLabel: v })}
+          placeholder="$ 1.640"
+        />
+        <InspField
+          label="Desde (ej: Desde $6.459 x kg)"
+          value={htmlToText(block.props.desdeLabel ?? "")}
+          onChange={(v) => setProps({ desdeLabel: v })}
+          placeholder="Desde $6.459 x kg"
+        />
+      </InspSectionCollapsible>
+
       {/* 5. Producto */}
-      <InspSectionCollapsible title="Producto">
+      <InspSectionCollapsible title="Producto" sectionRef={sectionRefs["producto"]} forceOpen={focusedSection === "producto"}>
         <InspField
           label="Nombre del producto"
           value={htmlToText(block.props.name)}
@@ -1941,7 +2236,7 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
       </InspSectionCollapsible>
 
       {/* 6. Logo de marca */}
-      <InspSectionCollapsible title="Logo de marca" defaultOpen={false}>
+      <InspSectionCollapsible title="Logo de marca" defaultOpen={false} sectionRef={sectionRefs["logo"]} forceOpen={focusedSection === "logo"}>
         {block.props.logoUrl && (
           <div className="overflow-hidden rounded-lg border border-border bg-secondary/30 p-2">
             <img src={block.props.logoUrl} alt="logo" className="mx-auto h-12 object-contain" />
@@ -1988,14 +2283,13 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
             onChange={(v) => onChange({ ...block, layout: { ...block.layout, backgroundColor: v } })}
           />
         </InspRow>
-        <InspRow label="Radio de borde">
-          <PxStepper
-            value={block.layout.borderRadius ?? 0}
-            onChange={(v) => onChange({ ...block, layout: { ...block.layout, borderRadius: v } })}
-            min={0}
-            max={48}
+        <div className="space-y-1.5">
+          <span className="text-[11px] font-medium text-muted-foreground/70">Radio de borde</span>
+          <BorderRadiusEditor
+            layout={block.layout}
+            onChange={(patch) => onChange({ ...block, layout: { ...block.layout, ...patch } })}
           />
-        </InspRow>
+        </div>
         <InspRow label="Grosor del borde">
           <PxStepper
             value={block.layout.borderWidth ?? 0}
