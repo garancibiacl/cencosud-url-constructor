@@ -2,19 +2,29 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from "react"
 import { createPortal } from "react-dom";
 import {
   AlignCenter, AlignJustify, AlignLeft, AlignRight,
-  Bold, Code, Italic, Link2, Link2Off,
+  Bold, ChevronUp, Code, Italic, Link2, Link2Off,
   List, ListOrdered, Minus, Plus,
-  RemoveFormatting, Strikethrough, Underline,
+  RemoveFormatting, RotateCcw, Strikethrough, Underline,
 } from "lucide-react";
+import { ColorPickerCanvas, hexToHsv, hsvToHex, hexToRgb, rgbToHex } from "./ColorPickerCanvas";
 import { useTextCommands, saveSelection } from "./useTextCommands";
 import { useFloatingPosition } from "./useFloatingPosition";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const BRAND_COLORS = [
-  "#E30613", "#00843D", "#8B1A5A", "#FF6600",
-  "#1D4ED8", "#0891B2", "#16A34A", "#CA8A04",
-  "#000000", "#1F2937", "#6B7280", "#9CA3AF", "#D1D5DB", "#FFFFFF",
+const BRAND_PALETTE = [
+  { label: "Jumbo",        color: "#0A8920" },
+  { label: "Santa Isabel", color: "#de0610" },
+  { label: "Spid",         color: "#E91E8C" },
+  { label: "Naranja",      color: "#F97316" },
+  { label: "Azul",         color: "#1D4ED8" },
+  { label: "Cian",         color: "#0891B2" },
+  { label: "Amarillo",     color: "#CA8A04" },
+  { label: "Blanco",       color: "#FFFFFF" },
+  { label: "Negro",        color: "#000000" },
+  { label: "Gris oscuro",  color: "#1F2937" },
+  { label: "Gris medio",   color: "#6B7280" },
+  { label: "Gris claro",   color: "#D1D5DB" },
 ];
 
 const BLOCK_TYPES = [
@@ -45,11 +55,23 @@ const ORDERED_STYLES = [
   { type: "upper-roman", label: "I. Romano may." },
 ];
 
-// Recent colors — module-level, survives re-renders
-let _recentColors: string[] = [];
-function addRecentColor(c: string) {
-  _recentColors = [c, ..._recentColors.filter((x) => x !== c)].slice(0, 8);
+// Recent colors — shared with inspector via localStorage
+const RECENT_KEY = "mailing-builder:recent-colors";
+const RECENT_MAX = 8;
+
+function readRecent(): string[] {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]"); } catch { return []; }
 }
+function pushRecent(color: string) {
+  if (!/^#[0-9A-Fa-f]{6}$/.test(color)) return;
+  const list = readRecent().filter((c) => c.toLowerCase() !== color.toLowerCase());
+  list.unshift(color);
+  localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, RECENT_MAX)));
+}
+
+// ─── Color format utilities ───────────────────────────────────────────────────
+
+type ColorMode = "hex" | "rgb";
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -70,86 +92,238 @@ function useOutsideClick(ref: RefObject<HTMLElement | null>, handler: () => void
 
 // ─── ColorPopover ─────────────────────────────────────────────────────────────
 
+const COLOR_POPOVER_W = 240; // matches w-60
+const TOOLBAR_H = 40;       // approximate toolbar height
+
 interface ColorPopoverProps {
   mode: "text" | "highlight";
   currentColor: string;
+  anchorTop: number;
+  anchorLeft: number;
   onSelect: (color: string) => void;
   onClose: () => void;
 }
 
-function ColorPopover({ mode, currentColor, onSelect, onClose }: ColorPopoverProps) {
+function ColorPopover({ mode, currentColor, anchorTop, anchorLeft, onSelect, onClose }: ColorPopoverProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const [recent, setRecent] = useState(_recentColors);
 
+  // Start hidden below toolbar; after first paint measure actual height and
+  // flip above if there's not enough room below.
+  const [top, setTop] = useState(anchorTop + TOOLBAR_H);
+  const left = Math.max(8, Math.min(anchorLeft, window.innerWidth - COLOR_POPOVER_W - 8));
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const h = el.offsetHeight;
+    const belowFits = anchorTop + TOOLBAR_H + h + 8 <= window.innerHeight;
+    setTop(belowFits ? anchorTop + TOOLBAR_H : Math.max(8, anchorTop - h));
+  }, [anchorTop]);
+  const initHex = /^#[0-9A-Fa-f]{6}$/.test(currentColor) ? currentColor : "#000000";
+  const [pickerColor, setPickerColor] = useState(initHex);
+  const [hsv, setHsv] = useState(() => hexToHsv(initHex));
+  const [hexInput, setHexInput] = useState(initHex);
+  const [colorMode, setColorMode] = useState<ColorMode>("hex");
+  const [modeOpen, setModeOpen] = useState(false);
+  const [rgbInput, setRgbInput] = useState(() => hexToRgb(initHex));
+  const [recent, setRecent] = useState<string[]>([]);
+  const initialColor = useRef(initHex);
+
+  useEffect(() => { setRecent(readRecent()); }, []);
   useOutsideClick(ref, onClose);
 
-  const pick = useCallback(
+  const commit = useCallback(
     (color: string) => {
-      addRecentColor(color);
-      setRecent([..._recentColors]);
+      pushRecent(color);
+      setRecent(readRecent());
       onSelect(color);
-      onClose();
     },
-    [onSelect, onClose],
+    [onSelect],
   );
 
-  return (
+  const applyHex = useCallback((hex: string) => {
+    setPickerColor(hex);
+    setHsv(hexToHsv(hex));
+    setHexInput(hex);
+    setRgbInput(hexToRgb(hex));
+    commit(hex);
+  }, [commit]);
+
+  const handleCanvasChange = useCallback((newHsv: typeof hsv) => {
+    setHsv(newHsv);
+    const hex = hsvToHex(newHsv.h, newHsv.s, newHsv.v);
+    setPickerColor(hex);
+    setHexInput(hex);
+    setRgbInput(hexToRgb(hex));
+    commit(hex);
+  }, [commit]);
+
+  const handleHexInput = useCallback((raw: string) => {
+    const val = raw.startsWith("#") ? raw : `#${raw}`;
+    setHexInput(val);
+    if (/^#[0-9A-Fa-f]{6}$/.test(val)) applyHex(val);
+  }, [applyHex]);
+
+  const handleRgbChannel = useCallback(
+    (channel: "r" | "g" | "b", raw: string) => {
+      const n = Math.min(255, Math.max(0, parseInt(raw) || 0));
+      const next = { ...rgbInput, [channel]: n };
+      setRgbInput(next);
+      applyHex(rgbToHex(next.r, next.g, next.b));
+    },
+    [rgbInput, applyHex],
+  );
+
+  return createPortal(
     <div
       ref={ref}
       onMouseDown={(e) => e.preventDefault()}
-      className="absolute left-0 z-10 mt-1 w-56 rounded-lg border border-white/10 bg-zinc-900 p-3 shadow-2xl shadow-black/60 animate-in fade-in slide-in-from-top-1 duration-100"
+      style={{
+        position: "fixed", top, left, zIndex: 10000, width: COLOR_POPOVER_W,
+        boxShadow: "0 4px 6px rgba(0,0,0,.3), 0 10px 40px rgba(0,0,0,.7), 0 20px 60px rgba(0,0,0,.5)",
+      }}
+      className="overflow-hidden rounded-xl border border-white/10 bg-zinc-900 animate-in fade-in duration-100"
     >
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
-        {mode === "text" ? "Color de texto" : "Resaltado"}
-      </p>
-
-      <p className="mb-1.5 text-[10px] text-zinc-500">Marca</p>
-      <div className="mb-3 grid grid-cols-7 gap-1">
-        {BRAND_COLORS.map((c) => (
-          <button
-            key={c}
-            type="button"
-            title={c}
-            onMouseDown={(e) => { e.preventDefault(); pick(c); }}
-            className="h-6 w-6 rounded ring-1 ring-white/20 transition hover:scale-110 hover:ring-2 hover:ring-white/40"
-            style={{ backgroundColor: c }}
-          />
-        ))}
+      {/* Header */}
+      <div className="border-b border-white/10 px-3 py-2">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-300">
+          {mode === "text" ? "Color de texto" : "Resaltado"}
+        </p>
       </div>
 
+      {/* Custom canvas: sat/bright + vertical hue */}
+      <div className="px-3 pt-3 pb-2">
+        <ColorPickerCanvas hsv={hsv} onChange={handleCanvasChange} height={150} />
+      </div>
+
+      {/* Input row: HEX or RGB + format selector + reset */}
+      <div className="flex items-center gap-1.5 px-3 pb-3">
+        {/* Color value input */}
+        {colorMode === "hex" ? (
+          <div className="flex flex-1 items-center rounded-md border border-white/10 bg-white/5 px-2 focus-within:border-white/30">
+            <span className="font-mono text-[12px] text-zinc-500">#</span>
+            <input
+              type="text"
+              maxLength={6}
+              value={hexInput.replace(/^#/, "")}
+              onChange={(e) => handleHexInput(e.target.value)}
+              className="w-full bg-transparent py-1.5 pl-0.5 pr-1 font-mono text-[13px] uppercase text-zinc-200 outline-none"
+              placeholder="000000"
+              spellCheck={false}
+            />
+          </div>
+        ) : (
+          <div className="flex flex-1 gap-1">
+            {(["r", "g", "b"] as const).map((ch) => (
+              <div key={ch} className="flex flex-1 flex-col items-center gap-0.5">
+                <input
+                  type="number"
+                  min={0}
+                  max={255}
+                  value={rgbInput[ch]}
+                  onChange={(e) => handleRgbChannel(ch, e.target.value)}
+                  className="w-full rounded-md border border-white/10 bg-white/5 py-1.5 text-center font-mono text-[12px] text-zinc-200 outline-none focus:border-white/30 [appearance:textfield]"
+                />
+                <span className="text-[9px] uppercase text-zinc-600">{ch}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Format selector */}
+        <div className="relative shrink-0">
+          <button
+            type="button"
+            onMouseDown={(e) => { e.preventDefault(); setModeOpen((v) => !v); }}
+            className="flex h-8 items-center gap-0.5 rounded-md border border-white/10 bg-white/5 px-2 text-[11px] font-semibold text-zinc-300 transition hover:border-white/20 hover:bg-white/10"
+          >
+            {colorMode.toUpperCase()}
+            <ChevronUp className={`h-3 w-3 transition-transform ${modeOpen ? "rotate-180" : ""}`} />
+          </button>
+          {modeOpen && (
+            <div className="absolute top-full left-0 mt-1 overflow-hidden rounded-lg border border-white/10 bg-zinc-800 shadow-xl z-10">
+              {(["hex", "rgb"] as ColorMode[]).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); setColorMode(m); setModeOpen(false); }}
+                  className={`block w-full px-3 py-1.5 text-left text-[12px] font-medium transition hover:bg-white/10 ${colorMode === m ? "text-white" : "text-zinc-400"}`}
+                >
+                  {m.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Reset */}
+        <button
+          type="button"
+          title="Restablecer color original"
+          onMouseDown={(e) => { e.preventDefault(); handlePicker(initialColor.current); }}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-white/10 text-zinc-500 transition hover:border-white/20 hover:text-zinc-300"
+        >
+          <RotateCcw className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {/* Brand palette */}
+      <div className="border-t border-white/10 px-3 py-2">
+        <p className="mb-2 text-[11px] font-bold text-zinc-300">
+          Colores de marca
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {BRAND_PALETTE.map(({ color, label }) => (
+            <button
+              key={color}
+              type="button"
+              title={label}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handlePicker(color);
+                setHexInput(color);
+              }}
+              className={`h-6 w-6 rounded-md border-2 transition-transform hover:scale-110 ${
+                pickerColor.toLowerCase() === color.toLowerCase()
+                  ? "border-white shadow-md"
+                  : "border-transparent hover:border-white/30"
+              }`}
+              style={{ backgroundColor: color }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Recent colors */}
       {recent.length > 0 && (
-        <>
-          <p className="mb-1.5 text-[10px] text-zinc-500">Recientes</p>
-          <div className="mb-3 flex flex-wrap gap-1">
+        <div className="border-t border-white/10 px-3 py-2">
+          <p className="mb-2 text-[11px] font-bold text-zinc-300">
+            Usados recientemente
+          </p>
+          <div className="flex flex-wrap gap-1.5">
             {recent.map((c) => (
               <button
                 key={c}
                 type="button"
                 title={c}
-                onMouseDown={(e) => { e.preventDefault(); pick(c); }}
-                className="h-6 w-6 rounded ring-1 ring-white/20 transition hover:scale-110"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  handlePicker(c);
+                  setHexInput(c);
+                }}
+                className={`h-6 w-6 rounded-md border-2 transition-transform hover:scale-110 ${
+                  pickerColor.toLowerCase() === c.toLowerCase()
+                    ? "border-white shadow-md"
+                    : "border-transparent hover:border-white/30"
+                }`}
                 style={{ backgroundColor: c }}
               />
             ))}
           </div>
-        </>
+        </div>
       )}
-
-      <p className="mb-1.5 text-[10px] text-zinc-500">Color libre</p>
-      <label className="flex cursor-pointer items-center gap-2 rounded-md bg-white/5 px-2 py-1.5 hover:bg-white/10">
-        <div
-          className="h-5 w-5 rounded ring-1 ring-white/20"
-          style={{ backgroundColor: currentColor }}
-        />
-        <span className="text-xs text-zinc-300">Elige color…</span>
-        <input
-          type="color"
-          defaultValue={currentColor}
-          className="sr-only"
-          onInput={(e) => pick((e.target as HTMLInputElement).value)}
-        />
-      </label>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -477,6 +651,8 @@ export function TextFloatingToolbar({ containerRef }: { containerRef: RefObject<
         <ColorPopover
           mode={popover === "text-color" ? "text" : "highlight"}
           currentColor={fmt.textColor}
+          anchorTop={pos.top}
+          anchorLeft={pos.left}
           onSelect={popover === "text-color" ? applyColor : applyHighlight}
           onClose={closePopover}
         />

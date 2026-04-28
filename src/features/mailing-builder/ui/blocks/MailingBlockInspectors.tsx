@@ -1,12 +1,13 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { ColorPickerCanvas, hexToHsv, hsvToHex } from "../editor/ColorPickerCanvas";
 import type { ReactNode } from "react";
 import {
   AlignCenter, AlignJustify, AlignLeft, AlignRight,
   ArrowDown, ArrowLeft, ArrowRight, ArrowUp,
   ArrowLeftRight, ArrowUpDown,
-  AlertCircle, Check, ChevronDown, ChevronRight, ChevronsUpDown, ClipboardPaste,
+  AlertCircle, Check, ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown, ClipboardPaste,
   Image as ImageIcon, Link2, Monitor,
-  MonitorSmartphone, PenLine, PenSquare, Plus, Settings2, Smartphone,
+  MonitorSmartphone, PenLine, PenSquare, Plus, RotateCcw, Settings2, Smartphone,
   Zap,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -733,60 +734,290 @@ function LineHeightControl({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ColorSwatch
 // ─────────────────────────────────────────────────────────────────────────────
+// ColorPicker — modern picker built on react-colorful
+// ─────────────────────────────────────────────────────────────────────────────
+
+const RECENT_COLORS_KEY = "mailing-builder:recent-colors";
+const RECENT_MAX = 8;
+
+// Cencosud brand palette — shown as a fixed swatch row
+const BRAND_PALETTE = [
+  { label: "Jumbo",         color: "#0A8920" },
+  { label: "Santa Isabel",  color: "#de0610" },
+  { label: "Spid",          color: "#E91E8C" },
+  { label: "Blanco",        color: "#FFFFFF" },
+  { label: "Negro",         color: "#000000" },
+  { label: "Gris claro",    color: "#F3F4F6" },
+  { label: "Gris medio",    color: "#9CA3AF" },
+  { label: "Naranja",       color: "#F97316" },
+];
+
+import { hexToRgb, rgbToHex } from "../editor/ColorPickerCanvas";
+
+type ColorMode = "hex" | "rgb";
+
+function isValidHex(hex: string) {
+  return /^#[0-9A-Fa-f]{6}$/.test(hex);
+}
+
+function readRecentColors(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_COLORS_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+
+function pushRecentColor(color: string) {
+  if (!isValidHex(color)) return;
+  const list = readRecentColors().filter((c) => c.toLowerCase() !== color.toLowerCase());
+  list.unshift(color);
+  localStorage.setItem(RECENT_COLORS_KEY, JSON.stringify(list.slice(0, RECENT_MAX)));
+}
+
+// Checker pattern for transparent/empty
+const CHECKER_BG =
+  "linear-gradient(45deg,#ccc 25%,transparent 25%,transparent 75%,#ccc 75%)," +
+  "linear-gradient(45deg,#ccc 25%,transparent 25%,transparent 75%,#ccc 75%)";
+
+function MiniSwatch({ color, active, onClick, title }: { color: string; active?: boolean; onClick: () => void; title?: string }) {
+  return (
+    <button
+      type="button"
+      title={title ?? color}
+      onClick={onClick}
+      className={`h-6 w-6 shrink-0 rounded-md border-2 transition-transform hover:scale-110 ${
+        active ? "border-primary shadow-md" : "border-transparent hover:border-border"
+      }`}
+      style={{ backgroundColor: color }}
+    />
+  );
+}
 
 function ColorSwatch({
   value,
   onChange,
+  defaultColor,
 }: {
   value?: string;
   onChange: (v: string | undefined) => void;
+  defaultColor?: string;
 }) {
   const display = value && value !== "transparent" ? value : undefined;
-  const inputId = `cs-${Math.random().toString(36).slice(2, 7)}`;
+  const [open, setOpen] = useState(false);
+  const [hexInput, setHexInput] = useState(display ?? "#ffffff");
+  const [hsv, setHsv] = useState(() => hexToHsv(display ?? "#ffffff"));
+  const [colorMode, setColorMode] = useState<ColorMode>("hex");
+  const [modeOpen, setModeOpen] = useState(false);
+  const [rgbInput, setRgbInput] = useState(() => hexToRgb(display ?? "#ffffff"));
+  const [recentColors, setRecentColors] = useState<string[]>([]);
+  const initialColor = useRef(display ?? defaultColor ?? "#ffffff");
+
+  // Sync inputs when value changes externally
+  useEffect(() => {
+    if (display) {
+      setHexInput(display);
+      setHsv(hexToHsv(display));
+      setRgbInput(hexToRgb(display));
+    }
+  }, [display]);
+
+  // Load recent colors on open
+  useEffect(() => {
+    if (open) setRecentColors(readRecentColors());
+  }, [open]);
+
+  const applyHex = useCallback((hex: string) => {
+    setHexInput(hex);
+    setRgbInput(hexToRgb(hex));
+    setHsv(hexToHsv(hex));
+    onChange(hex);
+  }, [onChange]);
+
+  const handleCanvasChange = useCallback((newHsv: ReturnType<typeof hexToHsv>) => {
+    const hex = hsvToHex(newHsv.h, newHsv.s, newHsv.v);
+    setHsv(newHsv);
+    setHexInput(hex);
+    setRgbInput(hexToRgb(hex));
+    onChange(hex);
+  }, [onChange]);
+
+  const handleHexInputChange = useCallback((raw: string) => {
+    const val = raw.startsWith("#") ? raw : `#${raw}`;
+    setHexInput(val);
+    if (isValidHex(val)) applyHex(val);
+  }, [applyHex]);
+
+  const handleRgbChannel = useCallback((channel: "r" | "g" | "b", raw: string) => {
+    const n = Math.min(255, Math.max(0, parseInt(raw) || 0));
+    const next = { ...rgbInput, [channel]: n };
+    setRgbInput(next);
+    applyHex(rgbToHex(next.r, next.g, next.b));
+  }, [rgbInput, applyHex]);
+
+  const handleClose = useCallback((open: boolean) => {
+    if (!open && display) pushRecentColor(display);
+    setOpen(open);
+  }, [display]);
+
+  const handleReset = useCallback(() => {
+    applyHex(initialColor.current);
+  }, [applyHex]);
 
   return (
-    <div className="flex h-7 w-full items-center gap-2 rounded-md border border-border bg-card px-2">
-      <label htmlFor={inputId} className="flex cursor-pointer items-center gap-1.5">
-        {display ? (
-          <span
-            className="h-4 w-4 shrink-0 rounded border border-border/60 shadow-inner"
-            style={{ backgroundColor: display }}
-          />
-        ) : (
-          <span
-            className="h-4 w-4 shrink-0 rounded border border-border/60"
-            style={{
-              backgroundImage:
-                "linear-gradient(45deg,#ccc 25%,transparent 25%,transparent 75%,#ccc 75%),linear-gradient(45deg,#ccc 25%,transparent 25%,transparent 75%,#ccc 75%)",
-              backgroundSize: "6px 6px",
-              backgroundPosition: "0 0,3px 3px",
-              backgroundColor: "#fff",
-            }}
-          />
-        )}
-        <span className="font-mono text-[11px] text-foreground/60">{display ?? "—"}</span>
-      </label>
-      <input
-        id={inputId}
-        type="color"
-        value={display ?? "#ffffff"}
-        onChange={(e) => onChange(e.target.value)}
-        className="sr-only"
-      />
-      {display && (
+    <Popover open={open} onOpenChange={handleClose}>
+      <PopoverTrigger asChild>
         <button
           type="button"
-          onClick={() => onChange(undefined)}
-          className="ml-auto text-xs text-muted-foreground/40 transition hover:text-destructive"
-          tabIndex={-1}
-          title="Quitar color"
+          className="flex h-8 w-full items-center gap-2 rounded-md border border-border bg-card px-2 text-left transition-colors hover:border-primary/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
         >
-          ×
+          {display ? (
+            <span
+              className="h-5 w-5 shrink-0 rounded border border-border/60 shadow-inner"
+              style={{ backgroundColor: display }}
+            />
+          ) : (
+            <span
+              className="h-5 w-5 shrink-0 rounded border border-border/60"
+              style={{
+                backgroundImage: CHECKER_BG,
+                backgroundSize: "6px 6px",
+                backgroundPosition: "0 0,3px 3px",
+                backgroundColor: "#fff",
+              }}
+            />
+          )}
+          <span className="font-mono text-[12px] text-foreground/70">{display?.toUpperCase() ?? "—"}</span>
         </button>
-      )}
-    </div>
+      </PopoverTrigger>
+
+      <PopoverContent
+        className="w-64 p-0"
+        style={{ boxShadow: "0 4px 6px rgba(0,0,0,.08), 0 10px 40px rgba(0,0,0,.18), 0 20px 60px rgba(0,0,0,.12)" }}
+        align="start"
+        side="bottom"
+        sideOffset={6}
+      >
+        {/* Custom canvas: sat/bright + vertical hue */}
+        <div className="px-3 pt-3 pb-2">
+          <ColorPickerCanvas hsv={hsv} onChange={handleCanvasChange} height={150} />
+        </div>
+
+        {/* Input row: HEX or RGB + format selector + reset */}
+        <div className="flex items-center gap-1.5 px-3 pb-2">
+          {colorMode === "hex" ? (
+            <div className="flex flex-1 items-center rounded-md border border-border bg-secondary/30 px-2 focus-within:border-primary/60">
+              <span className="font-mono text-[12px] text-muted-foreground/60">#</span>
+              <input
+                type="text"
+                maxLength={6}
+                value={hexInput.replace(/^#/, "")}
+                onChange={(e) => handleHexInputChange(e.target.value)}
+                className="w-full bg-transparent py-1.5 pl-0.5 pr-1 font-mono text-[13px] uppercase text-foreground outline-none"
+                placeholder="000000"
+                spellCheck={false}
+              />
+            </div>
+          ) : (
+            <div className="flex flex-1 gap-1">
+              {(["r", "g", "b"] as const).map((ch) => (
+                <div key={ch} className="flex flex-1 flex-col items-center gap-0.5">
+                  <input
+                    type="number"
+                    min={0}
+                    max={255}
+                    value={rgbInput[ch]}
+                    onChange={(e) => handleRgbChannel(ch, e.target.value)}
+                    className="w-full rounded-md border border-border bg-secondary/30 py-1.5 text-center font-mono text-[12px] text-foreground outline-none focus:border-primary/60 [appearance:textfield]"
+                  />
+                  <span className="text-[9px] uppercase text-muted-foreground/50">{ch}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Format selector */}
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setModeOpen((v) => !v)}
+              className="flex h-8 items-center gap-0.5 rounded-md border border-border bg-secondary/30 px-2 text-[11px] font-semibold text-foreground/70 transition hover:border-primary/40 hover:text-foreground"
+            >
+              {colorMode.toUpperCase()}
+              <ChevronUp className={`h-3 w-3 transition-transform ${modeOpen ? "rotate-180" : ""}`} />
+            </button>
+            {modeOpen && (
+              <div className="absolute top-full left-0 mt-1 overflow-hidden rounded-lg border border-border bg-card shadow-lg z-10">
+                {(["hex", "rgb"] as ColorMode[]).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => { setColorMode(m); setModeOpen(false); }}
+                    className={`block w-full px-3 py-1.5 text-left text-[12px] font-medium transition hover:bg-secondary ${colorMode === m ? "text-foreground" : "text-muted-foreground"}`}
+                  >
+                    {m.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Reset */}
+          <button
+            type="button"
+            title="Restablecer color original"
+            onClick={handleReset}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground/50 transition hover:border-primary/40 hover:text-foreground"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {/* Brand palette */}
+        <div className="border-t border-border/50 px-3 py-2">
+          <p className="mb-1.5 text-[11px] font-bold tracking-wide text-foreground">
+            Colores de marca
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {BRAND_PALETTE.map((b) => (
+              <MiniSwatch
+                key={b.color}
+                color={b.color}
+                title={b.label}
+                active={display?.toLowerCase() === b.color.toLowerCase()}
+                onClick={() => {
+                  handlePickerChange(b.color);
+                  setHexInput(b.color);
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Recent colors */}
+        {recentColors.length > 0 && (
+          <div className="border-t border-border/50 px-3 py-2">
+            <p className="mb-1.5 text-[11px] font-bold tracking-wide text-foreground">
+              Usados recientemente
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {recentColors.map((c) => (
+                <MiniSwatch
+                  key={c}
+                  color={c}
+                  active={display?.toLowerCase() === c.toLowerCase()}
+                  onClick={() => {
+                    handlePickerChange(c);
+                    setHexInput(c);
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
 
