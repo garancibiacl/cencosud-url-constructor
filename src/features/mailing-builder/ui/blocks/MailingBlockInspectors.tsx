@@ -631,22 +631,22 @@ function SegmentedAlign({
   onChange: (v: "left" | "center" | "right") => void;
 }) {
   const options = [
-    { value: "left"   as const, icon: <AlignStartVertical  size={16} strokeWidth={1.5} />, title: "Izquierda" },
-    { value: "center" as const, icon: <AlignCenterVertical size={16} strokeWidth={1.5} />, title: "Centro"    },
-    { value: "right"  as const, icon: <AlignEndVertical    size={16} strokeWidth={1.5} />, title: "Derecha"   },
+    { value: "left"   as const, icon: <AlignStartVertical  size={16} strokeWidth={2} />, title: "Izquierda" },
+    { value: "center" as const, icon: <AlignCenterVertical size={16} strokeWidth={2} />, title: "Centro"    },
+    { value: "right"  as const, icon: <AlignEndVertical    size={16} strokeWidth={2} />, title: "Derecha"   },
   ];
   return (
-    <div className="flex h-7 overflow-hidden rounded-md border border-border">
+    <div className="inline-flex gap-1 rounded-lg bg-muted p-1">
       {options.map((opt) => (
         <button
           key={opt.value}
           type="button"
           title={opt.title}
           onClick={() => onChange(opt.value)}
-          className={`flex flex-1 items-center justify-center transition ${
+          className={`flex h-8 w-9 items-center justify-center rounded-md transition-all duration-150 ${
             value === opt.value
-              ? "bg-indigo-100 text-indigo-700"
-              : "bg-card text-gray-500 hover:bg-secondary/60 hover:text-foreground"
+              ? "bg-white text-foreground shadow-sm"
+              : "text-muted-foreground hover:bg-white/60 hover:text-foreground"
           }`}
         >
           {opt.icon}
@@ -668,23 +668,23 @@ function SegmentedTextAlign({
   onChange: (v: "left" | "center" | "right" | "justify") => void;
 }) {
   const options = [
-    { value: "left"    as const, icon: <AlignLeft    size={16} strokeWidth={1.5} />, title: "Izquierda"  },
-    { value: "center"  as const, icon: <AlignCenter  size={16} strokeWidth={1.5} />, title: "Centro"     },
-    { value: "right"   as const, icon: <AlignRight   size={16} strokeWidth={1.5} />, title: "Derecha"    },
-    { value: "justify" as const, icon: <AlignJustify size={16} strokeWidth={1.5} />, title: "Justificar" },
+    { value: "left"    as const, icon: <AlignLeft    size={16} strokeWidth={2} />, title: "Izquierda"  },
+    { value: "center"  as const, icon: <AlignCenter  size={16} strokeWidth={2} />, title: "Centro"     },
+    { value: "right"   as const, icon: <AlignRight   size={16} strokeWidth={2} />, title: "Derecha"    },
+    { value: "justify" as const, icon: <AlignJustify size={16} strokeWidth={2} />, title: "Justificar" },
   ];
   return (
-    <div className="flex h-7 overflow-hidden rounded-md border border-border">
+    <div className="inline-flex gap-1 rounded-lg bg-muted p-1">
       {options.map((opt) => (
         <button
           key={opt.value}
           type="button"
           title={opt.title}
           onClick={() => onChange(opt.value)}
-          className={`flex flex-1 items-center justify-center transition ${
+          className={`flex h-8 w-9 items-center justify-center rounded-md transition-all duration-150 ${
             value === opt.value
-              ? "bg-indigo-100 text-indigo-700"
-              : "bg-card text-gray-500 hover:bg-secondary/60 hover:text-foreground"
+              ? "bg-white text-foreground shadow-sm"
+              : "text-muted-foreground hover:bg-white/60 hover:text-foreground"
           }`}
         >
           {opt.icon}
@@ -2279,6 +2279,12 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
         <InspRow label="Color del texto precio">
           <ColorSwatch value={block.props.priceFg ?? "#ffffff"} onChange={(v) => setProps({ priceFg: v ?? "#ffffff" })} />
         </InspRow>
+        <InspRow label="Alineación del bloque">
+          <SegmentedAlign
+            value={block.props.priceAlign ?? "left"}
+            onChange={(v) => setProps({ priceAlign: v })}
+          />
+        </InspRow>
       </InspSectionCollapsible>
 
       {/* 4b. Etiqueta dual de precio */}
@@ -2423,6 +2429,12 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
             placeholder="Agregar"
           />
         </div>
+        <InspRow label="Alineación del bloque">
+          <SegmentedAlign
+            value={block.props.nameAlign ?? "left"}
+            onChange={(v) => setProps({ nameAlign: v })}
+          />
+        </InspRow>
       </InspSectionCollapsible>
 
       {/* 6. Logo de marca */}

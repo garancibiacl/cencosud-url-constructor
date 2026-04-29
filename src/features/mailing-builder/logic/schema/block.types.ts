@@ -95,6 +95,8 @@ export interface ProductDdBlock extends BaseBlock<"product-dd", {
   rightBgColor?: string;  // fondo columna derecha (default verde #3DBE4A)
   priceSize?: number;     // font-size del precio en px (default 50)
   priceFg?: string;       // color del precio (default #ffffff)
+  priceAlign?: "left" | "center" | "right";
+  nameAlign?:  "left" | "center" | "right";
   ahorroLabel?: string;   // ej: "$ 1.640" — si vacío no se muestra
   desdeLabel?: string;    // ej: "Desde $6.459 x kg" — si vacío no se muestra
   // ── Etiqueta dual de precio (split badge) ────────────────────────

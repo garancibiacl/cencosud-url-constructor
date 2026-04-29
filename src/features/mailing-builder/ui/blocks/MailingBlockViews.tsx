@@ -1118,7 +1118,14 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
       case "price":
         if (!block.props.price) return null;
         return (
-          <div className="flex items-baseline leading-none" data-focus-section="precios" style={sectionRing(`${id}_${idx}`)}>
+          <div
+            className="flex items-baseline leading-none"
+            data-focus-section="precios"
+            style={{
+              justifyContent: block.props.priceAlign === "center" ? "center" : block.props.priceAlign === "right" ? "flex-end" : "flex-start",
+              ...sectionRing(`${id}_${idx}`),
+            }}
+          >
             <div
               className="font-bold leading-none"
               style={{
@@ -1231,7 +1238,21 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
       case "name":
         if (!block.props.name) return null;
         return (
-          <div className="leading-snug" data-focus-section="producto" style={{ color: "rgba(255,255,255,0.9)", marginTop: 6, fontSize: 24, fontWeight: 600, wordBreak: "break-word", overflowWrap: "break-word", minWidth: 0, ...sectionRing(`${id}_${idx}`) }}>
+          <div
+            className="leading-snug"
+            data-focus-section="producto"
+            style={{
+              color: "rgba(255,255,255,0.9)",
+              marginTop: 6,
+              fontSize: 24,
+              fontWeight: 600,
+              wordBreak: "break-word",
+              overflowWrap: "break-word",
+              minWidth: 0,
+              textAlign: block.props.nameAlign ?? "left",
+              ...sectionRing(`${id}_${idx}`),
+            }}
+          >
             {isSelected && onChange ? (
               <ContentEditableDiv
                 html={block.props.name}
