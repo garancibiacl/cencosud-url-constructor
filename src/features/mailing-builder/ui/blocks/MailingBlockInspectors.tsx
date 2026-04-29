@@ -2478,14 +2478,12 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
           blockId={block.id}
           field="logoUrl"
         />
-        <div className="grid grid-cols-2 gap-2.5 items-end">
-          <InspRow label="Tamaño">
-            <PxStepper value={block.props.logoSize ?? 60} onChange={(v) => setProps({ logoSize: v })} min={20} max={200} />
-          </InspRow>
-          <InspRow label="Alineación">
-            <SegmentedAlign value={block.props.logoAlign ?? "left"} onChange={(v) => setProps({ logoAlign: v })} />
-          </InspRow>
-        </div>
+        <InspRow label="Tamaño">
+          <PxStepper value={block.props.logoSize ?? 60} onChange={(v) => setProps({ logoSize: v })} min={20} max={200} />
+        </InspRow>
+        <InspRow label="Alineación">
+          <SegmentedAlign value={block.props.logoAlign ?? "left"} onChange={(v) => setProps({ logoAlign: v })} />
+        </InspRow>
       </InspSectionCollapsible>
 
       {/* 7. Apariencia del bloque */}
