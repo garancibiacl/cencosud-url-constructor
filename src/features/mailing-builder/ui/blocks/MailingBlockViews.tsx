@@ -804,6 +804,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
   const [imgError, setImgError] = useState(false);
   const [isEditingBadge, setIsEditingBadge] = useState(false);
   const [activeSectionKey, setActiveSectionKey] = useState<string | null>(null);
+  const [showDividerPct, setShowDividerPct] = useState(false);
   const badgeLabelRef = useRef<HTMLSpanElement>(null);
   useEffect(() => { setImgError(false); }, [block.props.imageUrl]);
   useEffect(() => { if (!isSelected) { setIsEditingBadge(false); setActiveSectionKey(null); } }, [isSelected]);
@@ -813,6 +814,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
     e.preventDefault();
     e.stopPropagation();
     isDraggingDivider.current = true;
+    setShowDividerPct(true);
 
     const handleMouseMove = (ev: MouseEvent) => {
       if (!isDraggingDivider.current || !cardRef.current) return;
@@ -824,6 +826,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
 
     const handleMouseUp = () => {
       isDraggingDivider.current = false;
+      setShowDividerPct(false);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
@@ -1034,6 +1037,11 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
             <div className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-lg ring-1 ring-black/10 hover:ring-primary/60 hover:shadow-xl transition-shadow">
               <MoveHorizontal size={13} strokeWidth={2} className="text-gray-500" />
             </div>
+            {showDividerPct && (
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-800/90 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow select-none pointer-events-none z-50">
+                {block.props.leftColWidth ?? 48}%
+              </div>
+            )}
           </div>
         )}
 
