@@ -1240,12 +1240,32 @@ export default function MailingBuilderPage() {
 
   const handleSaveDraft = async () => {
     if (!user) return;
+    void Swal.fire({
+      title: "Guardando borrador…",
+      html: `<p style="color:#64748b;font-size:13px;margin:0">Almacenando el mailing en el servidor</p>`,
+      allowOutsideClick: false, allowEscapeKey: false, showConfirmButton: false,
+      customClass: { popup: "swal-brand-popup", title: "swal-brand-title" },
+      didOpen: () => Swal.showLoading(),
+    });
     const result = await saveDraft({ mailingId: activeMailingId, userId: user.id, document });
-    if (!result.savedId) { toast({ title: "No se pudo guardar", description: "Revisa tu sesión e inténtalo nuevamente.", variant: "destructive" }); return; }
+    if (!result.savedId) {
+      await Swal.fire({
+        title: "No se pudo guardar",
+        html: `<p style="color:#64748b;font-size:13px;margin-top:6px">Revisa tu sesión e inténtalo nuevamente.</p>`,
+        icon: "error", confirmButtonText: "Cerrar",
+        customClass: { popup: "swal-brand-popup", title: "swal-brand-title", confirmButton: "swal-brand-cancel" },
+      });
+      return;
+    }
     setActiveMailingId(result.savedId);
     setLastAutosaveAt(new Date().toISOString());
     void saveVersion({ mailingId: result.savedId, userId: user.id, document, note: null });
-    toast({ title: "Borrador guardado", description: "El mailing quedó almacenado en backend." });
+    await Swal.fire({
+      title: "Borrador guardado",
+      html: `<p style="color:#64748b;font-size:13px;margin-top:6px">El mailing quedó almacenado correctamente.</p>`,
+      icon: "success", timer: 2500, timerProgressBar: true, showConfirmButton: false,
+      customClass: { popup: "swal-brand-popup", title: "swal-brand-title", icon: "swal-brand-icon", timerProgressBar: "swal-brand-progress" },
+    });
   };
 
   const handleSaveAndExit = async () => {
