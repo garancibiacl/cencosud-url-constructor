@@ -1,6 +1,6 @@
 import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { CodeXml, ImageIcon, ImageOff, LayoutGrid, Upload } from "lucide-react";
+import { CodeXml, GripHorizontal, ImageIcon, ImageOff, LayoutGrid, MoveDown, MoveUp, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { ButtonBlock, HeroBlock, ImageBlock, MailingBlock, ProductBlock, ProductDdBlock, RawHtmlBlock, SpacerBlock, TextBlock } from "../../logic/schema/block.types";
 import { imageLibraryBridge } from "../imageLibraryBridge";
@@ -637,6 +637,19 @@ function reorderSection(order: string[], id: string, dir: -1 | 1): string[] {
   return result;
 }
 
+const SECTION_DND_TYPE = "application/mailing-section";
+
+function reorderSectionByDrop(order: string[], fromId: string, toId: string, insertBefore: boolean): string[] {
+  const base = DEFAULT_SECTION_ORDER as unknown as string[];
+  const seen = new Set(order);
+  const full = [...order, ...base.filter(s => !seen.has(s))];
+  const without = full.filter(s => s !== fromId);
+  const targetIdx = without.indexOf(toId);
+  if (targetIdx === -1) return full;
+  without.splice(insertBefore ? targetIdx : targetIdx + 1, 0, fromId);
+  return without;
+}
+
 function SectionWrapper({ id, order, isSelected, onChange, block, isActive, children }: {
   id: string;
   order: string[];
@@ -646,40 +659,100 @@ function SectionWrapper({ id, order, isSelected, onChange, block, isActive, chil
   isActive: boolean;
   children: React.ReactNode;
 }) {
+  const [dropSide, setDropSide] = useState<"top" | "bottom" | null>(null);
+
   if (!isSelected || !onChange) return <>{children}</>;
+
   const idx = order.indexOf(id);
   const canUp = idx > 0;
   const canDown = idx < order.length - 1;
+
   const move = (dir: -1 | 1) => {
-    const newOrder = reorderSection(order, id, dir);
-    onChange({ ...block, props: { ...block.props, sectionOrder: newOrder } });
+    onChange({ ...block, props: { ...block.props, sectionOrder: reorderSection(order, id, dir) } });
   };
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData(SECTION_DND_TYPE, id);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes(SECTION_DND_TYPE)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = "move";
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setDropSide(e.clientY < rect.top + rect.height / 2 ? "top" : "bottom");
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) {
+      setDropSide(null);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const fromId = e.dataTransfer.getData(SECTION_DND_TYPE);
+    if (!fromId || fromId === id) { setDropSide(null); return; }
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const insertBefore = e.clientY < rect.top + rect.height / 2;
+    onChange({ ...block, props: { ...block.props, sectionOrder: reorderSectionByDrop(order, fromId, id, insertBefore) } });
+    setDropSide(null);
+  };
+
+  const dropIndicator: React.CSSProperties = dropSide
+    ? { boxShadow: dropSide === "top" ? "0 -2px 0 rgba(255,255,255,0.7)" : "0 2px 0 rgba(255,255,255,0.7)" }
+    : {};
+
   return (
-    <div className="relative">
+    <div
+      className="relative"
+      style={dropIndicator}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       {children}
       {isActive && (
-        <div className="flex items-center justify-center mt-1 z-20">
-          <div className="flex items-center gap-0.5 rounded-full bg-gray-900/90 px-1.5 py-0.5 shadow-lg backdrop-blur-sm">
+        <div
+          className="flex items-center justify-center py-1.5"
+          data-section-toolbar="true"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center gap-0.5 rounded-full bg-white px-1.5 py-0.5 shadow-lg ring-1 ring-black/8">
+            <span
+              draggable
+              onDragStart={handleDragStart}
+              className="flex h-7 w-7 cursor-grab items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 active:cursor-grabbing"
+              title="Arrastrar para reordenar"
+            >
+              <GripHorizontal className="h-3.5 w-3.5" />
+            </span>
+
+            <div className="mx-0.5 h-3.5 w-px bg-gray-200" />
+
             <button
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={(e) => { e.stopPropagation(); move(-1); }}
               disabled={!canUp}
-              className="flex h-5 w-5 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/15 hover:text-white disabled:opacity-25"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-25"
               title="Mover arriba"
             >
-              <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><path d="M5 2l4 5H1z"/></svg>
+              <MoveUp className="h-3.5 w-3.5" />
             </button>
-            <div className="h-3 w-px bg-white/20" />
+
             <button
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={(e) => { e.stopPropagation(); move(1); }}
               disabled={!canDown}
-              className="flex h-5 w-5 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/15 hover:text-white disabled:opacity-25"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-25"
               title="Mover abajo"
             >
-              <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><path d="M5 8L1 3h8z"/></svg>
+              <MoveDown className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
@@ -776,6 +849,8 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
         paddingLeft: block.layout.padding?.left ?? 0,
       }}
       onClickCapture={(e) => {
+        // Toolbar buttons must not reset activeSection — let their own onClick run
+        if ((e.target as HTMLElement).closest("[data-section-toolbar]")) return;
         const section = (e.target as HTMLElement).closest("[data-focus-section]")?.getAttribute("data-focus-section");
         const resolved = section ?? "apariencia";
         inspectorFocusBridge.focus(block.id, resolved);
