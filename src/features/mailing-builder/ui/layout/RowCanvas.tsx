@@ -12,7 +12,7 @@
  */
 
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
-import { Bookmark, Copy, GripHorizontal, GripVertical, MoveDown, MoveUp, Plus, Settings2, Trash2 } from "lucide-react";
+import { Copy, GripHorizontal, GripVertical, LayoutGrid, MoveDown, MoveUp, Plus, Trash2 } from "lucide-react";
 import { inspectorFocusBridge } from "../inspectorFocusBridge";
 
 // Custom MIME types — permiten distinguir tipo de drag en dragOver (sin leer contenido)
@@ -402,10 +402,10 @@ export const RowCanvas = memo(function RowCanvas({
               e.dataTransfer.effectAllowed = "move";
               rowDragRef.current = { rowId: row.id, fromIndex: rowIndex };
             }}
-            className="flex h-6 w-5 cursor-grab items-center justify-center rounded text-muted-foreground/40 transition hover:bg-secondary/60 hover:text-muted-foreground active:cursor-grabbing"
+            className="flex h-7 w-6 cursor-grab items-center justify-center rounded text-violet-400/50 transition hover:bg-violet-50 hover:text-violet-500 active:cursor-grabbing"
             title="Reordenar sección"
           >
-            <GripVertical className="h-3.5 w-3.5" />
+            <GripVertical size={16} strokeWidth={1.5} />
           </span>
           <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/60">
             Fila {rowIndex + 1}
@@ -419,7 +419,7 @@ export const RowCanvas = memo(function RowCanvas({
               onClick={() => setShowPresetPicker((v) => !v)}
               title="Cambiar layout de columnas"
             >
-              <Settings2 className="h-3 w-3" />
+              <LayoutGrid size={14} strokeWidth={1.5} />
             </Button>
             {showPresetPicker && (
               <div className="absolute left-0 top-full z-50 mt-1 rounded-lg border border-border bg-card p-2 shadow-lg">
@@ -480,40 +480,40 @@ export const RowCanvas = memo(function RowCanvas({
           <Button
             size="icon"
             variant="ghost"
-            className="h-6 w-6"
+            className="h-7 w-7"
             disabled={rowIndex === 0}
             onClick={() => onMoveRow(rowIndex, rowIndex - 1)}
             title="Mover fila arriba"
           >
-            <MoveUp className="h-3 w-3" />
+            <MoveUp size={14} strokeWidth={1.5} />
           </Button>
           <Button
             size="icon"
             variant="ghost"
-            className="h-6 w-6"
+            className="h-7 w-7"
             disabled={rowIndex === totalRows - 1}
             onClick={() => onMoveRow(rowIndex, rowIndex + 1)}
             title="Mover fila abajo"
           >
-            <MoveDown className="h-3 w-3" />
+            <MoveDown size={14} strokeWidth={1.5} />
           </Button>
           <Button
             size="icon"
             variant="ghost"
-            className="h-6 w-6"
+            className="h-7 w-7"
             onClick={() => onDuplicateRow(row.id)}
             title="Duplicar fila"
           >
-            <Copy className="h-3 w-3" />
+            <Copy size={14} strokeWidth={1.5} />
           </Button>
           <Button
             size="icon"
             variant="ghost"
-            className="h-6 w-6 text-destructive/70 hover:text-destructive"
+            className="h-7 w-7 hover:bg-red-50 hover:text-red-500"
             onClick={() => onRemoveRow(row.id)}
             title="Eliminar fila"
           >
-            <Trash2 className="h-3 w-3" />
+            <Trash2 size={14} strokeWidth={1.5} />
           </Button>
         </div>
       </div>
@@ -933,10 +933,10 @@ const BlockItem = memo(function BlockItem({
             <span
               draggable
               onDragStart={handleDragStart}
-              className="flex h-7 w-7 cursor-grab items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground active:cursor-grabbing"
+              className="flex h-7 w-7 cursor-grab items-center justify-center rounded-full text-violet-400/60 transition hover:bg-violet-50 hover:text-violet-600 active:cursor-grabbing"
               title="Arrastrar"
             >
-              <GripHorizontal className="h-3.5 w-3.5" />
+              <GripHorizontal size={16} strokeWidth={1.5} />
             </span>
 
             <div className="mx-0.5 h-3.5 w-px bg-border/60" />
@@ -948,7 +948,7 @@ const BlockItem = memo(function BlockItem({
               title="Mover arriba"
               className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground disabled:opacity-30"
             >
-              <MoveUp className="h-3.5 w-3.5" />
+              <MoveUp size={16} strokeWidth={1.5} />
             </button>
 
             <button
@@ -958,7 +958,7 @@ const BlockItem = memo(function BlockItem({
               title="Mover abajo"
               className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground disabled:opacity-30"
             >
-              <MoveDown className="h-3.5 w-3.5" />
+              <MoveDown size={16} strokeWidth={1.5} />
             </button>
 
             <div className="mx-0.5 h-3.5 w-px bg-border/60" />
@@ -969,16 +969,16 @@ const BlockItem = memo(function BlockItem({
               title="Duplicar"
               className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground"
             >
-              <Copy className="h-3.5 w-3.5" />
+              <Copy size={16} strokeWidth={1.5} />
             </button>
 
             <button
               type="button"
               onClick={handleRemove}
               title="Eliminar"
-              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-red-50 hover:text-destructive"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground/70 transition hover:bg-red-50 hover:text-red-500"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 size={16} strokeWidth={1.5} />
             </button>
           </div>
         )}
@@ -1003,7 +1003,7 @@ export function AddRowButton({ onAdd }: { onAdd: (layoutId: string) => void }) {
         className="gap-1.5 border-dashed text-muted-foreground"
         onClick={() => setOpen((v) => !v)}
       >
-        <Plus className="h-3.5 w-3.5" />
+        <Plus size={16} strokeWidth={1.5} />
         Agregar fila
       </Button>
       {open && (

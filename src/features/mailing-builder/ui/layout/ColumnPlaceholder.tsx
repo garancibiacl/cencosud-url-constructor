@@ -1,14 +1,14 @@
-import { ImageIcon, MousePointerClick, RectangleHorizontal, Type } from "lucide-react";
+import { Image, MousePointerClick, Rows2, Type } from "lucide-react";
 import type { PlaceholderSlot } from "../../logic/schema/layout-schema.types";
 import type { MailingBlockType } from "../../logic/schema/block.types";
 
 const SLOT_ICONS: Record<string, React.ElementType> = {
-  image:   ImageIcon,
+  image:   Image,
   text:    Type,
   button:  MousePointerClick,
-  hero:    RectangleHorizontal,
-  spacer:  RectangleHorizontal,
-  product: ImageIcon,
+  hero:    Rows2,
+  spacer:  Rows2,
+  product: Image,
 };
 
 const SLOT_LABELS: Record<string, string> = {
@@ -53,7 +53,7 @@ export function ColumnPlaceholder({ slots, onInsert, isDragOver }: ColumnPlaceho
                   title={`Agregar ${SLOT_LABELS[slot.type] ?? slot.label}`}
                   className="flex items-center gap-1 rounded-md border border-dashed border-violet-300/60 bg-violet-50/40 px-2 py-1 text-[10px] font-medium text-violet-500 transition-colors hover:border-violet-400 hover:bg-violet-100/60 dark:border-violet-700/50 dark:bg-violet-950/20 dark:text-violet-400 dark:hover:bg-violet-900/30"
                 >
-                  <Icon className="h-3 w-3" />
+                  <Icon size={12} strokeWidth={1.5} />
                   {slot.label}
                 </button>
               );

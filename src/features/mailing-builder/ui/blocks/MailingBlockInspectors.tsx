@@ -4,9 +4,11 @@ import { inspectorFocusBridge } from "../inspectorFocusBridge";
 import { ColorPickerCanvas, hexToHsv, hsvToHex } from "../editor/ColorPickerCanvas";
 import type { ReactNode } from "react";
 import {
-  AlignCenter, AlignJustify, AlignLeft, AlignRight,
+  AlignCenter, AlignCenterVertical, AlignEndVertical, AlignJustify,
+  AlignLeft, AlignRight, AlignStartVertical, AlignVerticalSpaceAround,
   ArrowDown, ArrowLeft, ArrowRight, ArrowUp,
   ArrowLeftRight, ArrowUpDown,
+  BoxSelect, Frame, Menu, MoveHorizontal,
   AlertCircle, Check, ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown, ClipboardPaste,
   Image as ImageIcon, Link2, Monitor,
   MonitorSmartphone, PenLine, PenSquare, Plus, RotateCcw, Settings2, Smartphone,
@@ -629,9 +631,9 @@ function SegmentedAlign({
   onChange: (v: "left" | "center" | "right") => void;
 }) {
   const options = [
-    { value: "left"   as const, icon: <AlignLeft    className="h-3.5 w-3.5" /> },
-    { value: "center" as const, icon: <AlignCenter  className="h-3.5 w-3.5" /> },
-    { value: "right"  as const, icon: <AlignRight   className="h-3.5 w-3.5" /> },
+    { value: "left"   as const, icon: <AlignStartVertical  size={16} strokeWidth={1.5} />, title: "Izquierda" },
+    { value: "center" as const, icon: <AlignCenterVertical size={16} strokeWidth={1.5} />, title: "Centro"    },
+    { value: "right"  as const, icon: <AlignEndVertical    size={16} strokeWidth={1.5} />, title: "Derecha"   },
   ];
   return (
     <div className="flex h-7 overflow-hidden rounded-md border border-border">
@@ -639,12 +641,12 @@ function SegmentedAlign({
         <button
           key={opt.value}
           type="button"
-          title={opt.value}
+          title={opt.title}
           onClick={() => onChange(opt.value)}
           className={`flex flex-1 items-center justify-center transition ${
             value === opt.value
-              ? "bg-foreground text-background"
-              : "bg-card text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+              ? "bg-indigo-100 text-indigo-700"
+              : "bg-card text-gray-500 hover:bg-secondary/60 hover:text-foreground"
           }`}
         >
           {opt.icon}
@@ -666,10 +668,10 @@ function SegmentedTextAlign({
   onChange: (v: "left" | "center" | "right" | "justify") => void;
 }) {
   const options = [
-    { value: "left"    as const, icon: <AlignLeft    className="h-3.5 w-3.5" /> },
-    { value: "center"  as const, icon: <AlignCenter  className="h-3.5 w-3.5" /> },
-    { value: "right"   as const, icon: <AlignRight   className="h-3.5 w-3.5" /> },
-    { value: "justify" as const, icon: <AlignJustify className="h-3.5 w-3.5" /> },
+    { value: "left"    as const, icon: <AlignLeft    size={16} strokeWidth={1.5} />, title: "Izquierda"  },
+    { value: "center"  as const, icon: <AlignCenter  size={16} strokeWidth={1.5} />, title: "Centro"     },
+    { value: "right"   as const, icon: <AlignRight   size={16} strokeWidth={1.5} />, title: "Derecha"    },
+    { value: "justify" as const, icon: <AlignJustify size={16} strokeWidth={1.5} />, title: "Justificar" },
   ];
   return (
     <div className="flex h-7 overflow-hidden rounded-md border border-border">
@@ -677,12 +679,12 @@ function SegmentedTextAlign({
         <button
           key={opt.value}
           type="button"
-          title={opt.value}
+          title={opt.title}
           onClick={() => onChange(opt.value)}
           className={`flex flex-1 items-center justify-center transition ${
             value === opt.value
-              ? "bg-foreground text-background"
-              : "bg-card text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+              ? "bg-indigo-100 text-indigo-700"
+              : "bg-card text-gray-500 hover:bg-secondary/60 hover:text-foreground"
           }`}
         >
           {opt.icon}
@@ -696,22 +698,11 @@ function SegmentedTextAlign({
 // LineHeightControl — presets de interlineado + stepper
 // ─────────────────────────────────────────────────────────────────────────────
 
-function LhIcon({ gaps }: { gaps: [number, number] }) {
-  const [g1, g2] = gaps;
-  return (
-    <svg viewBox="0 0 10 12" className="h-3 w-2.5 fill-current" aria-hidden>
-      <rect x="0" y="0"      width="10" height="1.6" rx="0.8" />
-      <rect x="0" y={g1}     width="10" height="1.6" rx="0.8" />
-      <rect x="0" y={g1+g2}  width="10" height="1.6" rx="0.8" />
-    </svg>
-  );
-}
-
-const LH_PRESETS: { value: number; icon: ReactNode }[] = [
-  { value: 1.0, icon: <LhIcon gaps={[3.5, 3.5]} /> },
-  { value: 1.2, icon: <LhIcon gaps={[4.5, 4.5]} /> },
-  { value: 1.5, icon: <LhIcon gaps={[5.5, 5.5]} /> },
-  { value: 2.0, icon: <Settings2 className="h-3 w-3" /> },
+const LH_PRESETS: { value: number; icon: ReactNode; title: string }[] = [
+  { value: 1.0, icon: <AlignJustify             size={16} strokeWidth={1.5} />, title: "Compacto" },
+  { value: 1.2, icon: <Menu                     size={16} strokeWidth={1.5} />, title: "Normal"   },
+  { value: 1.5, icon: <AlignVerticalSpaceAround size={16} strokeWidth={1.5} />, title: "Amplio"   },
+  { value: 2.0, icon: <Settings2               size={16} strokeWidth={1.5} />, title: "Personalizado" },
 ];
 
 function LineHeightControl({
@@ -730,12 +721,12 @@ function LineHeightControl({
             <button
               key={p.value}
               type="button"
-              title={`${p.value}×`}
+              title={p.title}
               onClick={() => onChange(p.value)}
               className={`flex w-7 items-center justify-center transition ${
                 active
-                  ? "bg-foreground text-background"
-                  : "bg-card text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                  ? "bg-indigo-100 text-indigo-700"
+                  : "bg-card text-gray-500 hover:bg-secondary/60 hover:text-foreground"
               }`}
             >
               {p.icon}
@@ -1068,12 +1059,12 @@ function PaddingEditor({
         <div className="grid grid-cols-2 gap-2">
           {/* Vertical (top + bottom) */}
           <div className="flex items-center gap-1">
-            <ArrowUpDown className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+            <BoxSelect size={14} strokeWidth={1.5} className="shrink-0 text-muted-foreground/50" />
             <PxStepper value={value.top} onChange={setVertical} min={0} max={200} />
           </div>
           {/* Horizontal (left + right) */}
           <div className="flex items-center gap-1">
-            <ArrowLeftRight className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+            <ArrowLeftRight size={14} strokeWidth={1.5} className="shrink-0 text-muted-foreground/50" />
             <PxStepper value={value.left} onChange={setHorizontal} min={0} max={200} />
           </div>
         </div>
@@ -1359,7 +1350,7 @@ export function TextBlockInspector({ block, onChange }: SharedProps<TextBlock>) 
           <span className="text-xs text-foreground/70">Margen</span>
           <div className="grid grid-cols-2 gap-2">
             <div className="flex items-center gap-1">
-              <ArrowUpDown className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+              <Frame size={14} strokeWidth={1.5} className="shrink-0 text-muted-foreground/50" />
               <PxStepper
                 value={Math.max(block.layout.marginTop ?? 0, block.layout.marginBottom ?? 0)}
                 onChange={(v) => setLayout({ marginTop: v, marginBottom: v })}
@@ -1368,7 +1359,7 @@ export function TextBlockInspector({ block, onChange }: SharedProps<TextBlock>) 
               />
             </div>
             <div className="flex items-center gap-1">
-              <ArrowLeftRight className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+              <MoveHorizontal size={14} strokeWidth={1.5} className="shrink-0 text-muted-foreground/50" />
               <PxStepper
                 value={Math.max(block.layout.marginLeft ?? 0, block.layout.marginRight ?? 0)}
                 onChange={(v) => setLayout({ marginLeft: v, marginRight: v })}
