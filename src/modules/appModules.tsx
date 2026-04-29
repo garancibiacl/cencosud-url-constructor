@@ -10,8 +10,12 @@ import { Code2, FolderArchive, Link, Mail, Shield, Sparkles, Wand2, Zap } from "
 
 type AppRole = "admin" | "disenador" | "programador" | "director" | "cencosud" | "mailing";
 
-const STANDARD_MODULE_ROLES: AppRole[] = ["disenador", "programador", "director", "cencosud", "mailing"];
-const AMPSCRIPT_MODULE_ROLES: AppRole[] = ["programador", "mailing"];
+// Roles "estándar" — NO incluye cencosud (cencosud solo accede a Mailing Builder y AMPscript Builder)
+const STANDARD_MODULE_ROLES: AppRole[] = ["disenador", "programador", "director", "mailing"];
+const AMPSCRIPT_MODULE_ROLES: AppRole[] = ["programador", "mailing", "cencosud"];
+const MAILING_BUILDER_ROLES: AppRole[] = ["disenador", "programador", "director", "mailing", "cencosud"];
+// Roles que pueden ver el Banco de Archivos (cencosud queda excluido)
+const FILE_BANK_ROLES: AppRole[] = ["disenador", "programador", "director", "mailing"];
 
 export type AppModuleId =
   | "constructor-url"
