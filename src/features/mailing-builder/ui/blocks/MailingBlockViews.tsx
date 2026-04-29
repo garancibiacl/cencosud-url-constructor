@@ -1002,7 +1002,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
           ref={editorAreaRef}
           className="flex flex-1 min-w-0 flex-col justify-center"
           style={{
-            backgroundColor: block.props.rightBgColor ?? "#3DBE4A",
+            backgroundColor: block.layout.backgroundColor ?? block.props.rightBgColor ?? "#3DBE4A",
             padding: "12px 14px",
             gap: "6px",
             overflow: "hidden",
