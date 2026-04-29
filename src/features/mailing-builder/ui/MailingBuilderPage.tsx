@@ -1117,14 +1117,67 @@ export default function MailingBuilderPage() {
       link.href     = dataUrl;
       link.download = `${fileName}.jpg`;
       link.click();
-      setShowDownloadModal(false);
-      toast({ title: "JPG descargado", description: `${docWidth} × ${contentHeight}px — mailing completo.` });
+      return { width: docWidth, height: contentHeight };
     } catch (err) {
       console.error("[JPG export]", err);
-      toast({ title: "Error al generar JPG", description: "Inténtalo nuevamente.", variant: "destructive" });
+      throw err;
     } finally {
       if (container.parentNode) window.document.body.removeChild(container);
       setDownloadingJpg(false);
+    }
+  };
+
+  const handleJpgExportWithSwal = async () => {
+    setShowDownloadModal(false);
+
+    void Swal.fire({
+      title: "Generando imagen…",
+      html: `<p style="color:#64748b;font-size:13px;margin:0">Procesando imágenes y preparando la descarga</p>`,
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      customClass: { popup: "swal-brand-popup", title: "swal-brand-title" },
+      didOpen: () => Swal.showLoading(),
+    });
+
+    try {
+      const { width, height } = await handleDownloadJpg();
+      await Swal.fire({
+        title: "¡JPG descargado!",
+        html: `<p style="color:#64748b;font-size:13px;margin-top:6px">
+                 ${width} × ${height}px &nbsp;·&nbsp;
+                 <strong style="color:#0f172a">${fileName}.jpg</strong>
+               </p>`,
+        icon: "success",
+        timer: 3000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+        customClass: {
+          popup:            "swal-brand-popup",
+          title:            "swal-brand-title",
+          icon:             "swal-brand-icon",
+          timerProgressBar: "swal-brand-progress",
+        },
+      });
+    } catch {
+      const result = await Swal.fire({
+        title: "Error al generar JPG",
+        html: `<p style="color:#64748b;font-size:13px;margin-top:6px">
+                 No se pudo exportar la imagen. Inténtalo nuevamente.
+               </p>`,
+        icon: "error",
+        confirmButtonText: "Reintentar",
+        showCancelButton: true,
+        cancelButtonText: "Cerrar",
+        reverseButtons: true,
+        customClass: {
+          popup:         "swal-brand-popup",
+          title:         "swal-brand-title",
+          confirmButton: "swal-brand-confirm-violet",
+          cancelButton:  "swal-brand-cancel",
+        },
+      });
+      if (result.isConfirmed) setShowDownloadModal(true);
     }
   };
 
@@ -2097,16 +2150,7 @@ export default function MailingBuilderPage() {
             <button
               type="button"
               disabled={downloadingJpg || jpgDone}
-              onClick={() => {
-                void (async () => {
-                  await handleDownloadJpg();
-                  setJpgDone(true);
-                  setTimeout(() => {
-                    setShowDownloadModal(false);
-                    setJpgDone(false);
-                  }, 1500);
-                })();
-              }}
+              onClick={() => { void handleJpgExportWithSwal(); }}
               className={[
                 "group w-full flex items-center gap-4 rounded-xl border px-4 py-3.5 text-left transition-all",
                 jpgDone
