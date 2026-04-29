@@ -85,6 +85,9 @@ function DefaultRedirect() {
   // Solo blanquear en carga inicial (sin usuario conocido).
   if (loading && !user) return null;
 
+  // Rol Cencosud entra directo a Mailing Builder
+  if (role === "cencosud") return <Navigate to="/mailing-builder" replace />;
+
   const first = appModules.find((m) => canAccessModule(m, role));
   return <Navigate to={first?.path ?? "/login"} replace />;
 }
