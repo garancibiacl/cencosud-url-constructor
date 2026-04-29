@@ -621,9 +621,8 @@ function Tip({ label, children }: { label: string; children: React.ReactNode }) 
   return (
     <div className="group/tip relative">
       {children}
-      <span className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 -translate-x-1/2 scale-95 whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1 text-[11px] font-medium leading-none tracking-wide text-white opacity-0 shadow-xl transition-all duration-150 group-hover/tip:scale-100 group-hover/tip:opacity-100">
+      <span className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 -translate-x-1/2 scale-95 whitespace-nowrap rounded-full bg-gray-900 px-3 py-1.5 text-xs font-medium leading-none text-white opacity-0 shadow-xl transition-all duration-150 group-hover/tip:scale-100 group-hover/tip:opacity-100">
         {label}
-        <span className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-900" />
       </span>
     </div>
   );

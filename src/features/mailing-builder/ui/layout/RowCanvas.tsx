@@ -30,6 +30,21 @@ import { ColumnPlaceholder } from "./ColumnPlaceholder";
 import { BlockDropIndicator } from "./RowDropIndicator";
 
 // ---------------------------------------------------------------------------
+// Tip — tooltip pill sin flecha, estilo dark pill
+// ---------------------------------------------------------------------------
+
+function Tip({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="group/tip relative">
+      {children}
+      <span className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 -translate-x-1/2 scale-95 whitespace-nowrap rounded-full bg-gray-900 px-3 py-1.5 text-xs font-medium leading-none text-white opacity-0 shadow-xl transition-all duration-150 group-hover/tip:scale-100 group-hover/tip:opacity-100">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Level color tokens
 // ---------------------------------------------------------------------------
 
@@ -478,44 +493,30 @@ export const RowCanvas = memo(function RowCanvas({
         </div>
 
         <div className="flex items-center gap-0.5">
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-7 w-7"
-            disabled={rowIndex === 0}
-            onClick={() => onMoveRow(rowIndex, rowIndex - 1)}
-            title="Mover fila arriba"
-          >
-            <MoveUp size={14} strokeWidth={1.5} />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-7 w-7"
-            disabled={rowIndex === totalRows - 1}
-            onClick={() => onMoveRow(rowIndex, rowIndex + 1)}
-            title="Mover fila abajo"
-          >
-            <MoveDown size={14} strokeWidth={1.5} />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-7 w-7"
-            onClick={() => onDuplicateRow(row.id)}
-            title="Duplicar fila"
-          >
-            <Copy size={14} strokeWidth={1.5} />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-7 w-7 hover:bg-red-50 hover:text-red-500"
-            onClick={() => onRemoveRow(row.id)}
-            title="Eliminar fila"
-          >
-            <Trash2 size={14} strokeWidth={1.5} />
-          </Button>
+          <Tip label="Mover fila arriba">
+            <Button size="icon" variant="ghost" className="h-7 w-7 disabled:pointer-events-none"
+              disabled={rowIndex === 0} onClick={() => onMoveRow(rowIndex, rowIndex - 1)}>
+              <MoveUp size={14} strokeWidth={1.75} />
+            </Button>
+          </Tip>
+          <Tip label="Mover fila abajo">
+            <Button size="icon" variant="ghost" className="h-7 w-7 disabled:pointer-events-none"
+              disabled={rowIndex === totalRows - 1} onClick={() => onMoveRow(rowIndex, rowIndex + 1)}>
+              <MoveDown size={14} strokeWidth={1.75} />
+            </Button>
+          </Tip>
+          <Tip label="Duplicar fila">
+            <Button size="icon" variant="ghost" className="h-7 w-7"
+              onClick={() => onDuplicateRow(row.id)}>
+              <Copy size={14} strokeWidth={1.75} />
+            </Button>
+          </Tip>
+          <Tip label="Eliminar fila">
+            <Button size="icon" variant="ghost" className="h-7 w-7 hover:bg-red-50 hover:text-red-500"
+              onClick={() => onRemoveRow(row.id)}>
+              <Trash2 size={14} strokeWidth={1.75} />
+            </Button>
+          </Tip>
         </div>
       </div>
 
@@ -940,56 +941,61 @@ const BlockItem = memo(function BlockItem({
             data-mailing-block="true"
             onClick={(e) => e.stopPropagation()}
           >
-            <span
-              draggable
-              onDragStart={handleDragStart}
-              className="flex h-7 w-7 cursor-grab items-center justify-center rounded-full text-violet-400/60 transition hover:bg-violet-50 hover:text-violet-600 active:cursor-grabbing"
-              title="Arrastrar"
-            >
-              <GripHorizontal size={16} strokeWidth={1.5} />
-            </span>
+            <Tip label="Mover">
+              <span
+                draggable
+                onDragStart={handleDragStart}
+                className="flex h-7 w-7 cursor-grab items-center justify-center rounded-full text-violet-400/60 transition-all duration-150 hover:bg-violet-50 hover:text-violet-600 hover:shadow-sm active:cursor-grabbing"
+              >
+                <GripHorizontal size={16} strokeWidth={1.75} />
+              </span>
+            </Tip>
 
             <div className="mx-0.5 h-3.5 w-px bg-border/60" />
 
-            <button
-              type="button"
-              disabled={index === 0 && rowIndex === 0}
-              onClick={handleMoveUp}
-              title="Mover arriba"
-              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground disabled:opacity-30"
-            >
-              <MoveUp size={16} strokeWidth={1.5} />
-            </button>
+            <Tip label="Mover arriba">
+              <button
+                type="button"
+                disabled={index === 0 && rowIndex === 0}
+                onClick={handleMoveUp}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-violet-400/60 transition-all duration-150 hover:bg-violet-50 hover:text-violet-600 hover:shadow-sm disabled:pointer-events-none disabled:opacity-30"
+              >
+                <MoveUp size={16} strokeWidth={1.75} />
+              </button>
+            </Tip>
 
-            <button
-              type="button"
-              disabled={index === totalInCol - 1 && rowIndex === totalRows - 1}
-              onClick={handleMoveDown}
-              title="Mover abajo"
-              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground disabled:opacity-30"
-            >
-              <MoveDown size={16} strokeWidth={1.5} />
-            </button>
+            <Tip label="Mover abajo">
+              <button
+                type="button"
+                disabled={index === totalInCol - 1 && rowIndex === totalRows - 1}
+                onClick={handleMoveDown}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-violet-400/60 transition-all duration-150 hover:bg-violet-50 hover:text-violet-600 hover:shadow-sm disabled:pointer-events-none disabled:opacity-30"
+              >
+                <MoveDown size={16} strokeWidth={1.75} />
+              </button>
+            </Tip>
 
             <div className="mx-0.5 h-3.5 w-px bg-border/60" />
 
-            <button
-              type="button"
-              onClick={handleDuplicate}
-              title="Duplicar"
-              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground"
-            >
-              <Copy size={16} strokeWidth={1.5} />
-            </button>
+            <Tip label="Duplicar">
+              <button
+                type="button"
+                onClick={handleDuplicate}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-gray-400 transition-all duration-150 hover:bg-indigo-50 hover:text-indigo-600 hover:shadow-sm"
+              >
+                <Copy size={16} strokeWidth={1.75} />
+              </button>
+            </Tip>
 
-            <button
-              type="button"
-              onClick={handleRemove}
-              title="Eliminar"
-              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground/70 transition hover:bg-red-50 hover:text-red-500"
-            >
-              <Trash2 size={16} strokeWidth={1.5} />
-            </button>
+            <Tip label="Eliminar">
+              <button
+                type="button"
+                onClick={handleRemove}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-gray-400 transition-all duration-150 hover:bg-red-50 hover:text-red-500 hover:shadow-sm"
+              >
+                <Trash2 size={16} strokeWidth={1.75} />
+              </button>
+            </Tip>
           </div>
         )}
       </div>
