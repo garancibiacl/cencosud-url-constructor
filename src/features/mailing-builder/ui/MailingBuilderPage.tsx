@@ -55,6 +55,28 @@ const CATEGORY_LABELS = {
 } as const;
 
 // ---------------------------------------------------------------------------
+// formatRelativeTime — returns "Hace X horas/minutos/días" for recent dates
+// or "22 abr 2026 · 9:13 p.m." using es-CL locale for older ones
+// ---------------------------------------------------------------------------
+function formatRelativeTime(iso: string): string {
+  const date = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60_000);
+  const diffHours = Math.floor(diffMs / 3_600_000);
+  const diffDays = Math.floor(diffMs / 86_400_000);
+
+  if (diffMins < 1) return "Hace un momento";
+  if (diffMins < 60) return `Hace ${diffMins} ${diffMins === 1 ? "minuto" : "minutos"}`;
+  if (diffHours < 24) return `Hace ${diffHours} ${diffHours === 1 ? "hora" : "horas"}`;
+  if (diffDays < 7) return `Hace ${diffDays} ${diffDays === 1 ? "día" : "días"}`;
+
+  const datePart = date.toLocaleDateString("es-CL", { day: "numeric", month: "short", year: "numeric" });
+  const timePart = date.toLocaleTimeString("es-CL", { hour: "numeric", minute: "2-digit", hour12: true });
+  return `${datePart} · ${timePart}`;
+}
+
+// ---------------------------------------------------------------------------
 // BlockMiniThumb — visual sketch de cada tipo de bloque
 // ---------------------------------------------------------------------------
 
@@ -889,6 +911,8 @@ export default function MailingBuilderPage() {
   const [lastAutosaveAt, setLastAutosaveAt] = useState<string | null>(null);
   const [showGlobalInspector, setShowGlobalInspector] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
+  const [showVersionHistoryModal, setShowVersionHistoryModal] = useState(false);
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
 
   const inspectorRef = useRef<HTMLDivElement | null>(null);
   const globalInspectorButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -1220,6 +1244,7 @@ export default function MailingBuilderPage() {
     if (!result.savedId) { toast({ title: "No se pudo guardar", description: "Revisa tu sesión e inténtalo nuevamente.", variant: "destructive" }); return; }
     setActiveMailingId(result.savedId);
     setLastAutosaveAt(new Date().toISOString());
+    void saveVersion({ mailingId: result.savedId, userId: user.id, document, note: null });
     toast({ title: "Borrador guardado", description: "El mailing quedó almacenado en backend." });
   };
 
@@ -1229,6 +1254,7 @@ export default function MailingBuilderPage() {
       if (result.savedId) {
         setActiveMailingId(result.savedId);
         setLastAutosaveAt(new Date().toISOString());
+        void saveVersion({ mailingId: result.savedId, userId: user.id, document, note: null });
       }
     }
     setShowCampaignSettings(true);
@@ -1255,8 +1281,13 @@ export default function MailingBuilderPage() {
 
   const handleRestoreVersion = (versionId: string) => {
     const version = versions.find((v) => v.id === versionId);
-    if (!version || !activeMailingId) return;
+    if (!version || !activeMailingId || !user) return;
     replaceDocument(version.snapshot, activeMailingId);
+    void saveDraft({ mailingId: activeMailingId, userId: user.id, document: version.snapshot }).then((result) => {
+      if (result.savedId) {
+        void saveVersion({ mailingId: result.savedId, userId: user.id, document: version.snapshot, note: `Restaurado desde v${version.versionNumber}` });
+      }
+    });
     toast({ title: `Versión v${version.versionNumber} restaurada`, description: "El canvas volvió al snapshot seleccionado." });
   };
 
@@ -1422,7 +1453,20 @@ export default function MailingBuilderPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuItem onClick={() => void handleSaveVersion()} disabled={!user || saving}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setShowVersionHistoryModal(true);
+                    if (activeMailingId) {
+                      void loadVersions(activeMailingId).then((loaded) => {
+                        const mostRecent = loaded.length > 0
+                          ? [...loaded].sort((a, b) => b.versionNumber - a.versionNumber)[0]
+                          : null;
+                        setSelectedVersionId(mostRecent?.id ?? null);
+                      });
+                    }
+                  }}
+                  disabled={loading || !activeMailingId}
+                >
                   <History className="mr-2 h-4 w-4" />Historial de versiones
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setPreviewMode("html")}>
@@ -2057,6 +2101,165 @@ export default function MailingBuilderPage() {
       />
 
       <ImageLibraryModal />
+
+      {/* ── Modal: historial de versiones ───────────────────────────────────── */}
+      <Dialog
+        open={showVersionHistoryModal}
+        onOpenChange={(v) => {
+          setShowVersionHistoryModal(v);
+        }}
+      >
+        <DialogContent className="gap-0 p-0 overflow-hidden max-w-4xl w-full h-[600px] flex flex-col">
+          <DialogHeader className="px-6 pt-5 pb-4 border-b border-border/50 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/10">
+                <History className="h-4 w-4 text-violet-600" />
+              </div>
+              <DialogTitle className="text-sm font-semibold leading-none">Historial de versiones</DialogTitle>
+            </div>
+          </DialogHeader>
+
+          {/* ── Body: preview + list ── */}
+          <div className="flex flex-1 min-h-0">
+
+            {/* Left panel — scaled iframe preview */}
+            <div className="flex-1 relative overflow-hidden bg-muted/30 border-r border-border/50">
+              {loading ? (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Loader2 className="h-7 w-7 animate-spin text-violet-500" />
+                </div>
+              ) : versions.length === 0 ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                  <History className="h-8 w-8 opacity-30" />
+                  <p className="text-sm">No hay versiones guardadas aún</p>
+                </div>
+              ) : (() => {
+                const previewVersion = versions.find((v) => v.id === selectedVersionId) ?? null;
+                const previewHtml = previewVersion ? renderMailingHtml(previewVersion.snapshot) : "";
+                const PREVIEW_WIDTH = 600;
+                // Container width ≈ (max-w-4xl - w-72) ≈ ~584px; use a fixed scale
+                const SCALE = 0.45;
+                const containerH = Math.round((PREVIEW_WIDTH * SCALE) * (4 / 3));
+                return previewVersion ? (
+                  <div
+                    className="absolute inset-0 flex items-start justify-center pt-6"
+                  >
+                    <div
+                      className="relative overflow-hidden rounded-xl border border-border/60 shadow-sm bg-white"
+                      style={{ width: Math.round(PREVIEW_WIDTH * SCALE), height: containerH }}
+                    >
+                      <div
+                        style={{
+                          width: PREVIEW_WIDTH,
+                          height: Math.round(containerH / SCALE),
+                          transformOrigin: "top left",
+                          transform: `scale(${SCALE})`,
+                          pointerEvents: "none",
+                        }}
+                      >
+                        <iframe
+                          srcDoc={previewHtml}
+                          title={`Vista previa v${previewVersion.versionNumber}`}
+                          scrolling="no"
+                          style={{
+                            width: PREVIEW_WIDTH,
+                            height: Math.round(containerH / SCALE),
+                            border: "none",
+                            display: "block",
+                            pointerEvents: "none",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+            </div>
+
+            {/* Right panel — version list + restore button */}
+            <div className="w-72 shrink-0 flex flex-col">
+              {/* Scrollable list */}
+              <div className="flex-1 overflow-y-auto">
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-6 w-6 animate-spin text-violet-500" />
+                  </div>
+                ) : versions.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground px-6 text-center">
+                    <History className="h-7 w-7 opacity-30" />
+                    <p className="text-xs">No hay versiones guardadas aún</p>
+                  </div>
+                ) : (() => {
+                  const sorted = [...versions].sort((a, b) => b.versionNumber - a.versionNumber);
+                  const latestNumber = sorted[0]?.versionNumber ?? -1;
+                  return sorted.map((v, idx) => {
+                    const isSelected = v.id === selectedVersionId;
+                    const isCurrent = v.versionNumber === latestNumber;
+                    return (
+                      <div key={v.id}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedVersionId(v.id)}
+                          className={`w-full text-left px-4 py-3.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
+                            isSelected
+                              ? "bg-violet-50 border-l-2 border-violet-500"
+                              : "border-l-2 border-transparent hover:bg-muted/60"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-sm font-semibold text-foreground">
+                              v{v.versionNumber}
+                            </span>
+                            {isCurrent && (
+                              <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-medium text-violet-700 leading-none">
+                                Versión actual
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-foreground/80 truncate">
+                            {v.note ? v.note : <span className="text-muted-foreground">Sin nota</span>}
+                          </p>
+                          <p className="mt-1 text-[11px] text-muted-foreground">
+                            {formatRelativeTime(v.createdAt)}
+                          </p>
+                        </button>
+                        {idx < sorted.length - 1 && (
+                          <div className="mx-4 border-b border-border/50" />
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+
+              {/* Sticky footer — Restaurar button */}
+              <div className="shrink-0 border-t border-border/50 px-4 py-3.5">
+                {(() => {
+                  const sorted = [...versions].sort((a, b) => b.versionNumber - a.versionNumber);
+                  const latestNumber = sorted[0]?.versionNumber ?? -1;
+                  const selectedVersion = versions.find((v) => v.id === selectedVersionId);
+                  const isCurrentVersion = selectedVersion?.versionNumber === latestNumber;
+                  return (
+                    <Button
+                      className="w-full bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium"
+                      disabled={!selectedVersionId || isCurrentVersion || versions.length === 0}
+                      onClick={() => {
+                        if (selectedVersionId) {
+                          handleRestoreVersion(selectedVersionId);
+                          setShowVersionHistoryModal(false);
+                        }
+                      }}
+                    >
+                      <RotateCcw className="mr-2 h-3.5 w-3.5" />
+                      Restaurar
+                    </Button>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Modal: descargar ─────────────────────────────────────────────────── */}
       <Dialog
