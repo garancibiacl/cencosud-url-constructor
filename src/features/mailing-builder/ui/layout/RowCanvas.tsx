@@ -14,6 +14,7 @@
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Copy, GripHorizontal, GripVertical, LayoutGrid, MoveDown, MoveUp, Plus, Trash2 } from "lucide-react";
 import { inspectorFocusBridge } from "../inspectorFocusBridge";
+import { blockActionBridge } from "../blockActionBridge";
 
 // Custom MIME types — permiten distinguir tipo de drag en dragOver (sin leer contenido)
 const SECTION_DRAG_TYPE = "application/mailing-section";
@@ -896,6 +897,15 @@ const BlockItem = memo(function BlockItem({
     (e: React.DragEvent) => onBlockDragStart(e, block, colId, index),
     [block, colId, index, onBlockDragStart],
   );
+
+  // Expone duplicate/remove al blockActionBridge para que las vistas internas
+  // (ej. SectionWrapper en ProductDd) puedan disparar acciones de bloque.
+  useEffect(() => {
+    return blockActionBridge.register(block.id, (action) => {
+      if (action === "duplicate") onDuplicateBlock(block.id);
+      if (action === "remove")    onRemoveBlock(block.id);
+    });
+  }, [block.id, onDuplicateBlock, onRemoveBlock]);
 
   const handleChange = useCallback(
     (nextBlock: typeof block) => onUpdateBlock(nextBlock as MailingBlock),

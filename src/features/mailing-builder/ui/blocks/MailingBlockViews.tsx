@@ -1,10 +1,11 @@
 import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { CodeXml, GripHorizontal, ImageIcon, ImageOff, LayoutGrid, MoveDown, MoveUp, Upload } from "lucide-react";
+import { CodeXml, Copy, GripHorizontal, ImageIcon, ImageOff, LayoutGrid, MoveDown, MoveUp, Trash2, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { ButtonBlock, HeroBlock, ImageBlock, MailingBlock, ProductBlock, ProductDdBlock, RawHtmlBlock, SpacerBlock, TextBlock } from "../../logic/schema/block.types";
 import { imageLibraryBridge } from "../imageLibraryBridge";
 import { inspectorFocusBridge } from "../inspectorFocusBridge";
+import { blockActionBridge } from "../blockActionBridge";
 import { TextFloatingToolbar } from "../editor/TextFloatingToolbar";
 
 const getPaddingStyle = (block: MailingBlock): CSSProperties => ({
@@ -639,6 +640,30 @@ function reorderSection(order: string[], id: string, dir: -1 | 1): string[] {
 
 const SECTION_DND_TYPE = "application/mailing-section";
 
+// Clears the prop that controls visibility — used by the delete button
+const SECTION_CLEAR: Record<string, (b: ProductDdBlock) => Partial<ProductDdBlock["props"]>> = {
+  logo:     () => ({ logoUrl: "" }),
+  discount: () => ({ discountNumber: "" }),
+  priceTag: () => ({ priceTagShow: false }),
+  ahorro:   () => ({ ahorroLabel: "" }),
+  price:    () => ({ price: "" }),
+  name:     () => ({ name: "" }),
+};
+
+// Returns the plain-text value for clipboard copy
+function sectionCopyText(id: string, block: ProductDdBlock): string {
+  const strip = (html: string) => html.replace(/<[^>]*>/g, "");
+  switch (id) {
+    case "logo":     return block.props.logoUrl ?? "";
+    case "discount": return `${block.props.discountNumber ?? ""}${block.props.discountSymbol ?? "%"}`;
+    case "price":    return strip(block.props.price);
+    case "priceTag": return `${block.props.priceTagLabel ?? "Ahorro"}: ${block.props.priceTagValue ?? ""}`;
+    case "ahorro":   return strip(block.props.ahorroLabel ?? "");
+    case "name":     return strip(block.props.name);
+    default:         return "";
+  }
+}
+
 function reorderSectionByDrop(order: string[], fromId: string, toId: string, insertBefore: boolean): string[] {
   const base = DEFAULT_SECTION_ORDER as unknown as string[];
   const seen = new Set(order);
@@ -722,17 +747,19 @@ function SectionWrapper({ id, order, isSelected, onChange, block, isActive, chil
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center gap-0.5 rounded-full bg-white px-1.5 py-0.5 shadow-lg ring-1 ring-black/8">
+            {/* Drag handle */}
             <span
               draggable
               onDragStart={handleDragStart}
               className="flex h-7 w-7 cursor-grab items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 active:cursor-grabbing"
               title="Arrastrar para reordenar"
             >
-              <GripHorizontal className="h-3.5 w-3.5" />
+              <GripHorizontal size={16} strokeWidth={1.5} />
             </span>
 
             <div className="mx-0.5 h-3.5 w-px bg-gray-200" />
 
+            {/* Reorder */}
             <button
               type="button"
               onMouseDown={(e) => e.preventDefault()}
@@ -741,7 +768,7 @@ function SectionWrapper({ id, order, isSelected, onChange, block, isActive, chil
               className="flex h-7 w-7 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-25"
               title="Mover arriba"
             >
-              <MoveUp className="h-3.5 w-3.5" />
+              <MoveUp size={16} strokeWidth={1.5} />
             </button>
 
             <button
@@ -752,7 +779,35 @@ function SectionWrapper({ id, order, isSelected, onChange, block, isActive, chil
               className="flex h-7 w-7 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-25"
               title="Mover abajo"
             >
-              <MoveDown className="h-3.5 w-3.5" />
+              <MoveDown size={16} strokeWidth={1.5} />
+            </button>
+
+            <div className="mx-0.5 h-3.5 w-px bg-gray-200" />
+
+            {/* Duplicate — clona el bloque completo justo debajo */}
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={(e) => { e.stopPropagation(); blockActionBridge.emit(block.id, "duplicate"); }}
+              className="flex h-7 w-7 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
+              title="Duplicar bloque"
+            >
+              <Copy size={16} strokeWidth={1.5} />
+            </button>
+
+            {/* Trash — oculta la sección limpiando su prop de control */}
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={(e) => {
+                e.stopPropagation();
+                const clearFn = SECTION_CLEAR[id];
+                if (clearFn) onChange({ ...block, props: { ...block.props, ...clearFn(block) } });
+              }}
+              className="flex h-7 w-7 items-center justify-center rounded-full text-gray-500 transition hover:bg-red-50 hover:text-red-500"
+              title="Ocultar sección"
+            >
+              <Trash2 size={16} strokeWidth={1.5} />
             </button>
           </div>
         </div>
@@ -1087,6 +1142,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
         );
 
       case "price":
+        if (!block.props.price) return null;
         return (
           <div className="flex items-baseline leading-none" data-focus-section="precios" style={sectionRing("precios")}>
             <div
@@ -1199,6 +1255,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
         );
 
       case "name":
+        if (!block.props.name) return null;
         return (
           <div className="leading-snug" data-focus-section="producto" style={{ color: "rgba(255,255,255,0.9)", marginTop: 6, fontSize: 24, fontWeight: 600, wordBreak: "break-word", overflowWrap: "break-word", minWidth: 0, ...sectionRing("producto") }}>
             {isSelected && onChange ? (

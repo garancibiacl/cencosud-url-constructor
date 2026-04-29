@@ -211,14 +211,16 @@ export function productDdTemplate({
         <span style="font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;color:${priceFg};margin-left:3px;line-height:1;">${unit}</span>
       </td>`
     : "";
-  const priceRowHtml = `<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin-bottom:6px;">
+  const priceRowHtml = price
+    ? `<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin-bottom:6px;">
     <tr>
       <td style="padding:0;vertical-align:baseline;">
         <span style="font-family:'Silka',Arial,Helvetica,sans-serif;font-size:${priceSize}px;font-weight:700;color:${priceFg};line-height:1;">${price}</span>
       </td>
       ${unitInlineHtml}
     </tr>
-  </table>`;
+  </table>`
+    : "";
 
   // ── Badge ahorro ───────────────────────────────────────────────────────────
   const ahorroHtml = ahorroLabel
@@ -297,7 +299,7 @@ export function productDdTemplate({
     priceTag: priceTagHtml,
     ahorro: ahorroHtml,
     desdeLabel: desdeLabelHtml,
-    name: `<div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:600;color:rgba(255,255,255,0.9);margin-top:6px;line-height:1.4;word-break:break-word;overflow-wrap:break-word;">${name}</div>`,
+    name: name ? `<div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:600;color:rgba(255,255,255,0.9);margin-top:6px;line-height:1.4;word-break:break-word;overflow-wrap:break-word;">${name}</div>` : "",
   };
 
   const rightContent = resolvedOrder.map(id => sectionMap[id] ?? "").join("\n");
