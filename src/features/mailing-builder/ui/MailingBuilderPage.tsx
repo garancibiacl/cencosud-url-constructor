@@ -854,6 +854,16 @@ function CampaignSettingsScreen({
 // MailingBuilderPage — componente principal
 // ---------------------------------------------------------------------------
 
+function buildDraftNote(user: { email?: string; user_metadata?: Record<string, string> } | null, templateName: string): string {
+  const meta = user?.user_metadata ?? {};
+  const firstName = (meta.first_name ?? "").trim();
+  const lastName  = (meta.last_name  ?? "").trim();
+  const userName  = firstName || lastName
+    ? `${firstName} ${lastName}`.trim()
+    : (user?.email ?? "Usuario desconocido");
+  return `${userName} — ${templateName}`;
+}
+
 export default function MailingBuilderPage() {
   const { user } = useAuth();
   const {
@@ -1259,7 +1269,7 @@ export default function MailingBuilderPage() {
     }
     setActiveMailingId(result.savedId);
     setLastAutosaveAt(new Date().toISOString());
-    void saveVersion({ mailingId: result.savedId, userId: user.id, document, note: null });
+    void saveVersion({ mailingId: result.savedId, userId: user.id, document, note: buildDraftNote(user, document.name) });
     await Swal.fire({
       title: "Borrador guardado",
       html: `<p style="color:#64748b;font-size:13px;margin-top:6px">El mailing quedó almacenado correctamente.</p>`,
@@ -1274,7 +1284,7 @@ export default function MailingBuilderPage() {
       if (result.savedId) {
         setActiveMailingId(result.savedId);
         setLastAutosaveAt(new Date().toISOString());
-        void saveVersion({ mailingId: result.savedId, userId: user.id, document, note: null });
+        void saveVersion({ mailingId: result.savedId, userId: user.id, document, note: buildDraftNote(user, document.name) });
       }
     }
     setShowCampaignSettings(true);
@@ -1668,7 +1678,16 @@ export default function MailingBuilderPage() {
                         <div key={version.id} className="flex items-start justify-between gap-2 text-xs">
                           <div>
                             <p className="font-medium text-foreground">v{version.versionNumber}</p>
-                            <p className="text-muted-foreground">{version.note || "Sin nota"}</p>
+                            {version.note ? (() => {
+                              const [author, ...rest] = version.note.split(" — ");
+                              const tplName = rest.join(" — ");
+                              return (
+                                <>
+                                  <p className="text-foreground/80">{author}</p>
+                                  {tplName && <p className="text-muted-foreground truncate">{tplName}</p>}
+                                </>
+                              );
+                            })() : <p className="text-muted-foreground">Sin nota</p>}
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-muted-foreground">{new Date(version.createdAt).toLocaleDateString("es-CL")}</span>
@@ -2236,9 +2255,16 @@ export default function MailingBuilderPage() {
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-foreground/80 truncate">
-                            {v.note ? v.note : <span className="text-muted-foreground">Sin nota</span>}
-                          </p>
+                          {v.note ? (() => {
+                            const [author, ...rest] = v.note.split(" — ");
+                            const tplName = rest.join(" — ");
+                            return (
+                              <>
+                                <p className="text-xs font-medium text-foreground/90 truncate">{author}</p>
+                                {tplName && <p className="text-[11px] text-muted-foreground truncate">{tplName}</p>}
+                              </>
+                            );
+                          })() : <span className="text-xs text-muted-foreground">Sin nota</span>}
                           <p className="mt-1 text-[11px] text-muted-foreground">
                             {formatRelativeTime(v.createdAt)}
                           </p>
