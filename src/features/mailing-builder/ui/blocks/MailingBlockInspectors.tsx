@@ -1809,6 +1809,8 @@ function InspSectionCollapsible({
   sectionRef?: React.RefObject<HTMLDivElement>;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const selfRef = useRef<HTMLDivElement>(null);
+  const resolvedRef = (sectionRef ?? selfRef) as React.RefObject<HTMLDivElement>;
 
   useEffect(() => {
     if (forceOpen) setOpen(true);
@@ -1818,9 +1820,22 @@ function InspSectionCollapsible({
     if (forceClose) setOpen(false);
   }, [forceClose]);
 
+  function handleToggle() {
+    const next = !open;
+    setOpen(next);
+    if (next) {
+      // Espera a que el contenido se expanda (150ms de animación) y luego hace scroll
+      setTimeout(() => {
+        const el = resolvedRef.current;
+        if (!el) return;
+        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }, 160);
+    }
+  }
+
   return (
     <div
-      ref={sectionRef}
+      ref={resolvedRef}
       className={`overflow-hidden rounded-xl border bg-card transition-all duration-150 ${
         open
           ? "border-violet-400/40 shadow-[0_2px_4px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.08),0_0_0_1px_rgba(139,92,246,0.14)]"
@@ -1829,7 +1844,7 @@ function InspSectionCollapsible({
     >
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleToggle}
         className={`flex w-full items-center justify-between px-4 py-2.5 transition-colors ${
           open
             ? "bg-violet-50/70 border-b border-violet-200/60 hover:bg-violet-50"
@@ -2073,6 +2088,7 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
     "col-derecha":     useRef<HTMLDivElement>(null),
     producto:          useRef<HTMLDivElement>(null),
     logo:              useRef<HTMLDivElement>(null),
+    apariencia:        useRef<HTMLDivElement>(null),
   };
 
   useEffect(() => {
@@ -2434,24 +2450,8 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
         </div>
       </InspSectionCollapsible>
 
-      {/* 7. Enlace */}
-      <InspSectionCollapsible title="Enlace" defaultOpen={false} forceClose={focusedSection !== null}>
-        <AMPscriptUrlInput
-          value={block.props.href ?? ""}
-          onChange={(href) => setProps({ href })}
-        />
-      </InspSectionCollapsible>
-
-      {/* 8. Espaciado */}
-      <InspSectionCollapsible title="Espaciado" defaultOpen={false} forceClose={focusedSection !== null}>
-        <PaddingEditor
-          value={padVal(block)}
-          onChange={(padding) => onChange({ ...block, layout: { ...block.layout, padding } })}
-        />
-      </InspSectionCollapsible>
-
-      {/* 9. Apariencia del bloque */}
-      <InspSectionCollapsible title="Apariencia del bloque" defaultOpen={false} forceClose={focusedSection !== null}>
+      {/* 7. Apariencia del bloque */}
+      <InspSectionCollapsible title="Apariencia del bloque" defaultOpen={false} sectionRef={sectionRefs["apariencia"]} forceOpen={focusedSection === "apariencia"} forceClose={focusedSection !== null && focusedSection !== "apariencia"}>
         <InspRow label="Color de fondo">
           <ColorSwatch
             value={block.layout.backgroundColor}
@@ -2481,6 +2481,46 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
             />
           </InspRow>
         )}
+
+        {/* ── Espaciado ──────────────────────────────────────────────────── */}
+        <div className="border-t border-border/50 pt-2.5 mt-1 space-y-3">
+          <PaddingEditor
+            value={padVal(block)}
+            onChange={(padding) => onChange({ ...block, layout: { ...block.layout, padding } })}
+          />
+          <div className="space-y-2">
+            <span className="text-xs text-foreground/70">Margen</span>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-1">
+                <ArrowUpDown className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+                <PxStepper
+                  value={Math.max(block.layout.marginTop ?? 0, block.layout.marginBottom ?? 0)}
+                  onChange={(v) => onChange({ ...block, layout: { ...block.layout, marginTop: v, marginBottom: v } })}
+                  min={0}
+                  max={200}
+                />
+              </div>
+              <div className="flex items-center gap-1">
+                <ArrowLeftRight className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+                <PxStepper
+                  value={Math.max(block.layout.marginLeft ?? 0, block.layout.marginRight ?? 0)}
+                  onChange={(v) => onChange({ ...block, layout: { ...block.layout, marginLeft: v, marginRight: v } })}
+                  min={0}
+                  max={200}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Enlace del bloque ──────────────────────────────────────────── */}
+        <div className="border-t border-border/50 pt-2.5 mt-1">
+          <span className="text-[11px] font-medium text-muted-foreground/70 block mb-1.5">Enlace</span>
+          <AMPscriptUrlInput
+            value={block.props.href ?? ""}
+            onChange={(href) => setProps({ href })}
+          />
+        </div>
       </InspSectionCollapsible>
 
     </div>

@@ -268,18 +268,16 @@ export function productDdTemplate({
   // Columna derecha: esquinas TR y BR
   const rightColRadius = hasRadius ? `border-radius:0 ${tr}px ${br}px 0; overflow:hidden;` : "";
 
+  const blockHref = href || "#";
+
   return `<tr>
   <td style="padding:${p.top}px ${p.right}px ${p.bottom}px ${p.left}px; background:${bgColor}; font-family:Arial,Helvetica,sans-serif; vertical-align:top; ${borderStyle} ${outerRadius}">
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout:fixed;">
       <tr>
         <!-- LEFT COLUMN: imagen a full width + badges superpuestos -->
         <td width="50%" valign="top" style="vertical-align:top;padding:0;position:relative;max-width:50%;overflow:hidden; ${leftColRadius}">
-          <!-- Imagen full-width sin padding -->
-          <a href="${href}" target="_blank" style="text-decoration:none;display:block;line-height:0;">
-            <img src="${imageUrl || "/placeholder.svg"}"
-                 alt="${name}"
-                 width="100%"
-                 style="display:block!important;width:100%;height:auto;border:0;" />
+          <a href="${blockHref}" target="_blank" style="text-decoration:none;display:block;line-height:0;">
+            <img src="${imageUrl || "/placeholder.svg"}" alt="${name}" width="100%" style="display:block!important;width:100%;height:auto;border:0;" />
           </a>
           <!-- Badge principal: posición desde inspector (% con centrado) -->
           <div style="position:absolute;top:${bTop}%;left:${bLeft}%;transform:translate(-50%,-50%);line-height:1;white-space:nowrap;">
@@ -287,16 +285,17 @@ export function productDdTemplate({
           </div>
         </td>
         <!-- RIGHT COLUMN: fondo de color, precio grande, ahorro, desde -->
-        <td width="50%" valign="middle" style="background-color:${rightBgColor};padding:12px 14px;vertical-align:middle;max-width:50%;overflow:hidden; ${rightColRadius}">
-          ${logoHtml}
-          ${discountPctHtml}
-          ${priceRowHtml}
-          ${ahorroHtml}
-          ${desdeLabelHtml}
-          ${priceTagHtml}
-          <!-- Nombre del producto -->
-          <div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:600;color:rgba(255,255,255,0.9);margin-top:6px;line-height:1.4;word-break:break-word;overflow-wrap:break-word;">${name}</div>
-          ${ctaHtml}
+        <td width="50%" valign="middle" style="background-color:${rightBgColor};padding:0;vertical-align:middle;max-width:50%;overflow:hidden; ${rightColRadius}">
+          <a href="${blockHref}" target="_blank" style="text-decoration:none;display:block;padding:12px 14px;color:inherit;">
+            ${logoHtml}
+            ${discountPctHtml}
+            ${priceRowHtml}
+            ${ahorroHtml}
+            ${desdeLabelHtml}
+            ${priceTagHtml}
+            <div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:600;color:rgba(255,255,255,0.9);margin-top:6px;line-height:1.4;word-break:break-word;overflow-wrap:break-word;">${name}</div>
+            ${ctaHtml}
+          </a>
         </td>
       </tr>
     </table>

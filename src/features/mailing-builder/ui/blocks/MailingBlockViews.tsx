@@ -690,7 +690,9 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
       }}
       onClickCapture={(e) => {
         const section = (e.target as HTMLElement).closest("[data-focus-section]")?.getAttribute("data-focus-section");
-        if (section) { inspectorFocusBridge.focus(block.id, section); setActiveSection(section); }
+        const resolved = section ?? "apariencia";
+        inspectorFocusBridge.focus(block.id, resolved);
+        setActiveSection(resolved);
       }}
     >
       <div className="flex overflow-hidden font-sans" style={cardStyle}>

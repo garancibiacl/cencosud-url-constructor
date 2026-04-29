@@ -13,6 +13,7 @@
 
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Bookmark, Copy, GripHorizontal, GripVertical, MoveDown, MoveUp, Plus, Settings2, Trash2 } from "lucide-react";
+import { inspectorFocusBridge } from "../inspectorFocusBridge";
 
 // Custom MIME types — permiten distinguir tipo de drag en dragOver (sin leer contenido)
 const SECTION_DRAG_TYPE = "application/mailing-section";
@@ -981,6 +982,7 @@ const BlockItem = memo(function BlockItem({
           backgroundColor: LEVEL.block.bg,
         } : undefined}
         onClick={handleSelect}
+        onClickCapture={() => inspectorFocusBridge.focus(block.id, "apariencia")}
       >
         <div className="p-1.5">
           <BlockView block={block} isSelected={isSelected} onChange={handleChange as never} />
