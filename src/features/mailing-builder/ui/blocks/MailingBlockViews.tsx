@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import type { ButtonBlock, HeroBlock, ImageBlock, MailingBlock, ProductBlock, ProductDdBlock, RawHtmlBlock, SpacerBlock, TextBlock } from "../../logic/schema/block.types";
 import { imageLibraryBridge } from "../imageLibraryBridge";
 import { inspectorFocusBridge } from "../inspectorFocusBridge";
-import { blockActionBridge } from "../blockActionBridge";
 import { TextFloatingToolbar } from "../editor/TextFloatingToolbar";
 
 const getPaddingStyle = (block: MailingBlock): CSSProperties => ({
@@ -615,68 +614,12 @@ export function ProductBlockView({ block, isSelected, onChange }: { block: Produ
 
 const DEFAULT_SECTION_ORDER = ["logo", "discount", "price", "priceTag", "ahorro", "name"] as const;
 
-// Maps sectionOrder ids → data-focus-section values used by activeSection state
-const SECTION_FOCUS_KEY: Record<string, string> = {
-  logo:      "logo",
-  discount:  "descuento",
-  price:     "precios",
-  priceTag:  "precio-tag",
-  ahorro:    "col-derecha",
-  name:      "producto",
-};
-
-function reorderSection(order: string[], id: string, dir: -1 | 1): string[] {
-  const base = DEFAULT_SECTION_ORDER as unknown as string[];
-  const seen = new Set(order);
-  const full = [...order, ...base.filter(s => !seen.has(s))];
-  const idx = full.indexOf(id);
-  if (idx === -1) return full;
-  const next = idx + dir;
-  if (next < 0 || next >= full.length) return full;
-  const result = [...full];
-  [result[idx], result[next]] = [result[next], result[idx]];
-  return result;
-}
 
 const SECTION_DND_TYPE = "application/mailing-section";
 
-// Clears the prop that controls visibility — used by the delete button
-const SECTION_CLEAR: Record<string, (b: ProductDdBlock) => Partial<ProductDdBlock["props"]>> = {
-  logo:     () => ({ logoUrl: "" }),
-  discount: () => ({ discountNumber: "" }),
-  priceTag: () => ({ priceTagShow: false }),
-  ahorro:   () => ({ ahorroLabel: "" }),
-  price:    () => ({ price: "" }),
-  name:     () => ({ name: "" }),
-};
-
-// Returns the plain-text value for clipboard copy
-function sectionCopyText(id: string, block: ProductDdBlock): string {
-  const strip = (html: string) => html.replace(/<[^>]*>/g, "");
-  switch (id) {
-    case "logo":     return block.props.logoUrl ?? "";
-    case "discount": return `${block.props.discountNumber ?? ""}${block.props.discountSymbol ?? "%"}`;
-    case "price":    return strip(block.props.price);
-    case "priceTag": return `${block.props.priceTagLabel ?? "Ahorro"}: ${block.props.priceTagValue ?? ""}`;
-    case "ahorro":   return strip(block.props.ahorroLabel ?? "");
-    case "name":     return strip(block.props.name);
-    default:         return "";
-  }
-}
-
-function reorderSectionByDrop(order: string[], fromId: string, toId: string, insertBefore: boolean): string[] {
-  const base = DEFAULT_SECTION_ORDER as unknown as string[];
-  const seen = new Set(order);
-  const full = [...order, ...base.filter(s => !seen.has(s))];
-  const without = full.filter(s => s !== fromId);
-  const targetIdx = without.indexOf(toId);
-  if (targetIdx === -1) return full;
-  without.splice(insertBefore ? targetIdx : targetIdx + 1, 0, fromId);
-  return without;
-}
-
-function SectionWrapper({ id, order, isSelected, onChange, block, isActive, children }: {
+function SectionWrapper({ id, index, order, isSelected, onChange, block, isActive, children }: {
   id: string;
+  index: number;
   order: string[];
   isSelected: boolean | undefined;
   onChange: ((b: ProductDdBlock) => void) | undefined;
@@ -688,16 +631,29 @@ function SectionWrapper({ id, order, isSelected, onChange, block, isActive, chil
 
   if (!isSelected || !onChange) return <>{children}</>;
 
-  const idx = order.indexOf(id);
-  const canUp = idx > 0;
-  const canDown = idx < order.length - 1;
+  const canUp   = index > 0;
+  const canDown = index < order.length - 1;
 
   const move = (dir: -1 | 1) => {
-    onChange({ ...block, props: { ...block.props, sectionOrder: reorderSection(order, id, dir) } });
+    const next = index + dir;
+    if (next < 0 || next >= order.length) return;
+    const o = [...order];
+    [o[index], o[next]] = [o[next], o[index]];
+    onChange({ ...block, props: { ...block.props, sectionOrder: o } });
+  };
+
+  const duplicate = () => {
+    const o = [...order];
+    o.splice(index + 1, 0, id);
+    onChange({ ...block, props: { ...block.props, sectionOrder: o } });
+  };
+
+  const remove = () => {
+    onChange({ ...block, props: { ...block.props, sectionOrder: order.filter((_, i) => i !== index) } });
   };
 
   const handleDragStart = (e: React.DragEvent) => {
-    e.dataTransfer.setData(SECTION_DND_TYPE, id);
+    e.dataTransfer.setData(SECTION_DND_TYPE, String(index));
     e.dataTransfer.effectAllowed = "move";
   };
 
@@ -711,19 +667,22 @@ function SectionWrapper({ id, order, isSelected, onChange, block, isActive, chil
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
-    if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) {
-      setDropSide(null);
-    }
+    if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) setDropSide(null);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const fromId = e.dataTransfer.getData(SECTION_DND_TYPE);
-    if (!fromId || fromId === id) { setDropSide(null); return; }
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const insertBefore = e.clientY < rect.top + rect.height / 2;
-    onChange({ ...block, props: { ...block.props, sectionOrder: reorderSectionByDrop(order, fromId, id, insertBefore) } });
+    const fromIndex = parseInt(e.dataTransfer.getData(SECTION_DND_TYPE), 10);
+    if (isNaN(fromIndex) || fromIndex === index) { setDropSide(null); return; }
+    const rect  = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const before = e.clientY < rect.top + rect.height / 2;
+    const o = [...order];
+    const [item] = o.splice(fromIndex, 1);
+    // Recalculate insert position after removal
+    const adj = fromIndex < index ? index - 1 : index;
+    o.splice(before ? adj : adj + 1, 0, item);
+    onChange({ ...block, props: { ...block.props, sectionOrder: o } });
     setDropSide(null);
   };
 
@@ -734,6 +693,7 @@ function SectionWrapper({ id, order, isSelected, onChange, block, isActive, chil
   return (
     <div
       className="relative"
+      data-section-key={`${id}_${index}`}
       style={dropIndicator}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -747,7 +707,6 @@ function SectionWrapper({ id, order, isSelected, onChange, block, isActive, chil
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center gap-0.5 rounded-full bg-white px-1.5 py-0.5 shadow-lg ring-1 ring-black/8">
-            {/* Drag handle */}
             <span
               draggable
               onDragStart={handleDragStart}
@@ -759,54 +718,35 @@ function SectionWrapper({ id, order, isSelected, onChange, block, isActive, chil
 
             <div className="mx-0.5 h-3.5 w-px bg-gray-200" />
 
-            {/* Reorder */}
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
+            <button type="button" onMouseDown={(e) => e.preventDefault()}
               onClick={(e) => { e.stopPropagation(); move(-1); }}
               disabled={!canUp}
               className="flex h-7 w-7 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-25"
-              title="Mover arriba"
-            >
+              title="Mover arriba">
               <MoveUp size={16} strokeWidth={1.5} />
             </button>
 
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
+            <button type="button" onMouseDown={(e) => e.preventDefault()}
               onClick={(e) => { e.stopPropagation(); move(1); }}
               disabled={!canDown}
               className="flex h-7 w-7 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-25"
-              title="Mover abajo"
-            >
+              title="Mover abajo">
               <MoveDown size={16} strokeWidth={1.5} />
             </button>
 
             <div className="mx-0.5 h-3.5 w-px bg-gray-200" />
 
-            {/* Duplicate — clona el bloque completo justo debajo */}
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={(e) => { e.stopPropagation(); blockActionBridge.emit(block.id, "duplicate"); }}
+            <button type="button" onMouseDown={(e) => e.preventDefault()}
+              onClick={(e) => { e.stopPropagation(); duplicate(); }}
               className="flex h-7 w-7 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
-              title="Duplicar bloque"
-            >
+              title="Duplicar sección">
               <Copy size={16} strokeWidth={1.5} />
             </button>
 
-            {/* Trash — oculta la sección limpiando su prop de control */}
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={(e) => {
-                e.stopPropagation();
-                const clearFn = SECTION_CLEAR[id];
-                if (clearFn) onChange({ ...block, props: { ...block.props, ...clearFn(block) } });
-              }}
+            <button type="button" onMouseDown={(e) => e.preventDefault()}
+              onClick={(e) => { e.stopPropagation(); remove(); }}
               className="flex h-7 w-7 items-center justify-center rounded-full text-gray-500 transition hover:bg-red-50 hover:text-red-500"
-              title="Ocultar sección"
-            >
+              title="Eliminar sección">
               <Trash2 size={16} strokeWidth={1.5} />
             </button>
           </div>
@@ -826,10 +766,10 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
   const isDraggingBadge = useRef(false);
   const [imgError, setImgError] = useState(false);
   const [isEditingBadge, setIsEditingBadge] = useState(false);
-  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [activeSectionKey, setActiveSectionKey] = useState<string | null>(null);
   const badgeLabelRef = useRef<HTMLSpanElement>(null);
   useEffect(() => { setImgError(false); }, [block.props.imageUrl]);
-  useEffect(() => { if (!isSelected) { setIsEditingBadge(false); setActiveSection(null); } }, [isSelected]);
+  useEffect(() => { if (!isSelected) { setIsEditingBadge(false); setActiveSectionKey(null); } }, [isSelected]);
 
   function handleBadgeDragStart(e: React.MouseEvent) {
     if (!onChange || !isSelected) return;
@@ -882,17 +822,12 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
     ? { borderRadius: `0 ${tr}px ${brr}px 0`, overflow: "hidden" }
     : {};
 
-  const sectionRing = (section: string): React.CSSProperties =>
-    isSelected && activeSection === section
+  const sectionRing = (key: string): React.CSSProperties =>
+    isSelected && activeSectionKey === key
       ? { outline: "2px solid rgba(139,92,246,0.75)", outlineOffset: 2, borderRadius: 4 }
       : {};
 
-  const sectionOrder: string[] = (() => {
-    const base = DEFAULT_SECTION_ORDER as unknown as string[];
-    const stored = block.props.sectionOrder ?? [];
-    const seen = new Set(stored);
-    return [...stored, ...base.filter(id => !seen.has(id))];
-  })();
+  const sectionOrder: string[] = block.props.sectionOrder ?? [...DEFAULT_SECTION_ORDER as unknown as string[]];
 
   return (
     <article
@@ -904,12 +839,15 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
         paddingLeft: block.layout.padding?.left ?? 0,
       }}
       onClickCapture={(e) => {
-        // Toolbar buttons must not reset activeSection — let their own onClick run
         if ((e.target as HTMLElement).closest("[data-section-toolbar]")) return;
-        const section = (e.target as HTMLElement).closest("[data-focus-section]")?.getAttribute("data-focus-section");
-        const resolved = section ?? "apariencia";
-        inspectorFocusBridge.focus(block.id, resolved);
-        setActiveSection(resolved);
+        const sectionKeyEl = (e.target as HTMLElement).closest("[data-section-key]");
+        const focusSectionEl = (e.target as HTMLElement).closest("[data-focus-section]");
+        const key = sectionKeyEl?.getAttribute("data-section-key")
+          ?? focusSectionEl?.getAttribute("data-focus-section")
+          ?? null;
+        const focusSection = focusSectionEl?.getAttribute("data-focus-section") ?? "apariencia";
+        inspectorFocusBridge.focus(block.id, focusSection);
+        setActiveSectionKey(key);
       }}
     >
       <div className="flex overflow-hidden font-sans" style={cardStyle}>
@@ -1036,19 +974,19 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
             ...rightColStyle,
           }}
         >
-          {sectionOrder.map((sectionId) => {
-            const sectionJsx = renderSection(sectionId);
+          {sectionOrder.map((sectionId, mapIndex) => {
+            const sectionJsx = renderSection(sectionId, mapIndex);
             if (!sectionJsx) return null;
-            const focusKey = SECTION_FOCUS_KEY[sectionId] ?? sectionId;
             return (
               <SectionWrapper
-                key={sectionId}
+                key={`${sectionId}_${mapIndex}`}
                 id={sectionId}
+                index={mapIndex}
                 order={sectionOrder}
                 isSelected={isSelected}
                 onChange={onChange}
                 block={block}
-                isActive={!!isSelected && activeSection === focusKey}
+                isActive={!!isSelected && activeSectionKey === `${sectionId}_${mapIndex}`}
               >
                 {sectionJsx}
               </SectionWrapper>
@@ -1063,12 +1001,12 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
     </article>
   );
 
-  function renderSection(id: string): React.ReactNode {
+  function renderSection(id: string, idx: number): React.ReactNode {
     switch (id) {
       case "logo":
         if (!block.props.logoUrl) return null;
         return (
-          <div className={`flex ${logoAlignClass}`} data-focus-section="logo" style={{ marginBottom: 4, ...sectionRing("logo") }}>
+          <div className={`flex ${logoAlignClass}`} data-focus-section="logo" style={{ marginBottom: 4, ...sectionRing(`${id}_${idx}`) }}>
             <img
               src={block.props.logoUrl}
               alt="logo"
@@ -1085,7 +1023,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
             className="flex items-center leading-none gap-2"
             data-focus-section="descuento"
             style={{
-              ...sectionRing("descuento"),
+              ...sectionRing(`${id}_${idx}`),
               justifyContent: block.props.discountAlign === "center" ? "center" : block.props.discountAlign === "right" ? "flex-end" : "flex-start",
             }}
           >
@@ -1144,7 +1082,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
       case "price":
         if (!block.props.price) return null;
         return (
-          <div className="flex items-baseline leading-none" data-focus-section="precios" style={sectionRing("precios")}>
+          <div className="flex items-baseline leading-none" data-focus-section="precios" style={sectionRing(`${id}_${idx}`)}>
             <div
               className="font-bold leading-none"
               style={{
@@ -1184,7 +1122,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
                 block.props.priceTagAlign === "center" ? "center"
                 : block.props.priceTagAlign === "right" ? "flex-end"
                 : "flex-start",
-              ...sectionRing("precio-tag"),
+              ...sectionRing(`${id}_${idx}`),
             }}
           >
           <div className="flex items-stretch" style={{ maxWidth: 220 }}>
@@ -1233,7 +1171,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
       case "ahorro":
         if (!block.props.ahorroLabel) return null;
         return (
-          <div data-focus-section="col-derecha" style={sectionRing("col-derecha")}>
+          <div data-focus-section="col-derecha" style={sectionRing(`${id}_${idx}`)}>
             <span
               className="inline-block rounded-[6px] px-2.5 py-1 text-[13px] font-bold text-white leading-tight"
               style={{ background: "rgba(0,0,0,0.2)" }}
@@ -1257,7 +1195,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
       case "name":
         if (!block.props.name) return null;
         return (
-          <div className="leading-snug" data-focus-section="producto" style={{ color: "rgba(255,255,255,0.9)", marginTop: 6, fontSize: 24, fontWeight: 600, wordBreak: "break-word", overflowWrap: "break-word", minWidth: 0, ...sectionRing("producto") }}>
+          <div className="leading-snug" data-focus-section="producto" style={{ color: "rgba(255,255,255,0.9)", marginTop: 6, fontSize: 24, fontWeight: 600, wordBreak: "break-word", overflowWrap: "break-word", minWidth: 0, ...sectionRing(`${id}_${idx}`) }}>
             {isSelected && onChange ? (
               <ContentEditableDiv
                 html={block.props.name}
