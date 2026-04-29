@@ -82,7 +82,7 @@ export const appModules: AppModuleDefinition[] = [
     label: "Mailing Builder",
     icon: Mail,
     path: "/mailing-builder",
-    allowedRoles: STANDARD_MODULE_ROLES,
+    allowedRoles: MAILING_BUILDER_ROLES,
   },
   {
     id: "banner-expand",
@@ -96,7 +96,7 @@ export const appModules: AppModuleDefinition[] = [
     label: "Banco de Archivos",
     icon: FolderArchive,
     path: "/banco-archivos",
-    // Sin allowedRoles → visible para todos los roles autenticados
+    allowedRoles: FILE_BANK_ROLES,
   },
   {
     id: "admin",
