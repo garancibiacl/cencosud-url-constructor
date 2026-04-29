@@ -668,7 +668,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
         paddingBottom: block.layout.padding?.bottom ?? 0,
         paddingLeft: block.layout.padding?.left ?? 0,
       }}
-      onClick={(e) => {
+      onClickCapture={(e) => {
         const section = (e.target as HTMLElement).closest("[data-focus-section]")?.getAttribute("data-focus-section");
         if (section) inspectorFocusBridge.focus(block.id, section);
       }}
@@ -763,7 +763,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
 
           {/* Descuento porcentual: número + símbolo/texto + badge Oferta en la misma fila */}
           {block.props.discountNumber && (
-            <div className="flex items-center leading-none gap-2" data-focus-section="precios">
+            <div className="flex items-center leading-none gap-2" data-focus-section="descuento">
               {/* Número grande */}
               <span
                 className="font-black leading-none"

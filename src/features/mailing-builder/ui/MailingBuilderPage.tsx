@@ -1249,7 +1249,7 @@ export default function MailingBuilderPage() {
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col bg-background" style={brandCssVars}>
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background" style={brandCssVars}>
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="border-b border-border bg-card">
@@ -1542,15 +1542,17 @@ export default function MailingBuilderPage() {
 
         {/* ── Canvas central ──────────────────────────────────────────────── */}
         <section
-          className={`min-h-0 bg-secondary/35 px-8 py-6 transition-colors duration-150 ${dropIndex !== null ? "bg-violet-50/60 dark:bg-violet-950/20" : ""}`}
+          className={`relative min-h-0 transition-colors duration-150 ${dropIndex !== null ? "bg-violet-50/60 dark:bg-violet-950/20" : ""}`}
           style={activeBrandColor && dropIndex === null ? {
             backgroundColor: `${activeBrandColor}0a`,
             transition: "background-color 250ms ease",
-          } : undefined}
+          } : { backgroundColor: "hsl(var(--secondary) / 0.35)" }}
           {...canvasDropHandlers}
         >
+          <ScrollArea className="h-full">
+          <div className="px-8 py-6">
           <div
-            className="mx-auto flex h-full max-w-[820px] flex-col rounded-lg bg-card transition-colors duration-250"
+            className="mx-auto flex max-w-[820px] flex-col rounded-lg bg-card transition-colors duration-250"
             style={{
               boxShadow: "0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.07), 0 16px 40px rgba(0,0,0,0.06)",
             }}
@@ -1841,12 +1843,14 @@ export default function MailingBuilderPage() {
               </div>
             </ScrollArea>
           </div>
+          </div>
+          </ScrollArea>
         </section>
 
         {/* ── Panel derecho — inspector ────────────────────────────────────── */}
         <aside
           ref={inspectorRef}
-          className={`flex flex-col overflow-hidden border-l border-border bg-card ${
+          className={`flex h-full flex-col overflow-hidden border-l border-border bg-card ${
             isInspectorOpen ? "opacity-100" : "pointer-events-none opacity-0"
           }`}
         >

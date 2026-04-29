@@ -1788,12 +1788,14 @@ function InspSectionCollapsible({
   children,
   defaultOpen = true,
   forceOpen,
+  forceClose,
   sectionRef,
 }: {
   title: string;
   children: ReactNode;
   defaultOpen?: boolean;
   forceOpen?: boolean;
+  forceClose?: boolean;
   sectionRef?: React.RefObject<HTMLDivElement>;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -1802,19 +1804,42 @@ function InspSectionCollapsible({
     if (forceOpen) setOpen(true);
   }, [forceOpen]);
 
+  useEffect(() => {
+    if (forceClose) setOpen(false);
+  }, [forceClose]);
+
   return (
-    <div ref={sectionRef} className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
+    <div
+      ref={sectionRef}
+      className={`overflow-hidden rounded-xl border bg-card transition-all duration-150 ${
+        open
+          ? "border-primary/35 shadow-[0_2px_4px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.08),0_0_0_1px_hsl(var(--primary)/0.12)]"
+          : "border-border/60 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.03)]"
+      }`}
+    >
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between border-b border-border/50 bg-secondary/30 px-4 py-2.5 transition-colors hover:bg-secondary/50"
+        className={`flex w-full items-center justify-between px-4 py-2.5 transition-colors ${
+          open
+            ? "bg-primary/[0.06] border-b border-primary/20 hover:bg-primary/[0.09]"
+            : "bg-secondary/30 border-b border-border/50 hover:bg-secondary/50"
+        }`}
       >
-        <span className="text-[13px] font-bold tracking-tight text-foreground">{title}</span>
+        <span className={`text-[13px] font-bold tracking-tight transition-colors ${open ? "text-primary" : "text-foreground"}`}>
+          {title}
+        </span>
         <ChevronDown
-          className={`h-4 w-4 text-muted-foreground/60 transition-transform duration-200 ${open ? "" : "-rotate-90"}`}
+          className={`h-4 w-4 transition-all duration-200 ${
+            open ? "text-primary rotate-0" : "text-muted-foreground/60 -rotate-90"
+          }`}
         />
       </button>
-      {open && <div className="space-y-3 p-4">{children}</div>}
+      {open && (
+        <div className="space-y-3 p-4 animate-in fade-in-0 slide-in-from-top-1 duration-150">
+          {children}
+        </div>
+      )}
     </div>
   );
 }
@@ -1965,13 +1990,14 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
   // ── Foco inteligente desde el canvas ──────────────────────────────────────
   const [focusedSection, setFocusedSection] = useState<string | null>(null);
   const sectionRefs: Record<string, React.RefObject<HTMLDivElement>> = {
-    imagen:        useRef<HTMLDivElement>(null),
+    imagen:            useRef<HTMLDivElement>(null),
     "badge-principal": useRef<HTMLDivElement>(null),
-    precios:       useRef<HTMLDivElement>(null),
-    "precio-tag":  useRef<HTMLDivElement>(null),
-    "col-derecha": useRef<HTMLDivElement>(null),
-    producto:      useRef<HTMLDivElement>(null),
-    logo:          useRef<HTMLDivElement>(null),
+    descuento:         useRef<HTMLDivElement>(null),
+    precios:           useRef<HTMLDivElement>(null),
+    "precio-tag":      useRef<HTMLDivElement>(null),
+    "col-derecha":     useRef<HTMLDivElement>(null),
+    producto:          useRef<HTMLDivElement>(null),
+    logo:              useRef<HTMLDivElement>(null),
   };
 
   useEffect(() => {
@@ -2000,7 +2026,7 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
     <div className="space-y-2.5">
 
       {/* 1. Imagen */}
-      <InspSectionCollapsible title="Imagen del producto" sectionRef={sectionRefs["imagen"]} forceOpen={focusedSection === "imagen"}>
+      <InspSectionCollapsible title="Imagen del producto" defaultOpen={false} sectionRef={sectionRefs["imagen"]} forceOpen={focusedSection === "imagen"} forceClose={focusedSection !== null && focusedSection !== "imagen"}>
         {block.props.imageUrl && (
           <div className="overflow-hidden rounded-lg border border-border bg-secondary/30">
             <img src={block.props.imageUrl} alt="preview" className="h-28 w-full object-contain" />
@@ -2016,7 +2042,7 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
       </InspSectionCollapsible>
 
       {/* 2. Badge principal */}
-      <InspSectionCollapsible title="Badge principal" sectionRef={sectionRefs["badge-principal"]} forceOpen={focusedSection === "badge-principal"}>
+      <InspSectionCollapsible title="Badge principal" defaultOpen={false} sectionRef={sectionRefs["badge-principal"]} forceOpen={focusedSection === "badge-principal"} forceClose={focusedSection !== null && focusedSection !== "badge-principal"}>
         <InspField
           label="Texto del badge"
           value={block.props.discountLabel}
@@ -2050,7 +2076,7 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
       </InspSectionCollapsible>
 
       {/* 3. Badge secundaria */}
-      <InspSectionCollapsible title="Badge secundaria" defaultOpen={false}>
+      <InspSectionCollapsible title="Badge secundaria" defaultOpen={false} forceClose={focusedSection !== null}>
         <InspField
           label="Texto (opcional)"
           value={block.props.secondBadge ?? ""}
@@ -2070,50 +2096,32 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
       </InspSectionCollapsible>
 
       {/* 4a. Descuento porcentual */}
-      <InspSectionCollapsible title="Descuento %" defaultOpen={false}>
+      <InspSectionCollapsible title="Descuento %" defaultOpen={false} sectionRef={sectionRefs["descuento"]} forceOpen={focusedSection === "descuento"} forceClose={focusedSection !== null && focusedSection !== "descuento"}>
+        {/* Valores — grid 3 col compacto */}
         <div className="grid grid-cols-3 gap-2">
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-medium text-muted-foreground/70">Número</span>
-            <InspField
-              label=""
-              value={block.props.discountNumber ?? ""}
-              onChange={(v) => setProps({ discountNumber: v })}
-              placeholder="30"
-            />
+          <div className="space-y-1">
+            <span className="text-[10px] font-medium text-muted-foreground/60">Número</span>
+            <InspField label="" value={block.props.discountNumber ?? ""} onChange={(v) => setProps({ discountNumber: v })} placeholder="30" />
           </div>
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-medium text-muted-foreground/70">Símbolo</span>
-            <InspField
-              label=""
-              value={block.props.discountSymbol ?? "%"}
-              onChange={(v) => setProps({ discountSymbol: v })}
-              placeholder="%"
-            />
+          <div className="space-y-1">
+            <span className="text-[10px] font-medium text-muted-foreground/60">Símbolo</span>
+            <InspField label="" value={block.props.discountSymbol ?? "%"} onChange={(v) => setProps({ discountSymbol: v })} placeholder="%" />
           </div>
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-medium text-muted-foreground/70">Texto</span>
-            <InspField
-              label=""
-              value={block.props.discountText ?? "DCTO."}
-              onChange={(v) => setProps({ discountText: v })}
-              placeholder="DCTO."
-            />
+          <div className="space-y-1">
+            <span className="text-[10px] font-medium text-muted-foreground/60">Texto</span>
+            <InspField label="" value={block.props.discountText ?? "DCTO."} onChange={(v) => setProps({ discountText: v })} placeholder="DCTO." />
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-2.5">
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-medium text-muted-foreground/70">Color número</span>
-            <ColorSwatch value={block.props.discountNumberColor ?? "#ffffff"} onChange={(v) => setProps({ discountNumberColor: v ?? "#ffffff" })} />
-          </div>
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-medium text-muted-foreground/70">Color símbolo</span>
-            <ColorSwatch value={block.props.discountSymbolColor ?? "#ffffff"} onChange={(v) => setProps({ discountSymbolColor: v ?? "#ffffff" })} />
-          </div>
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-medium text-muted-foreground/70">Color texto</span>
-            <ColorSwatch value={block.props.discountTextColor ?? "#ffffff"} onChange={(v) => setProps({ discountTextColor: v ?? "#ffffff" })} />
-          </div>
-        </div>
+        {/* Colores — InspRow para tener espacio suficiente al hex */}
+        <InspRow label="Color número">
+          <ColorSwatch value={block.props.discountNumberColor ?? "#ffffff"} onChange={(v) => setProps({ discountNumberColor: v ?? "#ffffff" })} />
+        </InspRow>
+        <InspRow label="Color símbolo">
+          <ColorSwatch value={block.props.discountSymbolColor ?? "#ffffff"} onChange={(v) => setProps({ discountSymbolColor: v ?? "#ffffff" })} />
+        </InspRow>
+        <InspRow label="Color texto">
+          <ColorSwatch value={block.props.discountTextColor ?? "#ffffff"} onChange={(v) => setProps({ discountTextColor: v ?? "#ffffff" })} />
+        </InspRow>
 
         {/* Badge Oferta */}
         <div className="mt-1 border-t border-border/50 pt-2.5">
@@ -2142,7 +2150,7 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
       </InspSectionCollapsible>
 
       {/* 4. Precios */}
-      <InspSectionCollapsible title="Precios" sectionRef={sectionRefs["precios"]} forceOpen={focusedSection === "precios"}>
+      <InspSectionCollapsible title="Precios" defaultOpen={false} sectionRef={sectionRefs["precios"]} forceOpen={focusedSection === "precios"} forceClose={focusedSection !== null && focusedSection !== "precios"}>
         <InspField
           label="Precio oferta"
           value={htmlToText(block.props.price)}
@@ -2158,7 +2166,7 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
       </InspSectionCollapsible>
 
       {/* 4b. Etiqueta dual de precio */}
-      <InspSectionCollapsible title="Etiqueta bajo precio" defaultOpen={false} sectionRef={sectionRefs["precio-tag"]} forceOpen={focusedSection === "precio-tag"}>
+      <InspSectionCollapsible title="Etiqueta bajo precio" defaultOpen={false} sectionRef={sectionRefs["precio-tag"]} forceOpen={focusedSection === "precio-tag"} forceClose={focusedSection !== null && focusedSection !== "precio-tag"}>
         {/* Toggle principal */}
         <div className="flex items-center justify-between">
           <span className="text-[12px] font-medium text-foreground">Mostrar etiqueta</span>
@@ -2253,7 +2261,7 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
       </InspSectionCollapsible>
 
       {/* 4c. Columna derecha */}
-      <InspSectionCollapsible title="Columna derecha" sectionRef={sectionRefs["col-derecha"]} forceOpen={focusedSection === "col-derecha"}>
+      <InspSectionCollapsible title="Columna derecha" defaultOpen={false} sectionRef={sectionRefs["col-derecha"]} forceOpen={focusedSection === "col-derecha"} forceClose={focusedSection !== null && focusedSection !== "col-derecha"}>
         <InspRow label="Fondo columna derecha">
           <ColorSwatch value={block.props.rightBgColor ?? "#3DBE4A"} onChange={(v) => setProps({ rightBgColor: v ?? "#3DBE4A" })} />
         </InspRow>
@@ -2272,7 +2280,7 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
       </InspSectionCollapsible>
 
       {/* 5. Producto */}
-      <InspSectionCollapsible title="Producto" sectionRef={sectionRefs["producto"]} forceOpen={focusedSection === "producto"}>
+      <InspSectionCollapsible title="Producto" defaultOpen={false} sectionRef={sectionRefs["producto"]} forceOpen={focusedSection === "producto"} forceClose={focusedSection !== null && focusedSection !== "producto"}>
         <InspField
           label="Nombre del producto"
           value={htmlToText(block.props.name)}
@@ -2302,7 +2310,7 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
       </InspSectionCollapsible>
 
       {/* 6. Logo de marca */}
-      <InspSectionCollapsible title="Logo de marca" defaultOpen={false} sectionRef={sectionRefs["logo"]} forceOpen={focusedSection === "logo"}>
+      <InspSectionCollapsible title="Logo de marca" defaultOpen={false} sectionRef={sectionRefs["logo"]} forceOpen={focusedSection === "logo"} forceClose={focusedSection !== null && focusedSection !== "logo"}>
         {block.props.logoUrl && (
           <div className="overflow-hidden rounded-lg border border-border bg-secondary/30 p-2">
             <img src={block.props.logoUrl} alt="logo" className="mx-auto h-12 object-contain" />
@@ -2326,7 +2334,7 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
       </InspSectionCollapsible>
 
       {/* 7. Enlace */}
-      <InspSectionCollapsible title="Enlace">
+      <InspSectionCollapsible title="Enlace" defaultOpen={false} forceClose={focusedSection !== null}>
         <AMPscriptUrlInput
           value={block.props.href ?? ""}
           onChange={(href) => setProps({ href })}
@@ -2334,7 +2342,7 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
       </InspSectionCollapsible>
 
       {/* 8. Espaciado */}
-      <InspSectionCollapsible title="Espaciado" defaultOpen={false}>
+      <InspSectionCollapsible title="Espaciado" defaultOpen={false} forceClose={focusedSection !== null}>
         <PaddingEditor
           value={padVal(block)}
           onChange={(padding) => onChange({ ...block, layout: { ...block.layout, padding } })}
@@ -2342,7 +2350,7 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
       </InspSectionCollapsible>
 
       {/* 9. Apariencia del bloque */}
-      <InspSectionCollapsible title="Apariencia del bloque" defaultOpen={true}>
+      <InspSectionCollapsible title="Apariencia del bloque" defaultOpen={false} forceClose={focusedSection !== null}>
         <InspRow label="Color de fondo">
           <ColorSwatch
             value={block.layout.backgroundColor}
