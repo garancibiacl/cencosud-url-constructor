@@ -1087,7 +1087,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
   function renderSection(id: string, idx: number): React.ReactNode {
     switch (id) {
       case "logo":
-        if (!block.props.logoUrl) return null;
+        if (!block.props.logoUrl || block.props.logoShow === false) return null;
         return (
           <div className={`flex ${logoAlignClass}`} data-focus-section="logo" style={{ marginBottom: 4, ...sectionRing(`${id}_${idx}`) }}>
             <img

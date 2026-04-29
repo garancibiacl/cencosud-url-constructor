@@ -167,7 +167,7 @@ function prepareProductDd(
     name:             block.props.name,
     brand:            block.props.brand ?? "",
     unit:             escapeHtml(block.props.unit ?? ""),
-    logoUrl:          escapeHref(block.props.logoUrl ?? ""),
+    logoUrl:          block.props.logoShow !== false ? escapeHref(block.props.logoUrl ?? "") : "",
     logoSize:         block.props.logoSize ?? 60,
     logoAlign:        block.props.logoAlign ?? "left",
     href:             escapeHref(buildTrackedUrl(block.props.href, doc)),

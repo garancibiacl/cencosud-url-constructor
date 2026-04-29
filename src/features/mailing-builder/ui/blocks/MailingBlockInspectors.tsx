@@ -2466,24 +2466,34 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
 
       {/* 6. Logo de marca */}
       <InspSectionCollapsible title="Logo de marca" defaultOpen={false} sectionRef={sectionRefs["logo"]} forceOpen={focusedSection === "logo"} forceClose={focusedSection !== null && focusedSection !== "logo"}>
-        {block.props.logoUrl && (
-          <div className="overflow-hidden rounded-lg border border-border bg-secondary/30 p-2">
-            <img src={block.props.logoUrl} alt="logo" className="mx-auto h-12 object-contain" />
-          </div>
+        <InspRow label="Mostrar logo">
+          <Switch
+            checked={block.props.logoShow !== false}
+            onCheckedChange={(v) => setProps({ logoShow: v })}
+          />
+        </InspRow>
+        {block.props.logoShow !== false && (
+          <>
+            {block.props.logoUrl && (
+              <div className="overflow-hidden rounded-lg border border-border bg-secondary/30 p-2">
+                <img src={block.props.logoUrl} alt="logo" className="mx-auto h-12 object-contain" />
+              </div>
+            )}
+            <ImageFieldInput
+              label="URL del logo (opcional)"
+              value={block.props.logoUrl ?? ""}
+              onChange={(logoUrl) => setProps({ logoUrl })}
+              blockId={block.id}
+              field="logoUrl"
+            />
+            <InspRow label="Tamaño">
+              <PxStepper value={block.props.logoSize ?? 60} onChange={(v) => setProps({ logoSize: v })} min={20} max={200} />
+            </InspRow>
+            <InspRow label="Alineación">
+              <SegmentedAlign value={block.props.logoAlign ?? "left"} onChange={(v) => setProps({ logoAlign: v })} />
+            </InspRow>
+          </>
         )}
-        <ImageFieldInput
-          label="URL del logo (opcional)"
-          value={block.props.logoUrl ?? ""}
-          onChange={(logoUrl) => setProps({ logoUrl })}
-          blockId={block.id}
-          field="logoUrl"
-        />
-        <InspRow label="Tamaño">
-          <PxStepper value={block.props.logoSize ?? 60} onChange={(v) => setProps({ logoSize: v })} min={20} max={200} />
-        </InspRow>
-        <InspRow label="Alineación">
-          <SegmentedAlign value={block.props.logoAlign ?? "left"} onChange={(v) => setProps({ logoAlign: v })} />
-        </InspRow>
       </InspSectionCollapsible>
 
       {/* 7. Apariencia del bloque */}

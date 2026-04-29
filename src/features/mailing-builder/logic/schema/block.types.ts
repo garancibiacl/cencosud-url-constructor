@@ -86,6 +86,7 @@ export interface ProductDdBlock extends BaseBlock<"product-dd", {
   unit?: string;
   // ── Logo de marca (esquina derecha panel) ────────────────────────
   logoUrl?: string;
+  logoShow?: boolean;        // false = ocultar logo (default true)
   logoSize?: number;         // ancho en px (default 60)
   logoAlign?: "left" | "center" | "right";
   // ── CTA ──────────────────────────────────────────────────────────
