@@ -566,7 +566,7 @@ interface DateSelectorFieldProps {
 
 const DateSelectorField = ({ label, value, onChange, placeholder }: DateSelectorFieldProps) => {
   const [open, setOpen] = useState(false);
-  const selectedDate = value ? parseDateValue(value) : undefined;
+  const selectedDate = useMemo(() => (value ? parseDateValue(value) : undefined), [value]);
   const [viewMonth, setViewMonth] = useState<Date>(selectedDate ?? new Date());
   const [inputValue, setInputValue] = useState(
     selectedDate ? formatDateDisplay(selectedDate) : "",
