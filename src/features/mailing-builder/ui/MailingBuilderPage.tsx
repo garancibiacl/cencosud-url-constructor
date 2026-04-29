@@ -1025,44 +1025,64 @@ export default function MailingBuilderPage() {
 
   const handleDownloadJpg = async () => {
     setDownloadingJpg(true);
-    const docWidth = document.settings.width;
-
-    const iframe = window.document.createElement("iframe");
-    iframe.setAttribute("scrolling", "no");
-    iframe.style.cssText = [
-      "position:fixed", "top:0", `left:${-(docWidth + 400)}px`,
-      `width:${docWidth}px`, "height:1px",
-      "border:none", "overflow:visible",
-      "z-index:-9999", "pointer-events:none", "visibility:hidden",
-    ].join(";");
-    window.document.body.appendChild(iframe);
+    const docWidth    = document.settings.width;
+    const scopeClass  = "__mailing_export__";
+    const container   = window.document.createElement("div");
 
     try {
       const html = renderMailingHtml(document);
 
-      await new Promise<void>((resolve) => {
-        iframe.onload = () => resolve();
-        setTimeout(resolve, 4000);
-        iframe.srcdoc = html;
-      });
+      // Extraer estilos del <head> y contenido + fondo del <body>
+      const headContent = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i)?.[1] ?? "";
+      const emailStyles = [...headContent.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)]
+        .map((m) => m[1]).join("\n");
+      const bodyTag     = html.match(/<body([^>]*)>/i)?.[1] ?? "";
+      const bodyBg      = bodyTag.match(/background-color:\s*([^;"]+)/i)?.[1]?.trim() ?? "#ffffff";
+      const bodyContent = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)?.[1] ?? "";
 
-      const iframeDoc = iframe.contentDocument!;
+      // Reset CSS con scope: neutraliza preflight de Tailwind (border-collapse,
+      // box-sizing, max-width en img) que distorsionan la tabla del email.
+      const resetCss = [
+        `.${scopeClass} *, .${scopeClass} *::before, .${scopeClass} *::after { box-sizing: content-box !important; }`,
+        `.${scopeClass} table { border-collapse: separate !important; border-spacing: 0 !important; }`,
+        `.${scopeClass} img { display: inline !important; max-width: none !important; }`,
+      ].join(" ");
 
-      await (iframeDoc as Document & { fonts?: FontFaceSet }).fonts?.ready;
+      container.className  = scopeClass;
+      // opacity:0 oculta el contenedor sin afectar su posición ni layout.
+      // html-to-image copia los computed styles; si el nodo tiene
+      // position:fixed + left negativo en su cssText, el contenido queda
+      // fuera del viewport del SVG foreignObject → imagen en blanco.
+      // Con top:0 left:0 no hay offset problemático; opacity:1 en la opción
+      // `style` lo hace visible solo en el canvas clonado.
+      container.style.cssText = [
+        "position:fixed", "top:0", "left:0",
+        `width:${docWidth}px`, `background-color:${bodyBg}`,
+        "opacity:0", "z-index:-1", "pointer-events:none",
+      ].join(";");
+      // innerHTML incluye: reset Tailwind + estilos propios del email + contenido del body
+      container.innerHTML = `<style>${resetCss}</style><style>${emailStyles}</style>${bodyContent}`;
+      window.document.body.appendChild(container);
+
+      // Primer ciclo de layout
       await new Promise((r) => requestAnimationFrame(r));
-      await new Promise((r) => setTimeout(r, 350));
+      await new Promise((r) => setTimeout(r, 400));
 
-      const contentHeight = iframeDoc.documentElement.scrollHeight;
-
-      // Proxy imágenes → data URLs para evitar restricciones CORS
-      const imgs = Array.from(iframeDoc.querySelectorAll<HTMLImageElement>("img"));
+      // Proxy de imágenes → data URLs antes de capturar.
+      // Usamos imgEl.src (URL absoluta resuelta por el browser) en lugar de
+      // getAttribute("src") que puede devolver rutas relativas (/imagen.webp)
+      // que el proxy server-side no puede resolver.
+      const origin = window.location.origin;
+      const imgs   = Array.from(container.querySelectorAll<HTMLImageElement>("img"));
       await Promise.allSettled(imgs.map(async (imgEl) => {
-        let src = imgEl.getAttribute("src") ?? "";
+        const src = imgEl.src; // siempre absoluta: "http://host/path" o "data:..."
         if (!src || src.startsWith("data:") || src.startsWith("blob:")) return;
-        src = src.replace(/^http:\/\//i, "https://");
-        const proxyUrl = `/api/proxy-img?url=${encodeURIComponent(src)}`;
         try {
-          const res = await fetch(proxyUrl, { cache: "force-cache" });
+          // Imágenes del mismo origen (assets locales): fetch directo sin proxy
+          const fetchUrl = src.startsWith(origin)
+            ? src
+            : `/api/proxy-img?url=${encodeURIComponent(src.replace(/^http:\/\//i, "https://"))}`;
+          const res = await fetch(fetchUrl, { cache: "force-cache" });
           if (!res.ok) return;
           const blob = await res.blob();
           imgEl.src = await new Promise<string>((resolve, reject) => {
@@ -1074,19 +1094,23 @@ export default function MailingBuilderPage() {
         } catch { /* conservar src original */ }
       }));
 
-      iframe.style.height   = `${contentHeight}px`;
-      iframe.style.overflow = "hidden";
+      // Segundo ciclo de layout con imágenes ya cargadas (alto correcto)
       await new Promise((r) => requestAnimationFrame(r));
-      await new Promise((r) => setTimeout(r, 100));
+      await new Promise((r) => setTimeout(r, 150));
 
-      const dataUrl = await toJpeg(iframeDoc.body, {
-        quality: 0.95,
-        backgroundColor: "#ffffff",
-        width: docWidth,
-        height: contentHeight,
-        pixelRatio: 1,
-        skipFonts: false,
-        fetchRequestInit: { cache: "force-cache" },
+      const contentHeight = container.scrollHeight;
+
+      const dataUrl = await toJpeg(container, {
+        quality:         0.95,
+        backgroundColor: bodyBg || "#ffffff",
+        width:           docWidth,
+        height:          contentHeight,
+        pixelRatio:      1,
+        skipFonts:       true,
+        imagePlaceholder: "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+        // El nodo raíz tiene opacity:0 para ocultarse en la página.
+        // Aquí lo restauramos en el clon para que sea visible en el SVG/canvas.
+        style: { opacity: "1" },
       });
 
       const link = window.document.createElement("a");
@@ -1099,7 +1123,7 @@ export default function MailingBuilderPage() {
       console.error("[JPG export]", err);
       toast({ title: "Error al generar JPG", description: "Inténtalo nuevamente.", variant: "destructive" });
     } finally {
-      if (iframe.parentNode) window.document.body.removeChild(iframe);
+      if (container.parentNode) window.document.body.removeChild(container);
       setDownloadingJpg(false);
     }
   };
