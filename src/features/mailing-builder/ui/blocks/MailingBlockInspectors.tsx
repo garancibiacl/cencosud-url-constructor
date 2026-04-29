@@ -1813,7 +1813,7 @@ function InspSectionCollapsible({
       ref={sectionRef}
       className={`overflow-hidden rounded-xl border bg-card transition-all duration-150 ${
         open
-          ? "border-primary/35 shadow-[0_2px_4px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.08),0_0_0_1px_hsl(var(--primary)/0.12)]"
+          ? "border-violet-400/40 shadow-[0_2px_4px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.08),0_0_0_1px_rgba(139,92,246,0.14)]"
           : "border-border/60 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.03)]"
       }`}
     >
@@ -1822,16 +1822,16 @@ function InspSectionCollapsible({
         onClick={() => setOpen((v) => !v)}
         className={`flex w-full items-center justify-between px-4 py-2.5 transition-colors ${
           open
-            ? "bg-primary/[0.06] border-b border-primary/20 hover:bg-primary/[0.09]"
+            ? "bg-violet-50/70 border-b border-violet-200/60 hover:bg-violet-50"
             : "bg-secondary/30 border-b border-border/50 hover:bg-secondary/50"
         }`}
       >
-        <span className={`text-[13px] font-bold tracking-tight transition-colors ${open ? "text-primary" : "text-foreground"}`}>
+        <span className={`text-[13px] font-bold tracking-tight transition-colors ${open ? "text-violet-700" : "text-foreground"}`}>
           {title}
         </span>
         <ChevronDown
           className={`h-4 w-4 transition-all duration-200 ${
-            open ? "text-primary rotate-0" : "text-muted-foreground/60 -rotate-90"
+            open ? "text-violet-500 rotate-0" : "text-muted-foreground/60 -rotate-90"
           }`}
         />
       </button>
