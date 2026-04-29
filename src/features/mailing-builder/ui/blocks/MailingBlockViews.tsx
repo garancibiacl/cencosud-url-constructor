@@ -679,12 +679,12 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
         <div
           ref={imageContainerRef}
           data-focus-section="imagen"
-          className="relative shrink-0 bg-[#f9fafb] flex items-center justify-center overflow-hidden group/img"
-          style={{ width: "48%", ...leftColStyle }}
+          className="relative shrink-0 self-stretch bg-[#f9fafb] overflow-hidden group/img"
+          style={{ width: "48%", minHeight: 200, ...leftColStyle }}
         >
           {/* Imagen */}
           {block.props.imageUrl && imgError ? (
-            <div className="flex flex-col items-center gap-1.5 text-muted-foreground/40">
+            <div className="flex flex-col items-center justify-center gap-1.5 text-muted-foreground/40 w-full h-full absolute inset-0">
               <ImageOff className="h-6 w-6" />
               <span className="text-[10px]">Sin imagen</span>
             </div>
@@ -692,7 +692,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
             <img
               src={block.props.imageUrl || "/placeholder.svg"}
               alt={block.props.name}
-              className="max-h-[200px] max-w-[90%] object-contain"
+              className="absolute inset-0 w-full h-full object-cover"
               onError={() => setImgError(true)}
             />
           )}

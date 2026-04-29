@@ -236,29 +236,19 @@ export function productDdTemplate({
   <td style="padding:${p.top}px ${p.right}px ${p.bottom}px ${p.left}px; background:${bgColor}; font-family:Arial,Helvetica,sans-serif; vertical-align:top; ${borderStyle} ${outerRadius}">
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
       <tr>
-        <!-- LEFT COLUMN: imagen + badges -->
-        <td width="50%" valign="top" style="vertical-align:top; ${leftColRadius}">
-          <!-- Badges encima de la imagen -->
-          <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
-            <tr>
-              <td style="padding:8px 8px 0;">
-                <span style="display:inline-block;font-size:10px;font-family:Arial,Helvetica,sans-serif;font-weight:bold;color:${discountBadgeFg};background-color:${discountBadgeBg};padding:3px 8px;border-radius:12px;line-height:1;">${discountLabel}</span>${secondBadgeHtml}
-              </td>
-            </tr>
-          </table>
-          <!-- Imagen -->
-          <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
-            <tr>
-              <td align="center" style="padding:8px;">
-                <a href="${href}" target="_blank" style="text-decoration:none;color:#000000;">
-                  <img src="${imageUrl || "/placeholder.svg"}"
-                       alt="${name}"
-                       width="140"
-                       style="display:block!important;width:140px;height:auto;margin:0 auto;border:0;" />
-                </a>
-              </td>
-            </tr>
-          </table>
+        <!-- LEFT COLUMN: imagen a full width + badges superpuestos -->
+        <td width="50%" valign="top" style="vertical-align:top;padding:0;position:relative; ${leftColRadius}">
+          <!-- Imagen full-width sin padding -->
+          <a href="${href}" target="_blank" style="text-decoration:none;display:block;line-height:0;">
+            <img src="${imageUrl || "/placeholder.svg"}"
+                 alt="${name}"
+                 width="100%"
+                 style="display:block!important;width:100%;height:auto;border:0;" />
+          </a>
+          <!-- Badges flotando sobre la imagen -->
+          <div style="position:absolute;top:8px;left:8px;line-height:1;">
+            <span style="display:inline-block;font-size:10px;font-family:Arial,Helvetica,sans-serif;font-weight:bold;color:${discountBadgeFg};background-color:${discountBadgeBg};padding:3px 8px;border-radius:12px;line-height:1;">${discountLabel}</span>${secondBadgeHtml}
+          </div>
         </td>
         <!-- RIGHT COLUMN: fondo de color, precio grande, ahorro, desde -->
         <td width="50%" valign="middle" style="background-color:${rightBgColor};padding:12px 14px;vertical-align:middle; ${rightColRadius}">
