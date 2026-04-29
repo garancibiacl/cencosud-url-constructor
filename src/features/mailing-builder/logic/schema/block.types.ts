@@ -93,6 +93,7 @@ export interface ProductDdBlock extends BaseBlock<"product-dd", {
   href: string;
   // ── Columna derecha ───────────────────────────────────────────────
   rightBgColor?: string;  // fondo columna derecha (default verde #3DBE4A)
+  leftColWidth?: number;  // % ancho columna izquierda (default 48, rango 20-80)
   priceSize?: number;     // font-size del precio en px (default 50)
   priceFg?: string;       // color del precio (default #ffffff)
   priceAlign?: "left" | "center" | "right";

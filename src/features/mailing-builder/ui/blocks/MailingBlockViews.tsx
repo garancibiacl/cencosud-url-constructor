@@ -1,6 +1,6 @@
 import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { CodeXml, Copy, GripHorizontal, ImageIcon, ImageOff, LayoutGrid, MoveDown, MoveUp, Trash2, Upload } from "lucide-react";
+import { CodeXml, Copy, GripHorizontal, ImageIcon, ImageOff, LayoutGrid, MoveDown, MoveHorizontal, MoveUp, Trash2, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { ButtonBlock, HeroBlock, ImageBlock, MailingBlock, ProductBlock, ProductDdBlock, RawHtmlBlock, SpacerBlock, TextBlock } from "../../logic/schema/block.types";
 import { imageLibraryBridge } from "../imageLibraryBridge";
@@ -798,13 +798,39 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
 }) {
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const editorAreaRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const isDraggingBadge = useRef(false);
+  const isDraggingDivider = useRef(false);
   const [imgError, setImgError] = useState(false);
   const [isEditingBadge, setIsEditingBadge] = useState(false);
   const [activeSectionKey, setActiveSectionKey] = useState<string | null>(null);
   const badgeLabelRef = useRef<HTMLSpanElement>(null);
   useEffect(() => { setImgError(false); }, [block.props.imageUrl]);
   useEffect(() => { if (!isSelected) { setIsEditingBadge(false); setActiveSectionKey(null); } }, [isSelected]);
+
+  function handleDividerMouseDown(e: React.MouseEvent) {
+    if (!onChange || !isSelected) return;
+    e.preventDefault();
+    e.stopPropagation();
+    isDraggingDivider.current = true;
+
+    const handleMouseMove = (ev: MouseEvent) => {
+      if (!isDraggingDivider.current || !cardRef.current) return;
+      const rect = cardRef.current.getBoundingClientRect();
+      const pct = Math.round(((ev.clientX - rect.left) / rect.width) * 100);
+      const clamped = Math.min(80, Math.max(20, pct));
+      onChange({ ...block, props: { ...block.props, leftColWidth: clamped } });
+    };
+
+    const handleMouseUp = () => {
+      isDraggingDivider.current = false;
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  }
 
   function handleBadgeDragStart(e: React.MouseEvent) {
     if (!onChange || !isSelected) return;
@@ -885,14 +911,14 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
         setActiveSectionKey(key);
       }}
     >
-      <div className="flex overflow-hidden font-sans" style={cardStyle}>
+      <div ref={cardRef} className="relative flex overflow-hidden font-sans" style={cardStyle}>
 
         {/* ── LEFT COLUMN: imagen + badge ───────────────────────────── */}
         <div
           ref={imageContainerRef}
           data-focus-section="imagen"
           className="relative shrink-0 self-stretch bg-[#f9fafb] overflow-hidden group/img"
-          style={{ width: "48%", minHeight: 200, ...leftColStyle, ...sectionRing("imagen") }}
+          style={{ width: `${block.props.leftColWidth ?? 48}%`, minHeight: 200, ...leftColStyle, ...sectionRing("imagen") }}
         >
           {/* Imagen */}
           {block.props.imageUrl && imgError ? (
@@ -996,6 +1022,20 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
             />
           )}
         </div>
+
+        {/* ── COLUMN DIVIDER HANDLE — visible cuando seleccionado ─── */}
+        {isSelected && onChange && (
+          <div
+            className="absolute top-0 bottom-0 z-30 flex items-center justify-center"
+            style={{ left: `calc(${block.props.leftColWidth ?? 48}% - 8px)`, width: 16, cursor: "col-resize" }}
+            onMouseDown={handleDividerMouseDown}
+          >
+            <div className="absolute inset-y-0 left-1/2 w-[2px] -translate-x-1/2 bg-primary/70" />
+            <div className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-lg ring-1 ring-black/10 hover:ring-primary/60 hover:shadow-xl transition-shadow">
+              <MoveHorizontal size={13} strokeWidth={2} className="text-gray-500" />
+            </div>
+          </div>
+        )}
 
         {/* ── RIGHT COLUMN: fondo de color, precio grande, ahorro, desde ── */}
         <div
