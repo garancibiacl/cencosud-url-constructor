@@ -203,6 +203,8 @@ function prepareProductDd(
     ofertaBg:            block.props.ofertaBg            ?? "transparent",
     ofertaBorderRadius:  block.props.ofertaBorderRadius  ?? 6,
     sectionOrder:        block.props.sectionOrder,
+    priceAlign:          block.props.priceAlign  ?? "left",
+    nameAlign:           block.props.nameAlign   ?? "left",
   });
 }
 

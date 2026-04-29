@@ -70,6 +70,9 @@ export interface ProductDdTemplateData {
   ofertaLogoSize?: number;
   ofertaBg?: string;
   ofertaBorderRadius?: number;
+  // ── Alineación columna derecha ───────────────────────────────────────────
+  priceAlign?: "left" | "center" | "right";
+  nameAlign?:  "left" | "center" | "right";
   // ── Orden de secciones ───────────────────────────────────────────────────
   sectionOrder?: string[];
 }
@@ -142,6 +145,8 @@ export function productDdTemplate({
   ofertaBg,
   ofertaBorderRadius,
   discountAlign,
+  priceAlign,
+  nameAlign,
   sectionOrder,
 }: ProductDdTemplateData): string {
 
@@ -211,15 +216,22 @@ export function productDdTemplate({
         <span style="font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;color:${priceFg};margin-left:3px;line-height:1;">${unit}</span>
       </td>`
     : "";
+  const priceRowAlign = priceAlign === "center" ? "center" : priceAlign === "right" ? "right" : "left";
   const priceRowHtml = price
-    ? `<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin-bottom:6px;">
-    <tr>
-      <td style="padding:0;vertical-align:baseline;">
-        <span style="font-family:'Silka',Arial,Helvetica,sans-serif;font-size:${priceSize}px;font-weight:700;color:${priceFg};line-height:1;">${price}</span>
-      </td>
-      ${unitInlineHtml}
-    </tr>
-  </table>`
+    ? `<table border="0" cellspacing="0" cellpadding="0" role="presentation" width="100%" style="margin-bottom:6px;">
+        <tr>
+          <td align="${priceRowAlign}">
+            <table cellpadding="0" cellspacing="0" border="0" role="presentation">
+              <tr>
+                <td style="padding:0;vertical-align:baseline;">
+                  <span style="font-family:'Silka',Arial,Helvetica,sans-serif;font-size:${priceSize}px;font-weight:700;color:${priceFg};line-height:1;">${price}</span>
+                </td>
+                ${unitInlineHtml}
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>`
     : "";
 
   // ── Badge ahorro ───────────────────────────────────────────────────────────
@@ -299,7 +311,7 @@ export function productDdTemplate({
     priceTag: priceTagHtml,
     ahorro: ahorroHtml,
     desdeLabel: desdeLabelHtml,
-    name: name ? `<div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:600;color:rgba(255,255,255,0.9);margin-top:6px;line-height:1.4;word-break:break-word;overflow-wrap:break-word;">${name}</div>` : "",
+    name: name ? `<div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:600;color:rgba(255,255,255,0.9);margin-top:6px;line-height:1.4;word-break:break-word;overflow-wrap:break-word;text-align:${nameAlign ?? "left"};">${name}</div>` : "",
   };
 
   const rightContent = resolvedOrder.map(id => sectionMap[id] ?? "").join("\n");
