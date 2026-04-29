@@ -2069,14 +2069,80 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
         </div>
       </InspSectionCollapsible>
 
+      {/* 4a. Descuento porcentual */}
+      <InspSectionCollapsible title="Descuento %" defaultOpen={false}>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-medium text-muted-foreground/70">Número</span>
+            <InspField
+              label=""
+              value={block.props.discountNumber ?? ""}
+              onChange={(v) => setProps({ discountNumber: v })}
+              placeholder="30"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-medium text-muted-foreground/70">Símbolo</span>
+            <InspField
+              label=""
+              value={block.props.discountSymbol ?? "%"}
+              onChange={(v) => setProps({ discountSymbol: v })}
+              placeholder="%"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-medium text-muted-foreground/70">Texto</span>
+            <InspField
+              label=""
+              value={block.props.discountText ?? "DCTO."}
+              onChange={(v) => setProps({ discountText: v })}
+              placeholder="DCTO."
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-2.5">
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-medium text-muted-foreground/70">Color número</span>
+            <ColorSwatch value={block.props.discountNumberColor ?? "#ffffff"} onChange={(v) => setProps({ discountNumberColor: v ?? "#ffffff" })} />
+          </div>
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-medium text-muted-foreground/70">Color símbolo</span>
+            <ColorSwatch value={block.props.discountSymbolColor ?? "#ffffff"} onChange={(v) => setProps({ discountSymbolColor: v ?? "#ffffff" })} />
+          </div>
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-medium text-muted-foreground/70">Color texto</span>
+            <ColorSwatch value={block.props.discountTextColor ?? "#ffffff"} onChange={(v) => setProps({ discountTextColor: v ?? "#ffffff" })} />
+          </div>
+        </div>
+
+        {/* Badge Oferta */}
+        <div className="mt-1 border-t border-border/50 pt-2.5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[12px] font-medium text-foreground">Badge Oferta</span>
+            <Switch
+              checked={block.props.ofertaShow ?? false}
+              onCheckedChange={(v) => setProps({ ofertaShow: v })}
+            />
+          </div>
+          {(block.props.ofertaShow ?? false) && (
+            <>
+              <ImageFieldInput
+                label="Logo URL (opcional)"
+                value={block.props.ofertaLogoUrl ?? ""}
+                onChange={(ofertaLogoUrl) => setProps({ ofertaLogoUrl })}
+                blockId={block.id}
+                field="ofertaLogoUrl"
+              />
+              <InspRow label="Tamaño logo (px)">
+                <PxStepper value={block.props.ofertaLogoSize ?? 60} onChange={(v) => setProps({ ofertaLogoSize: v })} min={20} max={200} />
+              </InspRow>
+            </>
+          )}
+        </div>
+      </InspSectionCollapsible>
+
       {/* 4. Precios */}
       <InspSectionCollapsible title="Precios" sectionRef={sectionRefs["precios"]} forceOpen={focusedSection === "precios"}>
-        <InspField
-          label="Precio original (tachado)"
-          value={htmlToText(block.props.originalPrice)}
-          onChange={(v) => setProps({ originalPrice: v })}
-          placeholder="$ 19.990"
-        />
         <InspField
           label="Precio oferta"
           value={htmlToText(block.props.price)}

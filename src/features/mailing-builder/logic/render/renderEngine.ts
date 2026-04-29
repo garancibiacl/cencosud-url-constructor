@@ -178,6 +178,19 @@ function prepareProductDd(
     priceTagValueFg: block.props.priceTagValueFg ?? "#ffffff",
     priceTagRadius:  block.props.priceTagRadius  ?? 10,
     priceTagAlign:   block.props.priceTagAlign   ?? "left",
+    discountNumber:      escapeHtml(block.props.discountNumber      ?? ""),
+    discountNumberColor: block.props.discountNumberColor ?? "#ffffff",
+    discountSymbol:      escapeHtml(block.props.discountSymbol      ?? "%"),
+    discountSymbolColor: block.props.discountSymbolColor ?? "#ffffff",
+    discountText:        escapeHtml(block.props.discountText        ?? "DCTO."),
+    discountTextColor:   block.props.discountTextColor   ?? "#ffffff",
+    ofertaShow:          block.props.ofertaShow          ?? false,
+    ofertaLabel:         escapeHtml(block.props.ofertaLabel         ?? ""),
+    ofertaLabelFg:       block.props.ofertaLabelFg       ?? "#1a5c2a",
+    ofertaLogoUrl:       escapeHtml(block.props.ofertaLogoUrl       ?? ""),
+    ofertaLogoSize:      block.props.ofertaLogoSize      ?? 80,
+    ofertaBg:            block.props.ofertaBg            ?? "transparent",
+    ofertaBorderRadius:  block.props.ofertaBorderRadius  ?? 6,
   });
 }
 

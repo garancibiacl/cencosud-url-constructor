@@ -15,7 +15,7 @@ export interface ProductDdTemplateData {
   secondBadge: string;
   secondBadgeBg: string;
   secondBadgeFg: string;
-  originalPrice: string;
+  originalPrice?: string;
   price: string;
   priceColor: string;
   name: string;
@@ -44,6 +44,21 @@ export interface ProductDdTemplateData {
   priceTagValueFg: string;
   priceTagRadius:  number;
   priceTagAlign:   "left" | "center" | "right";
+  // ── Descuento porcentual ──────────────────────────────────────────────────
+  discountNumber?: string;
+  discountNumberColor?: string;
+  discountSymbol?: string;
+  discountSymbolColor?: string;
+  discountText?: string;
+  discountTextColor?: string;
+  // ── Badge Oferta ─────────────────────────────────────────────────────────
+  ofertaShow?: boolean;
+  ofertaLabel?: string;
+  ofertaLabelFg?: string;
+  ofertaLogoUrl?: string;
+  ofertaLogoSize?: number;
+  ofertaBg?: string;
+  ofertaBorderRadius?: number;
 }
 
 export function productDdTemplate({
@@ -63,7 +78,7 @@ export function productDdTemplate({
   secondBadge,
   secondBadgeBg,
   secondBadgeFg,
-  originalPrice,
+  // originalPrice kept in interface for backwards-compat, not rendered
   price,
   // priceColor kept in interface for backwards-compat, superseded by priceFg
   name,
@@ -90,6 +105,19 @@ export function productDdTemplate({
   priceTagValueFg,
   priceTagRadius,
   priceTagAlign,
+  discountNumber,
+  discountNumberColor,
+  discountSymbol,
+  discountSymbolColor,
+  discountText,
+  discountTextColor,
+  ofertaShow,
+  ofertaLabel,
+  ofertaLabelFg,
+  ofertaLogoUrl,
+  ofertaLogoSize,
+  ofertaBg,
+  ofertaBorderRadius,
 }: ProductDdTemplateData): string {
 
   // ── Badge secundaria ───────────────────────────────────────────────────────
@@ -109,10 +137,41 @@ export function productDdTemplate({
       </table>`
     : "";
 
-  // ── Precio original tachado (blanco semitransparente) ─────────────────────
-  const originalPriceHtml = originalPrice
-    ? `<div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:rgba(255,255,255,0.7);text-decoration:line-through;line-height:1.2;margin-bottom:4px;">${originalPrice}</div>`
+  // ── Badge Oferta (inline, a la derecha del símbolo) ───────────────────────
+  const ofertaCellHtml = (ofertaShow && (ofertaLabel || ofertaLogoUrl))
+    ? `<td style="padding:0 0 0 6px;vertical-align:middle;">
+        <table cellpadding="0" cellspacing="0" border="0" role="presentation">
+          <tr>
+            <td style="background-color:${ofertaBg && ofertaBg !== "transparent" ? ofertaBg : "transparent"};border-radius:${ofertaBorderRadius ?? 6}px;padding:${ofertaBg && ofertaBg !== "transparent" ? "3px 6px" : "0"};vertical-align:middle;">
+              <table cellpadding="0" cellspacing="0" border="0" role="presentation">
+                <tr>
+                  ${ofertaLabel ? `<td style="padding:0;vertical-align:middle;font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;color:${ofertaLabelFg ?? "#1a5c2a"};white-space:nowrap;padding-right:${ofertaLogoUrl ? "3px" : "0"};">${ofertaLabel}</td>` : ""}
+                  ${ofertaLogoUrl ? `<td style="padding:0;vertical-align:middle;"><img src="${ofertaLogoUrl}" alt="" width="${ofertaLogoSize ?? 60}" style="display:block;width:${ofertaLogoSize ?? 60}px;height:auto;border:0;" /></td>` : ""}
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>`
     : "";
+
+  // ── Descuento porcentual: número + símbolo/texto + badge oferta en la misma fila ──
+  const discountPctHtml = discountNumber
+    ? `<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin-bottom:4px;">
+      <tr>
+        <td style="padding:0;vertical-align:middle;">
+          <span style="font-family:'Silka',Arial,Helvetica,sans-serif;font-size:64px;font-weight:900;color:${discountNumberColor ?? "#ffffff"};line-height:1;">${discountNumber}</span>
+        </td>
+        <td style="padding:0 0 0 3px;vertical-align:middle;">
+          <div style="font-family:'Silka',Arial,Helvetica,sans-serif;font-size:32px;font-weight:900;color:${discountSymbolColor ?? "#ffffff"};line-height:1;">${discountSymbol ?? "%"}</div>
+          <div style="font-family:'Silka',Arial,Helvetica,sans-serif;font-size:14px;font-weight:700;color:${discountTextColor ?? "#ffffff"};line-height:1.2;margin-top:2px;">${discountText ?? "DCTO."}</div>
+        </td>
+        ${ofertaCellHtml}
+      </tr>
+    </table>`
+    : "";
+
+  const ofertaBadgeHtml = "";
 
   // ── Precio grande + unidad inline (tabla email-safe) ──────────────────────
   const unitInlineHtml = unit
@@ -204,7 +263,7 @@ export function productDdTemplate({
         <!-- RIGHT COLUMN: fondo de color, precio grande, ahorro, desde -->
         <td width="50%" valign="middle" style="background-color:${rightBgColor};padding:12px 14px;vertical-align:middle; ${rightColRadius}">
           ${logoHtml}
-          ${originalPriceHtml}
+          ${discountPctHtml}
           ${priceRowHtml}
           ${ahorroHtml}
           ${desdeLabelHtml}

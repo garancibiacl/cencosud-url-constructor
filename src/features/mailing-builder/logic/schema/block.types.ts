@@ -69,7 +69,7 @@ export interface ProductDdBlock extends BaseBlock<"product-dd", {
   secondBadgeBg?: string;
   secondBadgeFg?: string;
   // ── Precios ───────────────────────────────────────────────────────
-  originalPrice: string;     // precio tachado
+  originalPrice?: string;    // precio tachado (obsoleto, mantenido por compatibilidad)
   price: string;             // precio con descuento
   priceColor: string;        // color del precio descontado
   // ── Info del producto ─────────────────────────────────────────────
@@ -99,6 +99,21 @@ export interface ProductDdBlock extends BaseBlock<"product-dd", {
   priceTagValueFg?: string;
   priceTagRadius?:  number;
   priceTagAlign?:   "left" | "center" | "right";
+  // ── Descuento porcentual ──────────────────────────────────────
+  discountNumber?: string;      // "30"
+  discountNumberColor?: string; // "#ffffff"
+  discountSymbol?: string;      // "%"
+  discountSymbolColor?: string; // "#ffffff"
+  discountText?: string;        // "DCTO."
+  discountTextColor?: string;   // "#ffffff"
+  // ── Badge Oferta ─────────────────────────────────────────────
+  ofertaShow?: boolean;
+  ofertaLabel?: string;         // "Oferta"
+  ofertaLabelFg?: string;       // "#1a5c2a"
+  ofertaLogoUrl?: string;
+  ofertaLogoSize?: number;      // px, default 80
+  ofertaBg?: string;            // "#ffffff"
+  ofertaBorderRadius?: number;  // default 6
 }> {}
 
 export interface RawHtmlBlock extends BaseBlock<"raw-html", {

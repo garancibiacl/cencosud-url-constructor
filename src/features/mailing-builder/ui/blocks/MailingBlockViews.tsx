@@ -761,18 +761,60 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
             </div>
           )}
 
-          {/* Precio original tachado — blanco semitransparente */}
-          <div className="text-[11px] leading-tight line-through" data-focus-section="precios" style={{ color: "rgba(255,255,255,0.7)" }}>
-            {isSelected && onChange ? (
-              <ContentEditableDiv
-                html={block.props.originalPrice}
-                onChange={(html) => onChange({ ...block, props: { ...block.props, originalPrice: html } })}
-                className="min-w-[40px] rounded px-0.5 outline-none focus:ring-1 focus:ring-white/40"
-              />
-            ) : (
-              <span dangerouslySetInnerHTML={{ __html: block.props.originalPrice }} />
-            )}
-          </div>
+          {/* Descuento porcentual: número + símbolo/texto + badge Oferta en la misma fila */}
+          {block.props.discountNumber && (
+            <div className="flex items-center leading-none gap-2" data-focus-section="precios">
+              {/* Número grande */}
+              <span
+                className="font-black leading-none"
+                style={{ fontSize: 64, color: block.props.discountNumberColor ?? "#ffffff" }}
+              >
+                {block.props.discountNumber}
+              </span>
+              {/* Símbolo + texto apilados */}
+              <div className="flex flex-col justify-center">
+                <span
+                  className="font-black leading-none"
+                  style={{ fontSize: 32, color: block.props.discountSymbolColor ?? "#ffffff" }}
+                >
+                  {block.props.discountSymbol ?? "%"}
+                </span>
+                <span
+                  className="font-bold"
+                  style={{ fontSize: 14, color: block.props.discountTextColor ?? "#ffffff", lineHeight: 1.2, marginTop: 2 }}
+                >
+                  {block.props.discountText ?? "DCTO."}
+                </span>
+              </div>
+              {/* Badge Oferta — a la derecha del símbolo */}
+              {(block.props.ofertaShow && (block.props.ofertaLabel || block.props.ofertaLogoUrl)) && (
+                <div
+                  className="flex items-center gap-1 self-center"
+                  style={{
+                    backgroundColor: block.props.ofertaBg ?? "transparent",
+                    borderRadius: block.props.ofertaBorderRadius ?? 6,
+                    padding: block.props.ofertaBg && block.props.ofertaBg !== "transparent" ? "3px 8px" : 0,
+                  }}
+                >
+                  {block.props.ofertaLabel && (
+                    <span
+                      className="text-[10px] font-bold whitespace-nowrap"
+                      style={{ color: block.props.ofertaLabelFg ?? "#1a5c2a" }}
+                    >
+                      {block.props.ofertaLabel}
+                    </span>
+                  )}
+                  {block.props.ofertaLogoUrl && (
+                    <img
+                      src={block.props.ofertaLogoUrl}
+                      alt=""
+                      style={{ width: block.props.ofertaLogoSize ?? 60, height: "auto", display: "block" }}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Precio grande + unidad inline */}
           <div className="flex items-baseline leading-none" data-focus-section="precios">
