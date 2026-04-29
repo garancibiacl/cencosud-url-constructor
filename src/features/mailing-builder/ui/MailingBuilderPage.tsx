@@ -102,6 +102,11 @@ function BlockMiniThumb({ type }: { type: string }) {
       </div>
     </div>
   );
+  if (type === "product-dd") return (
+    <div className="h-14 overflow-hidden rounded-md bg-black">
+      <img src="/thumbnails/product-dd.png" alt="Producto más descuento doble" className="h-full w-full object-cover object-top" draggable={false} />
+    </div>
+  );
   return <div className="h-14 rounded-md bg-secondary/60" />;
 }
 
@@ -1549,7 +1554,7 @@ export default function MailingBuilderPage() {
           } : { backgroundColor: "hsl(var(--secondary) / 0.35)" }}
           {...canvasDropHandlers}
         >
-          <ScrollArea className="h-full">
+          <div className="h-full overflow-y-auto" style={{ scrollBehavior: "smooth" }}>
           <div className="px-8 py-6">
           <div
             className="mx-auto flex max-w-[820px] flex-col rounded-lg bg-card transition-colors duration-250"
@@ -1680,7 +1685,7 @@ export default function MailingBuilderPage() {
 
             </div>
 
-            <ScrollArea className="h-full">
+            <div className="h-full overflow-y-auto" style={{ scrollBehavior: "smooth" }}>
               <div
                 className="p-6"
                 style={{
@@ -1841,10 +1846,10 @@ export default function MailingBuilderPage() {
 
                 </div>
               </div>
-            </ScrollArea>
+            </div>
           </div>
           </div>
-          </ScrollArea>
+          </div>
         </section>
 
         {/* ── Panel derecho — inspector ────────────────────────────────────── */}

@@ -12,6 +12,16 @@ export interface ProductDdTemplateData {
   discountLabel: string;
   discountBadgeBg: string;
   discountBadgeFg: string;
+  badgeTop?: number;
+  badgeLeft?: number;
+  badgeFontSize?: number;
+  badgeBorderRadius?: number;
+  badgeRadiusTL?: number;
+  badgeRadiusTR?: number;
+  badgeRadiusBR?: number;
+  badgeRadiusBL?: number;
+  badgeBorderWidth?: number;
+  badgeBorderColor?: string;
   secondBadge: string;
   secondBadgeBg: string;
   secondBadgeFg: string;
@@ -75,6 +85,16 @@ export function productDdTemplate({
   discountLabel,
   discountBadgeBg,
   discountBadgeFg,
+  badgeTop,
+  badgeLeft,
+  badgeFontSize,
+  badgeBorderRadius,
+  badgeRadiusTL,
+  badgeRadiusTR,
+  badgeRadiusBR,
+  badgeRadiusBL,
+  badgeBorderWidth,
+  badgeBorderColor,
   secondBadge,
   secondBadgeBg,
   secondBadgeFg,
@@ -220,6 +240,22 @@ export function productDdTemplate({
 
   const ctaHtml = "";
 
+  // ── Badge principal: estilos dinámicos ────────────────────────────────────
+  const bTop      = badgeTop  ?? 10;
+  const bLeft     = badgeLeft ?? 50;
+  const bFontSize = badgeFontSize ?? 12;
+  const bBase     = badgeBorderRadius ?? 20;
+  const bTL = badgeRadiusTL ?? bBase;
+  const bTR = badgeRadiusTR ?? bBase;
+  const bBR = badgeRadiusBR ?? bBase;
+  const bBL = badgeRadiusBL ?? bBase;
+  const bRadiusStr = (badgeRadiusTL !== undefined || badgeRadiusTR !== undefined || badgeRadiusBR !== undefined || badgeRadiusBL !== undefined)
+    ? `${bTL}px ${bTR}px ${bBR}px ${bBL}px`
+    : `${bBase}px`;
+  const bBorderW  = badgeBorderWidth ?? 0;
+  const bBorder   = bBorderW > 0 ? `border:${bBorderW}px solid ${badgeBorderColor ?? "#000000"};` : "";
+  const badgeStyle = `display:inline-block;font-size:${bFontSize}px;font-family:Arial,Helvetica,sans-serif;font-weight:bold;color:${discountBadgeFg};background-color:${discountBadgeBg};padding:4px 10px;border-radius:${bRadiusStr};line-height:1;white-space:nowrap;${bBorder}`;
+
   const tl = borderRadiusTL;
   const tr = borderRadiusTR;
   const br = borderRadiusBR;
@@ -234,10 +270,10 @@ export function productDdTemplate({
 
   return `<tr>
   <td style="padding:${p.top}px ${p.right}px ${p.bottom}px ${p.left}px; background:${bgColor}; font-family:Arial,Helvetica,sans-serif; vertical-align:top; ${borderStyle} ${outerRadius}">
-    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout:fixed;">
       <tr>
         <!-- LEFT COLUMN: imagen a full width + badges superpuestos -->
-        <td width="50%" valign="top" style="vertical-align:top;padding:0;position:relative; ${leftColRadius}">
+        <td width="50%" valign="top" style="vertical-align:top;padding:0;position:relative;max-width:50%;overflow:hidden; ${leftColRadius}">
           <!-- Imagen full-width sin padding -->
           <a href="${href}" target="_blank" style="text-decoration:none;display:block;line-height:0;">
             <img src="${imageUrl || "/placeholder.svg"}"
@@ -245,13 +281,13 @@ export function productDdTemplate({
                  width="100%"
                  style="display:block!important;width:100%;height:auto;border:0;" />
           </a>
-          <!-- Badges flotando sobre la imagen -->
-          <div style="position:absolute;top:8px;left:8px;line-height:1;">
-            <span style="display:inline-block;font-size:10px;font-family:Arial,Helvetica,sans-serif;font-weight:bold;color:${discountBadgeFg};background-color:${discountBadgeBg};padding:3px 8px;border-radius:12px;line-height:1;">${discountLabel}</span>${secondBadgeHtml}
+          <!-- Badge principal: posición desde inspector (% con centrado) -->
+          <div style="position:absolute;top:${bTop}%;left:${bLeft}%;transform:translate(-50%,-50%);line-height:1;white-space:nowrap;">
+            <span style="${badgeStyle}">${discountLabel}</span>${secondBadgeHtml}
           </div>
         </td>
         <!-- RIGHT COLUMN: fondo de color, precio grande, ahorro, desde -->
-        <td width="50%" valign="middle" style="background-color:${rightBgColor};padding:12px 14px;vertical-align:middle; ${rightColRadius}">
+        <td width="50%" valign="middle" style="background-color:${rightBgColor};padding:12px 14px;vertical-align:middle;max-width:50%;overflow:hidden; ${rightColRadius}">
           ${logoHtml}
           ${discountPctHtml}
           ${priceRowHtml}
@@ -259,7 +295,7 @@ export function productDdTemplate({
           ${desdeLabelHtml}
           ${priceTagHtml}
           <!-- Nombre del producto -->
-          <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:rgba(255,255,255,0.9);margin-top:6px;line-height:1.4;">${name}</div>
+          <div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:600;color:rgba(255,255,255,0.9);margin-top:6px;line-height:1.4;word-break:break-word;overflow-wrap:break-word;">${name}</div>
           ${ctaHtml}
         </td>
       </tr>

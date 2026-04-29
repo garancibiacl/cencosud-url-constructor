@@ -62,13 +62,23 @@ const ContentEditableDiv = forwardRef<HTMLDivElement, {
     [onChange],
   );
 
+  const handleBlur = useCallback(
+    (e: React.FocusEvent<HTMLDivElement>) => {
+      isFocused.current = false;
+      // Forzar guardado final — evita que el sync-effect revierta el contenido
+      // si el re-render del store aún no llegó cuando se pierde el foco.
+      onChange(e.currentTarget.innerHTML);
+    },
+    [onChange],
+  );
+
   return (
     <div
       ref={ref}
       contentEditable
       suppressContentEditableWarning
       onFocus={() => { isFocused.current = true; }}
-      onBlur={() => { isFocused.current = false; }}
+      onBlur={handleBlur}
       onInput={handleInput}
       className={className}
       style={style}
@@ -143,6 +153,7 @@ function ImageEditOverlay({
       {!open && (
         <div
           className="absolute inset-0 flex cursor-pointer items-center justify-center bg-black/0 opacity-0 transition-all group-hover/img:bg-black/25 group-hover/img:opacity-100"
+          style={{ zIndex: 10 }}
           onClick={handleImageClick}
         >
           <div className="flex items-center gap-1.5 rounded-full bg-card/90 px-3 py-1.5 text-xs font-medium shadow-md">
@@ -606,7 +617,11 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
   const editorAreaRef = useRef<HTMLDivElement>(null);
   const isDraggingBadge = useRef(false);
   const [imgError, setImgError] = useState(false);
+  const [isEditingBadge, setIsEditingBadge] = useState(false);
+  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const badgeLabelRef = useRef<HTMLSpanElement>(null);
   useEffect(() => { setImgError(false); }, [block.props.imageUrl]);
+  useEffect(() => { if (!isSelected) { setIsEditingBadge(false); setActiveSection(null); } }, [isSelected]);
 
   function handleBadgeDragStart(e: React.MouseEvent) {
     if (!onChange || !isSelected) return;
@@ -659,6 +674,11 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
     ? { borderRadius: `0 ${tr}px ${brr}px 0`, overflow: "hidden" }
     : {};
 
+  const sectionRing = (section: string): React.CSSProperties =>
+    isSelected && activeSection === section
+      ? { outline: "2px solid rgba(139,92,246,0.75)", outlineOffset: 2, borderRadius: 4 }
+      : {};
+
   return (
     <article
       className={canvasShell(isSelected)}
@@ -670,7 +690,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
       }}
       onClickCapture={(e) => {
         const section = (e.target as HTMLElement).closest("[data-focus-section]")?.getAttribute("data-focus-section");
-        if (section) inspectorFocusBridge.focus(block.id, section);
+        if (section) { inspectorFocusBridge.focus(block.id, section); setActiveSection(section); }
       }}
     >
       <div className="flex overflow-hidden font-sans" style={cardStyle}>
@@ -680,7 +700,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
           ref={imageContainerRef}
           data-focus-section="imagen"
           className="relative shrink-0 self-stretch bg-[#f9fafb] overflow-hidden group/img"
-          style={{ width: "48%", minHeight: 200, ...leftColStyle }}
+          style={{ width: "48%", minHeight: 200, ...leftColStyle, ...sectionRing("imagen") }}
         >
           {/* Imagen */}
           {block.props.imageUrl && imgError ? (
@@ -697,21 +717,68 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
             />
           )}
 
-          {/* Badge principal — draggable */}
+          {/* Badge principal — draggable + doble click para editar */}
           <span
-            className="absolute cursor-grab select-none rounded-full px-2 py-1 text-[10px] font-bold leading-none shadow-md active:cursor-grabbing"
+            ref={badgeLabelRef}
+            className={`absolute font-bold leading-none shadow-md ${isEditingBadge ? "cursor-text" : "cursor-grab select-none active:cursor-grabbing"}`}
             style={{
               top: `${block.props.badgeTop}%`,
               left: `${block.props.badgeLeft}%`,
               backgroundColor: block.props.discountBadgeBg,
               color: block.props.discountBadgeFg,
+              fontSize: block.props.badgeFontSize ?? 12,
+              borderRadius: (block.props.badgeRadiusTL !== undefined || block.props.badgeRadiusTR !== undefined || block.props.badgeRadiusBR !== undefined || block.props.badgeRadiusBL !== undefined)
+                ? `${block.props.badgeRadiusTL ?? block.props.badgeBorderRadius ?? 20}px ${block.props.badgeRadiusTR ?? block.props.badgeBorderRadius ?? 20}px ${block.props.badgeRadiusBR ?? block.props.badgeBorderRadius ?? 20}px ${block.props.badgeRadiusBL ?? block.props.badgeBorderRadius ?? 20}px`
+                : block.props.badgeBorderRadius ?? 20,
+              border: (block.props.badgeBorderWidth ?? 0) > 0
+                ? `${block.props.badgeBorderWidth}px solid ${block.props.badgeBorderColor ?? "#000000"}`
+                : "none",
+              padding: "4px 10px",
               transform: "translate(-50%, -50%)",
-              userSelect: "none",
+              whiteSpace: "nowrap",
+              outline: isEditingBadge ? "2px solid rgba(139,92,246,0.6)" : "none",
+              minWidth: 20,
+              zIndex: 20,
             }}
+            contentEditable={isSelected && isEditingBadge}
+            suppressContentEditableWarning
             data-focus-section="badge-principal"
-            onMouseDown={handleBadgeDragStart}
+            onMouseDown={(e) => {
+              if (isEditingBadge) { e.stopPropagation(); return; }
+              handleBadgeDragStart(e);
+            }}
+            onMouseEnter={(e) => e.stopPropagation()}
+            onDoubleClick={(e) => {
+              if (!isSelected || !onChange) return;
+              e.stopPropagation();
+              setIsEditingBadge(true);
+              setTimeout(() => {
+                if (badgeLabelRef.current) {
+                  badgeLabelRef.current.focus();
+                  const range = document.createRange();
+                  range.selectNodeContents(badgeLabelRef.current);
+                  window.getSelection()?.removeAllRanges();
+                  window.getSelection()?.addRange(range);
+                }
+              }, 0);
+            }}
+            onBlur={(e) => {
+              if (!isEditingBadge) return;
+              const newText = e.currentTarget.textContent ?? "";
+              onChange?.({ ...block, props: { ...block.props, discountLabel: newText } });
+              setIsEditingBadge(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); (e.currentTarget as HTMLElement).blur(); }
+              if (e.key === "Escape") {
+                e.preventDefault();
+                if (badgeLabelRef.current) badgeLabelRef.current.textContent = block.props.discountLabel;
+                setIsEditingBadge(false);
+              }
+              e.stopPropagation();
+            }}
           >
-            {block.props.discountLabel || "Descuento Doble"}
+            {!isEditingBadge && (block.props.discountLabel || "Descuento Doble")}
           </span>
 
           {/* Badge secundaria — fija esquina superior derecha */}
@@ -741,17 +808,18 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
         {/* ── RIGHT COLUMN: fondo de color, precio grande, ahorro, desde ── */}
         <div
           ref={editorAreaRef}
-          className="flex flex-1 flex-col justify-center"
+          className="flex flex-1 min-w-0 flex-col justify-center"
           style={{
             backgroundColor: block.props.rightBgColor ?? "#3DBE4A",
             padding: "12px 14px",
             gap: "6px",
+            overflow: "hidden",
             ...rightColStyle,
           }}
         >
           {/* Logo */}
           {block.props.logoUrl && (
-            <div className={`flex ${logoAlignClass}`} data-focus-section="logo" style={{ marginBottom: 4 }}>
+            <div className={`flex ${logoAlignClass}`} data-focus-section="logo" style={{ marginBottom: 4, ...sectionRing("logo") }}>
               <img
                 src={block.props.logoUrl}
                 alt="logo"
@@ -763,7 +831,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
 
           {/* Descuento porcentual: número + símbolo/texto + badge Oferta en la misma fila */}
           {block.props.discountNumber && (
-            <div className="flex items-center leading-none gap-2" data-focus-section="descuento">
+            <div className="flex items-center leading-none gap-2" data-focus-section="descuento" style={sectionRing("descuento")}>
               {/* Número grande */}
               <span
                 className="font-black leading-none"
@@ -817,7 +885,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
           )}
 
           {/* Precio grande + unidad inline */}
-          <div className="flex items-baseline leading-none" data-focus-section="precios">
+          <div className="flex items-baseline leading-none" data-focus-section="precios" style={sectionRing("precios")}>
             <div
               className="font-bold leading-none"
               style={{
@@ -855,6 +923,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
                   block.props.priceTagAlign === "center" ? "center"
                   : block.props.priceTagAlign === "right" ? "flex-end"
                   : "flex-start",
+                ...sectionRing("precio-tag"),
               }}
             >
             <div className="flex items-stretch" style={{ maxWidth: 220 }}>
@@ -902,7 +971,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
 
           {/* Badge ahorro */}
           {block.props.ahorroLabel && (
-            <div data-focus-section="col-derecha">
+            <div data-focus-section="col-derecha" style={sectionRing("col-derecha")}>
               <span
                 className="inline-block rounded-[6px] px-2.5 py-1 text-[13px] font-bold text-white leading-tight"
                 style={{ background: "rgba(0,0,0,0.2)" }}
@@ -939,12 +1008,12 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
           )}
 
           {/* Nombre del producto */}
-          <div className="text-[12px] leading-snug" data-focus-section="producto" style={{ color: "rgba(255,255,255,0.9)", marginTop: 6 }}>
+          <div className="leading-snug" data-focus-section="producto" style={{ color: "rgba(255,255,255,0.9)", marginTop: 6, fontSize: 24, fontWeight: 600, wordBreak: "break-word", overflowWrap: "break-word", minWidth: 0, ...sectionRing("producto") }}>
             {isSelected && onChange ? (
               <ContentEditableDiv
                 html={block.props.name}
                 onChange={(html) => onChange({ ...block, props: { ...block.props, name: html } })}
-                className="min-h-[30px] min-w-[60px] rounded px-0.5 outline-none focus:ring-1 focus:ring-white/40"
+                className="w-full rounded px-0.5 outline-none focus:ring-1 focus:ring-white/40 break-words"
               />
             ) : (
               <span dangerouslySetInnerHTML={{ __html: block.props.name }} />

@@ -9,7 +9,7 @@
  */
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, GripHorizontal, ImageIcon } from "lucide-react";
+import { ChevronDown, ChevronRight, GripHorizontal } from "lucide-react";
 import { layoutRegistry } from "../../logic/registry/layoutRegistry";
 import { presetSections } from "../../logic/registry/presetSections";
 import { useMailingBuilderStore } from "../../hooks/useMailingBuilderStore";
@@ -88,21 +88,18 @@ table{border-collapse:collapse;width:100%;}
 }
 
 // ---------------------------------------------------------------------------
-// ProductDdMiniThumb — mini preview for "Producto más descuento doble"
+// ProductDdMiniThumb — imagen estática desde public/thumbnails/
 // ---------------------------------------------------------------------------
 
 function ProductDdMiniThumb() {
   return (
-    <div className="mx-3 mb-3 h-[110px] overflow-hidden rounded-md border border-border/60 bg-white p-2 text-[8px] font-sans">
-      <div className="flex gap-1 mb-1.5">
-        <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[7px] font-bold text-white leading-none">Descuento Doble</span>
-      </div>
-      <div className="mb-1 flex items-center justify-center bg-gray-50 rounded h-[44px]">
-        <ImageIcon className="h-5 w-5 text-gray-200" />
-      </div>
-      <div className="text-[7px] text-gray-400 line-through leading-none">$ 19.990</div>
-      <div className="text-[8px] font-bold text-red-600 leading-none mb-1">$ 9.990</div>
-      <div className="h-4 w-full rounded bg-primary/20" />
+    <div className="mx-3 mb-3 overflow-hidden rounded-md border border-border/60 bg-white">
+      <img
+        src="/thumbnails/product-dd.png"
+        alt="Producto más descuento doble"
+        className="block w-full h-auto object-cover"
+        draggable={false}
+      />
     </div>
   );
 }

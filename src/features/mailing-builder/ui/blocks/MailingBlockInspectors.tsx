@@ -547,29 +547,39 @@ function PxStepper({
   className?: string;
 }) {
   const clamp = (v: number) => Math.min(max, Math.max(min, v));
-  const display = Number.isInteger(value) ? value : parseFloat(value.toFixed(2));
+  const display = Number.isInteger(value) ? String(value) : parseFloat(value.toFixed(2)).toString();
+  const [draft, setDraft] = React.useState<string | null>(null);
+
+  const commit = (raw: string) => {
+    const parsed = parseFloat(raw);
+    onChange(clamp(isNaN(parsed) ? min : parsed));
+    setDraft(null);
+  };
 
   return (
     <div className={`flex h-7 items-center overflow-hidden rounded-md border border-border bg-card ${className}`}>
       <button
         type="button"
-        onClick={() => onChange(clamp(parseFloat((value - step).toFixed(4))))}
+        onClick={() => { setDraft(null); onChange(clamp(parseFloat((value - step).toFixed(4)))); }}
         className="flex h-full w-6 items-center justify-center text-muted-foreground/60 transition hover:bg-secondary/60 hover:text-foreground"
         tabIndex={-1}
       >
         <span className="select-none text-sm leading-none">−</span>
       </button>
       <input
-        type="number"
-        value={display}
-        step={step}
-        onChange={(e) => onChange(clamp(parseFloat(e.target.value) || min))}
-        className="w-10 bg-transparent text-center text-xs text-foreground focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        type="text"
+        inputMode="decimal"
+        value={draft ?? display}
+        onFocus={(e) => { setDraft(display); e.target.select(); }}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={(e) => commit(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") { commit((e.target as HTMLInputElement).value); (e.target as HTMLInputElement).blur(); } if (e.key === "Escape") { setDraft(null); (e.target as HTMLInputElement).blur(); } }}
+        className="w-10 bg-transparent text-center text-xs text-foreground focus:outline-none"
       />
       <span className="pr-1.5 text-[10px] select-none text-muted-foreground/40">{unit}</span>
       <button
         type="button"
-        onClick={() => onChange(clamp(parseFloat((value + step).toFixed(4))))}
+        onClick={() => { setDraft(null); onChange(clamp(parseFloat((value + step).toFixed(4)))); }}
         className="flex h-full w-6 items-center justify-center text-muted-foreground/60 transition hover:bg-secondary/60 hover:text-foreground"
         tabIndex={-1}
       >
@@ -1979,6 +1989,71 @@ function BorderRadiusEditor({
   );
 }
 
+function BadgeRadiusEditor({
+  value,
+  tl, tr, br, bl,
+  onChange,
+}: {
+  value: number;
+  tl?: number; tr?: number; br?: number; bl?: number;
+  onChange: (patch: { badgeBorderRadius?: number; badgeRadiusTL?: number; badgeRadiusTR?: number; badgeRadiusBR?: number; badgeRadiusBL?: number }) => void;
+}) {
+  const linked = tl === undefined && tr === undefined && br === undefined && bl === undefined;
+  const rTL = tl ?? value; const rTR = tr ?? value; const rBR = br ?? value; const rBL = bl ?? value;
+
+  const setLinked = (v: number) => onChange({ badgeBorderRadius: v, badgeRadiusTL: undefined, badgeRadiusTR: undefined, badgeRadiusBR: undefined, badgeRadiusBL: undefined });
+  const setCorner = (corner: "TL"|"TR"|"BR"|"BL", v: number) => onChange({ badgeRadiusTL: corner==="TL"?v:rTL, badgeRadiusTR: corner==="TR"?v:rTR, badgeRadiusBR: corner==="BR"?v:rBR, badgeRadiusBL: corner==="BL"?v:rBL });
+  const toggleLink = () => linked
+    ? onChange({ badgeRadiusTL: value, badgeRadiusTR: value, badgeRadiusBR: value, badgeRadiusBL: value })
+    : setLinked(rTL);
+
+  return (
+    <div className="space-y-2">
+      {linked ? (
+        <div className="flex items-center gap-2">
+          <div className="flex flex-1 items-center gap-1.5">
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="5" ry="5" />
+            </svg>
+            <PxStepper value={value} onChange={setLinked} min={0} max={60} />
+          </div>
+          <button type="button" onClick={toggleLink} title="Desvincular esquinas"
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-secondary/40 text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary">
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          <div className="grid grid-cols-2 gap-1.5">
+            {(["tl","tr","bl","br"] as const).map((c) => {
+              const cornerKey = c.toUpperCase() as "TL"|"TR"|"BR"|"BL";
+              const val = c==="tl"?rTL:c==="tr"?rTR:c==="bl"?rBL:rBR;
+              return (
+                <div key={c} className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/20 px-2 py-1">
+                  <CornerIcon corner={c} />
+                  <input type="number" min={0} max={60} value={val}
+                    onChange={(e) => setCorner(cornerKey, Math.min(60, Math.max(0, Number(e.target.value))))}
+                    className="w-full bg-transparent text-center text-[12px] font-medium text-foreground outline-none" />
+                </div>
+              );
+            })}
+          </div>
+          <button type="button" onClick={toggleLink}
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-border/60 py-1 text-[11px] font-medium text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary">
+            <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8h1a4 4 0 0 1 0 8h-1" /><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" /><line x1="6" y1="1" x2="6" y2="4" /><line x1="10" y1="1" x2="10" y2="4" /><line x1="14" y1="1" x2="14" y2="4" />
+            </svg>
+            Vincular esquinas
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ProductDdBlockInspector
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2049,6 +2124,7 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
           onChange={(v) => setProps({ discountLabel: v })}
           placeholder="Descuento Doble"
         />
+        {/* Colores fondo / texto */}
         <div className="grid grid-cols-2 gap-2.5">
           <div className="space-y-1.5">
             <span className="text-[11px] font-medium text-muted-foreground/70">Color fondo</span>
@@ -2065,14 +2141,39 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
             />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2.5">
-          <InspRow label="Pos. vertical (%)">
-            <PxStepper value={block.props.badgeTop} onChange={(v) => setProps({ badgeTop: v })} min={0} max={100} unit="%" />
-          </InspRow>
-          <InspRow label="Pos. horizontal (%)">
-            <PxStepper value={block.props.badgeLeft} onChange={(v) => setProps({ badgeLeft: v })} min={0} max={100} unit="%" />
-          </InspRow>
+        {/* Tipografía y forma — cada uno en su fila */}
+        <InspRow label="Tamaño fuente">
+          <PxStepper value={block.props.badgeFontSize ?? 12} onChange={(v) => setProps({ badgeFontSize: v })} min={8} max={32} unit="px" />
+        </InspRow>
+        <div className="space-y-1.5">
+          <span className="text-[11px] font-medium text-muted-foreground/70">Radio esquinas</span>
+          <BadgeRadiusEditor
+            value={block.props.badgeBorderRadius ?? 20}
+            tl={block.props.badgeRadiusTL}
+            tr={block.props.badgeRadiusTR}
+            br={block.props.badgeRadiusBR}
+            bl={block.props.badgeRadiusBL}
+            onChange={(patch) => setProps(patch)}
+          />
         </div>
+        {/* Borde: grosor + color en la misma fila compacta */}
+        <div className="flex items-center gap-2.5">
+          <span className="text-[11px] font-medium text-muted-foreground/70 shrink-0">Borde</span>
+          <div className="flex items-center gap-1.5 flex-1">
+            <PxStepper value={block.props.badgeBorderWidth ?? 0} onChange={(v) => setProps({ badgeBorderWidth: v })} min={0} max={10} unit="px" />
+          </div>
+          <ColorSwatch
+            value={block.props.badgeBorderColor ?? "#000000"}
+            onChange={(v) => setProps({ badgeBorderColor: v ?? "#000000" })}
+          />
+        </div>
+        {/* Posición */}
+        <InspRow label="Pos. vertical (%)">
+          <PxStepper value={block.props.badgeTop} onChange={(v) => setProps({ badgeTop: v })} min={0} max={100} unit="%" />
+        </InspRow>
+        <InspRow label="Pos. horizontal (%)">
+          <PxStepper value={block.props.badgeLeft} onChange={(v) => setProps({ badgeLeft: v })} min={0} max={100} unit="%" />
+        </InspRow>
       </InspSectionCollapsible>
 
       {/* 3. Badge secundaria */}

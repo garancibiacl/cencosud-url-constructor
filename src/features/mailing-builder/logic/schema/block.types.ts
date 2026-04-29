@@ -64,6 +64,14 @@ export interface ProductDdBlock extends BaseBlock<"product-dd", {
   discountBadgeFg: string;
   badgeTop: number;          // posición vertical en % dentro de la imagen (0-100)
   badgeLeft: number;         // posición horizontal en % (0-100)
+  badgeFontSize?: number;      // tamaño de fuente del badge (px)
+  badgeBorderRadius?: number;  // radio global (vinculado)
+  badgeRadiusTL?: number;      // esquina superior-izquierda
+  badgeRadiusTR?: number;      // esquina superior-derecha
+  badgeRadiusBR?: number;      // esquina inferior-derecha
+  badgeRadiusBL?: number;      // esquina inferior-izquierda
+  badgeBorderWidth?: number;   // grosor del borde (px)
+  badgeBorderColor?: string;   // color del borde
   // ── Badge secundaria (esquina superior derecha imagen) ───────────
   secondBadge?: string;
   secondBadgeBg?: string;
