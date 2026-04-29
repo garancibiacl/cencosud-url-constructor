@@ -617,6 +617,18 @@ const DEFAULT_SECTION_ORDER = ["logo", "discount", "price", "priceTag", "ahorro"
 
 const SECTION_DND_TYPE = "application/mailing-section";
 
+function Tip({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="group/tip relative">
+      {children}
+      <span className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 -translate-x-1/2 scale-95 whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1 text-[11px] font-medium leading-none tracking-wide text-white opacity-0 shadow-xl transition-all duration-150 group-hover/tip:scale-100 group-hover/tip:opacity-100">
+        {label}
+        <span className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-900" />
+      </span>
+    </div>
+  );
+}
+
 function SectionWrapper({ id, index, order, isSelected, onChange, block, isActive, children }: {
   id: string;
   index: number;
@@ -702,53 +714,77 @@ function SectionWrapper({ id, index, order, isSelected, onChange, block, isActiv
       {children}
       {isActive && (
         <div
-          className="flex items-center justify-center py-1.5"
+          className="flex items-center justify-center py-2"
           data-section-toolbar="true"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center gap-0.5 rounded-full bg-white px-1.5 py-0.5 shadow-lg ring-1 ring-black/8">
-            <span
-              draggable
-              onDragStart={handleDragStart}
-              className="flex h-7 w-7 cursor-grab items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 active:cursor-grabbing"
-              title="Arrastrar para reordenar"
-            >
-              <GripHorizontal size={16} strokeWidth={1.5} />
-            </span>
+          <div className="flex items-center gap-0.5 rounded-full bg-white px-1.5 py-1 shadow-[0_2px_12px_rgba(0,0,0,0.14)] ring-1 ring-black/6">
+
+            {/* Grip — violet */}
+            <Tip label="Mover">
+              <span
+                draggable
+                onDragStart={handleDragStart}
+                className="flex h-7 w-7 cursor-grab items-center justify-center rounded-full text-violet-400 transition-all duration-150 hover:bg-violet-50 hover:text-violet-600 hover:shadow-sm active:cursor-grabbing"
+              >
+                <GripHorizontal size={15} strokeWidth={1.75} />
+              </span>
+            </Tip>
 
             <div className="mx-0.5 h-3.5 w-px bg-gray-200" />
 
-            <button type="button" onMouseDown={(e) => e.preventDefault()}
-              onClick={(e) => { e.stopPropagation(); move(-1); }}
-              disabled={!canUp}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-25"
-              title="Mover arriba">
-              <MoveUp size={16} strokeWidth={1.5} />
-            </button>
+            {/* Move up — violet */}
+            <Tip label="Mover arriba">
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(e) => { e.stopPropagation(); move(-1); }}
+                disabled={!canUp}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-violet-400 transition-all duration-150 hover:bg-violet-50 hover:text-violet-600 hover:shadow-sm disabled:pointer-events-none disabled:opacity-25"
+              >
+                <MoveUp size={15} strokeWidth={1.75} />
+              </button>
+            </Tip>
 
-            <button type="button" onMouseDown={(e) => e.preventDefault()}
-              onClick={(e) => { e.stopPropagation(); move(1); }}
-              disabled={!canDown}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-25"
-              title="Mover abajo">
-              <MoveDown size={16} strokeWidth={1.5} />
-            </button>
+            {/* Move down — violet */}
+            <Tip label="Mover abajo">
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(e) => { e.stopPropagation(); move(1); }}
+                disabled={!canDown}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-violet-400 transition-all duration-150 hover:bg-violet-50 hover:text-violet-600 hover:shadow-sm disabled:pointer-events-none disabled:opacity-25"
+              >
+                <MoveDown size={15} strokeWidth={1.75} />
+              </button>
+            </Tip>
 
             <div className="mx-0.5 h-3.5 w-px bg-gray-200" />
 
-            <button type="button" onMouseDown={(e) => e.preventDefault()}
-              onClick={(e) => { e.stopPropagation(); duplicate(); }}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
-              title="Duplicar sección">
-              <Copy size={16} strokeWidth={1.5} />
-            </button>
+            {/* Duplicate — indigo */}
+            <Tip label="Duplicar">
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(e) => { e.stopPropagation(); duplicate(); }}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-gray-400 transition-all duration-150 hover:bg-indigo-50 hover:text-indigo-600 hover:shadow-sm"
+              >
+                <Copy size={15} strokeWidth={1.75} />
+              </button>
+            </Tip>
 
-            <button type="button" onMouseDown={(e) => e.preventDefault()}
-              onClick={(e) => { e.stopPropagation(); remove(); }}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-gray-500 transition hover:bg-red-50 hover:text-red-500"
-              title="Eliminar sección">
-              <Trash2 size={16} strokeWidth={1.5} />
-            </button>
+            {/* Delete — red destructive */}
+            <Tip label="Eliminar">
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(e) => { e.stopPropagation(); remove(); }}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-gray-400 transition-all duration-150 hover:bg-red-50 hover:text-red-500 hover:shadow-sm"
+              >
+                <Trash2 size={15} strokeWidth={1.75} />
+              </button>
+            </Tip>
+
           </div>
         </div>
       )}
