@@ -44,6 +44,7 @@ import { RowCanvas, AddRowButton } from "./layout/RowCanvas";
 import { ImageLibraryModal } from "./ImageLibraryModal";
 import { imageLibraryBridge } from "./imageLibraryBridge";
 import { NewTemplateModal } from "./NewTemplateModal";
+import { DevModePanel } from "./DevModePanel";
 import type { ScratchMode } from "./NewTemplateModal";
 import type { BrandId } from "../logic/brands/brand.types";
 import { brandThemes } from "../logic/brands/brandThemes";
@@ -938,6 +939,8 @@ export default function MailingBuilderPage() {
   const [showNewModal, setShowNewModal] = useState(false);
   const [showVersionHistoryModal, setShowVersionHistoryModal] = useState(false);
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+  const [showDevModeWarning, setShowDevModeWarning] = useState(false);
+  const [showDevMode, setShowDevMode] = useState(false);
 
   const inspectorRef = useRef<HTMLDivElement | null>(null);
   const globalInspectorButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -1541,7 +1544,12 @@ export default function MailingBuilderPage() {
                 >
                   <History className="mr-2 h-4 w-4" />Historial de versiones
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setPreviewMode("html")}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    const skip = localStorage.getItem("mailing-builder:devmode-skip-warning") === "1";
+                    if (skip) { setShowDevMode(true); } else { setShowDevModeWarning(true); }
+                  }}
+                >
                   <CodeXml className="mr-2 h-4 w-4" />Modo de desarrollador
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -2490,6 +2498,73 @@ export default function MailingBuilderPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ── Modal: advertencia modo desarrollador ───────────────────────────── */}
+      <Dialog open={showDevModeWarning} onOpenChange={setShowDevModeWarning}>
+        <DialogContent className="max-w-md gap-0 overflow-hidden p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/50">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ backgroundColor: "#2d1f0e" }}>
+                <CodeXml className="h-4 w-4" style={{ color: "#F97316" }} />
+              </div>
+              <DialogTitle className="text-sm font-semibold leading-snug">
+                Estás accediendo al modo desarrollador
+              </DialogTitle>
+            </div>
+          </DialogHeader>
+          <div className="px-6 py-5">
+            <p id="devmode-warning-desc" className="text-sm text-muted-foreground leading-relaxed">
+              El modo desarrollador es un editor de código JSON que te da más control sobre tus plantillas en comparación con el editor habitual Drag &amp; Drop. Puedes añadir personalización de código personalizado y mucho más.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 border-t border-border/50 px-6 pb-6 pt-4">
+            <label className="flex cursor-pointer items-center gap-2.5">
+              <input
+                type="checkbox"
+                id="devmode-skip-warning"
+                className="h-4 w-4 rounded border-border accent-primary"
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    localStorage.setItem("mailing-builder:devmode-skip-warning", "1");
+                  } else {
+                    localStorage.removeItem("mailing-builder:devmode-skip-warning");
+                  }
+                }}
+              />
+              <span className="text-sm text-foreground/70">No volver a mostrar</span>
+            </label>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowDevModeWarning(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1 font-semibold"
+                style={{ backgroundColor: "#111827", color: "white" }}
+                onClick={() => {
+                  setShowDevModeWarning(false);
+                  setShowDevMode(true);
+                }}
+              >
+                Abrir modo desarrollador
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dev mode panel (full screen overlay) ────────────────────────────── */}
+      {showDevMode && (
+        <DevModePanel
+          document={document}
+          activeMailingId={activeMailingId}
+          onClose={() => setShowDevMode(false)}
+          onApply={(doc, mailingId) => replaceDocument(doc, mailingId)}
+        />
+      )}
     </div>
   );
 }
