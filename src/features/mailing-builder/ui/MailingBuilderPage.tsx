@@ -858,10 +858,25 @@ function buildDraftNote(user: { email?: string; user_metadata?: Record<string, s
   const meta = user?.user_metadata ?? {};
   const firstName = (meta.first_name ?? "").trim();
   const lastName  = (meta.last_name  ?? "").trim();
-  const userName  = firstName || lastName
-    ? `${firstName} ${lastName}`.trim()
-    : (user?.email ?? "Usuario desconocido");
-  return `${userName} — ${templateName}`;
+  const userName  = firstName || lastName ? `${firstName} ${lastName}`.trim() : "";
+  const email     = user?.email ?? "";
+  return `${userName}|${email}|${templateName}`;
+}
+
+function parseDraftNote(note: string): { author: string; email: string; template: string } {
+  // New format: "Nombre|email|Plantilla"
+  const parts = note.split("|");
+  if (parts.length >= 3) return { author: parts[0], email: parts[1], template: parts.slice(2).join("|") };
+  // Legacy format: "Nombre — Plantilla"
+  const [author, ...rest] = note.split(" — ");
+  return { author, email: "", template: rest.join(" — ") };
+}
+
+function formatDateTime(iso: string): string {
+  const date = new Date(iso);
+  const datePart = date.toLocaleDateString("es-CL", { day: "numeric", month: "short", year: "numeric" });
+  const timePart = date.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return `${datePart} · ${timePart}`;
 }
 
 export default function MailingBuilderPage() {
@@ -1679,12 +1694,12 @@ export default function MailingBuilderPage() {
                           <div>
                             <p className="font-medium text-foreground">v{version.versionNumber}</p>
                             {version.note ? (() => {
-                              const [author, ...rest] = version.note.split(" — ");
-                              const tplName = rest.join(" — ");
+                              const { author, email, template } = parseDraftNote(version.note);
                               return (
                                 <>
-                                  <p className="text-foreground/80">{author}</p>
-                                  {tplName && <p className="text-muted-foreground truncate">{tplName}</p>}
+                                  {author   && <p className="text-foreground/80">{author}</p>}
+                                  {email    && <p className="text-muted-foreground truncate">{email}</p>}
+                                  {template && <p className="text-muted-foreground/70 truncate italic">{template}</p>}
                                 </>
                               );
                             })() : <p className="text-muted-foreground">Sin nota</p>}
@@ -2256,17 +2271,17 @@ export default function MailingBuilderPage() {
                             )}
                           </div>
                           {v.note ? (() => {
-                            const [author, ...rest] = v.note.split(" — ");
-                            const tplName = rest.join(" — ");
+                            const { author, email, template } = parseDraftNote(v.note);
                             return (
                               <>
-                                <p className="text-xs font-medium text-foreground/90 truncate">{author}</p>
-                                {tplName && <p className="text-[11px] text-muted-foreground truncate">{tplName}</p>}
+                                {author && <p className="text-xs font-medium text-foreground/90 truncate">{author}</p>}
+                                {email   && <p className="text-[11px] text-muted-foreground truncate">{email}</p>}
+                                {template && <p className="text-[11px] text-muted-foreground/70 truncate italic">{template}</p>}
                               </>
                             );
                           })() : <span className="text-xs text-muted-foreground">Sin nota</span>}
                           <p className="mt-1 text-[11px] text-muted-foreground">
-                            {formatRelativeTime(v.createdAt)}
+                            {formatDateTime(v.createdAt)}
                           </p>
                         </button>
                         {idx < sorted.length - 1 && (
