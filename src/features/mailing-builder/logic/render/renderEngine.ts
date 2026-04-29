@@ -194,6 +194,7 @@ function prepareProductDd(
     discountSymbolColor: block.props.discountSymbolColor ?? "#ffffff",
     discountText:        escapeHtml(block.props.discountText        ?? "DCTO."),
     discountTextColor:   block.props.discountTextColor   ?? "#ffffff",
+    discountAlign:       block.props.discountAlign       ?? "left",
     ofertaShow:          block.props.ofertaShow          ?? false,
     ofertaLabel:         escapeHtml(block.props.ofertaLabel         ?? ""),
     ofertaLabelFg:       block.props.ofertaLabelFg       ?? "#1a5c2a",

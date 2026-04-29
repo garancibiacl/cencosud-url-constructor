@@ -61,6 +61,7 @@ export interface ProductDdTemplateData {
   discountSymbolColor?: string;
   discountText?: string;
   discountTextColor?: string;
+  discountAlign?: "left" | "center" | "right";
   // ── Badge Oferta ─────────────────────────────────────────────────────────
   ofertaShow?: boolean;
   ofertaLabel?: string;
@@ -138,6 +139,7 @@ export function productDdTemplate({
   ofertaLogoSize,
   ofertaBg,
   ofertaBorderRadius,
+  discountAlign,
 }: ProductDdTemplateData): string {
 
   // ── Badge secundaria ───────────────────────────────────────────────────────
@@ -176,19 +178,26 @@ export function productDdTemplate({
     : "";
 
   // ── Descuento porcentual: número + símbolo/texto + badge oferta en la misma fila ──
+  const discountRowAlign = discountAlign === "center" ? "center" : discountAlign === "right" ? "right" : "left";
   const discountPctHtml = discountNumber
-    ? `<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin-bottom:4px;">
-      <tr>
-        <td style="padding:0;vertical-align:middle;">
-          <span style="font-family:'Silka',Arial,Helvetica,sans-serif;font-size:64px;font-weight:900;color:${discountNumberColor ?? "#ffffff"};line-height:1;">${discountNumber}</span>
-        </td>
-        <td style="padding:0 0 0 3px;vertical-align:middle;">
-          <div style="font-family:'Silka',Arial,Helvetica,sans-serif;font-size:32px;font-weight:900;color:${discountSymbolColor ?? "#ffffff"};line-height:1;">${discountSymbol ?? "%"}</div>
-          <div style="font-family:'Silka',Arial,Helvetica,sans-serif;font-size:14px;font-weight:700;color:${discountTextColor ?? "#ffffff"};line-height:1.2;margin-top:2px;">${discountText ?? "DCTO."}</div>
-        </td>
-        ${ofertaCellHtml}
-      </tr>
-    </table>`
+    ? `<table border="0" cellspacing="0" cellpadding="0" role="presentation" width="100%" style="margin-bottom:4px;">
+        <tr>
+          <td align="${discountRowAlign}">
+            <table cellpadding="0" cellspacing="0" border="0" role="presentation">
+              <tr>
+                <td style="padding:0;vertical-align:middle;">
+                  <span style="font-family:'Silka',Arial,Helvetica,sans-serif;font-size:64px;font-weight:900;color:${discountNumberColor ?? "#ffffff"};line-height:1;">${discountNumber}</span>
+                </td>
+                <td style="padding:0 0 0 3px;vertical-align:middle;">
+                  <div style="font-family:'Silka',Arial,Helvetica,sans-serif;font-size:32px;font-weight:900;color:${discountSymbolColor ?? "#ffffff"};line-height:1;">${discountSymbol ?? "%"}</div>
+                  <div style="font-family:'Silka',Arial,Helvetica,sans-serif;font-size:14px;font-weight:700;color:${discountTextColor ?? "#ffffff"};line-height:1.2;margin-top:2px;">${discountText ?? "DCTO."}</div>
+                </td>
+                ${ofertaCellHtml}
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>`
     : "";
 
   const ofertaBadgeHtml = "";

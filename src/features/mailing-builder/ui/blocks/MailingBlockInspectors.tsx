@@ -2240,6 +2240,14 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
           <ColorSwatch value={block.props.discountTextColor ?? "#ffffff"} onChange={(v) => setProps({ discountTextColor: v ?? "#ffffff" })} />
         </InspRow>
 
+        {/* Alineación del descuento */}
+        <InspRow label="Alineación del bloque">
+          <SegmentedAlign
+            value={block.props.discountAlign ?? "left"}
+            onChange={(v) => setProps({ discountAlign: v })}
+          />
+        </InspRow>
+
         {/* Badge Oferta */}
         <div className="mt-1 border-t border-border/50 pt-2.5">
           <div className="flex items-center justify-between mb-2">

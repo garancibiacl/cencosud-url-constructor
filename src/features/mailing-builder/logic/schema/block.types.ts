@@ -114,6 +114,7 @@ export interface ProductDdBlock extends BaseBlock<"product-dd", {
   discountSymbolColor?: string; // "#ffffff"
   discountText?: string;        // "DCTO."
   discountTextColor?: string;   // "#ffffff"
+  discountAlign?: "left" | "center" | "right";
   // ── Badge Oferta ─────────────────────────────────────────────
   ofertaShow?: boolean;
   ofertaLabel?: string;         // "Oferta"

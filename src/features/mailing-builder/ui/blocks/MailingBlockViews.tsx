@@ -833,7 +833,14 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
 
           {/* Descuento porcentual: número + símbolo/texto + badge Oferta en la misma fila */}
           {block.props.discountNumber && (
-            <div className="flex items-center leading-none gap-2" data-focus-section="descuento" style={sectionRing("descuento")}>
+            <div
+              className="flex items-center leading-none gap-2"
+              data-focus-section="descuento"
+              style={{
+                ...sectionRing("descuento"),
+                justifyContent: block.props.discountAlign === "center" ? "center" : block.props.discountAlign === "right" ? "flex-end" : "flex-start",
+              }}
+            >
               {/* Número grande */}
               <span
                 className="font-black leading-none"
