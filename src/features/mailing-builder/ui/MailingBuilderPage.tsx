@@ -1231,7 +1231,34 @@ export default function MailingBuilderPage() {
   };
 
   const handleSaveAsPdf = () => {
-    window.print();
+    const printCss = `<style>
+      @media print {
+        @page { margin: 10mm; size: A4 portrait; }
+        body { margin: 0 !important; padding: 0 !important; }
+      }
+    </style>`;
+    const emailHtml = renderMailingHtml(document).replace("</head>", `${printCss}</head>`);
+
+    const win = window.open("", "_blank", "width=720,height=900");
+    if (!win) {
+      void Swal.fire({
+        title: "Ventana emergente bloqueada",
+        text: "Permite las ventanas emergentes para este sitio e inténtalo nuevamente.",
+        icon: "warning",
+        confirmButtonText: "Entendido",
+      });
+      return;
+    }
+    win.document.write(emailHtml);
+    win.document.close();
+    // Esperar a que imágenes y estilos carguen antes de imprimir
+    win.addEventListener("load", () => {
+      setTimeout(() => {
+        win.focus();
+        win.print();
+        win.addEventListener("afterprint", () => win.close());
+      }, 400);
+    });
   };
 
   // ── Handlers de documento ────────────────────────────────────────────────
