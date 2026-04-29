@@ -202,6 +202,7 @@ function prepareProductDd(
     ofertaLogoSize:      block.props.ofertaLogoSize      ?? 80,
     ofertaBg:            block.props.ofertaBg            ?? "transparent",
     ofertaBorderRadius:  block.props.ofertaBorderRadius  ?? 6,
+    sectionOrder:        block.props.sectionOrder,
   });
 }
 

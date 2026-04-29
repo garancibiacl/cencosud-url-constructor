@@ -123,6 +123,8 @@ export interface ProductDdBlock extends BaseBlock<"product-dd", {
   ofertaLogoSize?: number;      // px, default 80
   ofertaBg?: string;            // "#ffffff"
   ofertaBorderRadius?: number;  // default 6
+  // ── Orden de secciones en la columna derecha ──────────────────────
+  sectionOrder?: string[];      // e.g. ["discount","price","priceTag","name"]
 }> {}
 
 export interface RawHtmlBlock extends BaseBlock<"raw-html", {

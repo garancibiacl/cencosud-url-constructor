@@ -904,72 +904,6 @@ const BlockItem = memo(function BlockItem({
 
   return (
     <div className="relative" data-mailing-block="true">
-      {/* Pill flotante — solo visible cuando está seleccionado */}
-      {isSelected && (
-        <div className="absolute -top-5 left-1/2 z-30 -translate-x-1/2">
-          <div className="flex items-center gap-0.5 rounded-full border border-border bg-card px-2 py-1 shadow-lg">
-            <span
-              draggable
-              onDragStart={handleDragStart}
-              className="flex h-6 w-6 cursor-grab items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground active:cursor-grabbing"
-              title="Arrastrar"
-            >
-              <GripHorizontal className="h-3.5 w-3.5" />
-            </span>
-
-            <div className="mx-0.5 h-3.5 w-px bg-border/60" />
-
-            <button
-              type="button"
-              disabled={index === 0 && rowIndex === 0}
-              onClick={handleMoveUp}
-              title="Mover arriba"
-              className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground disabled:opacity-30"
-            >
-              <MoveUp className="h-3.5 w-3.5" />
-            </button>
-
-            <button
-              type="button"
-              disabled={index === totalInCol - 1 && rowIndex === totalRows - 1}
-              onClick={handleMoveDown}
-              title="Mover abajo"
-              className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground disabled:opacity-30"
-            >
-              <MoveDown className="h-3.5 w-3.5" />
-            </button>
-
-            <div className="mx-0.5 h-3.5 w-px bg-border/60" />
-
-            <button
-              type="button"
-              onClick={handleDuplicate}
-              title="Duplicar"
-              className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground"
-            >
-              <Copy className="h-3.5 w-3.5" />
-            </button>
-
-            <button
-              type="button"
-              title="Guardar bloque"
-              className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground"
-            >
-              <Bookmark className="h-3.5 w-3.5" />
-            </button>
-
-            <button
-              type="button"
-              onClick={handleRemove}
-              title="Eliminar"
-              className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition hover:bg-red-50 hover:text-destructive"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* data-block-drop: marcador para que ColumnCanvas calcule la posición del indicador */}
       <div
         data-block-drop
@@ -987,6 +921,67 @@ const BlockItem = memo(function BlockItem({
         <div className="p-1.5">
           <BlockView block={block} isSelected={isSelected} onChange={handleChange as never} />
         </div>
+
+        {/* Toolbar inline — visible solo cuando está seleccionado */}
+        {isSelected && (
+          <div
+            className="flex items-center justify-center gap-0.5 border-t border-dashed px-2 py-1.5"
+            style={{ borderColor: `${LEVEL.block.border}60` }}
+            data-mailing-block="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span
+              draggable
+              onDragStart={handleDragStart}
+              className="flex h-7 w-7 cursor-grab items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground active:cursor-grabbing"
+              title="Arrastrar"
+            >
+              <GripHorizontal className="h-3.5 w-3.5" />
+            </span>
+
+            <div className="mx-0.5 h-3.5 w-px bg-border/60" />
+
+            <button
+              type="button"
+              disabled={index === 0 && rowIndex === 0}
+              onClick={handleMoveUp}
+              title="Mover arriba"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground disabled:opacity-30"
+            >
+              <MoveUp className="h-3.5 w-3.5" />
+            </button>
+
+            <button
+              type="button"
+              disabled={index === totalInCol - 1 && rowIndex === totalRows - 1}
+              onClick={handleMoveDown}
+              title="Mover abajo"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground disabled:opacity-30"
+            >
+              <MoveDown className="h-3.5 w-3.5" />
+            </button>
+
+            <div className="mx-0.5 h-3.5 w-px bg-border/60" />
+
+            <button
+              type="button"
+              onClick={handleDuplicate}
+              title="Duplicar"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+            >
+              <Copy className="h-3.5 w-3.5" />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleRemove}
+              title="Eliminar"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-red-50 hover:text-destructive"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

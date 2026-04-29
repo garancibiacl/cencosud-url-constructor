@@ -70,6 +70,8 @@ export interface ProductDdTemplateData {
   ofertaLogoSize?: number;
   ofertaBg?: string;
   ofertaBorderRadius?: number;
+  // ── Orden de secciones ───────────────────────────────────────────────────
+  sectionOrder?: string[];
 }
 
 export function productDdTemplate({
@@ -140,6 +142,7 @@ export function productDdTemplate({
   ofertaBg,
   ofertaBorderRadius,
   discountAlign,
+  sectionOrder,
 }: ProductDdTemplateData): string {
 
   // ── Badge secundaria ───────────────────────────────────────────────────────
@@ -279,6 +282,26 @@ export function productDdTemplate({
 
   const blockHref = href || "#";
 
+  // ── Section ordering ──────────────────────────────────────────────────────
+  const DEFAULT_TEMPLATE_ORDER = ["logo", "discount", "price", "priceTag", "ahorro", "desdeLabel", "name"];
+  const resolvedOrder = (() => {
+    if (!sectionOrder || sectionOrder.length === 0) return DEFAULT_TEMPLATE_ORDER;
+    const seen = new Set(sectionOrder);
+    return [...sectionOrder, ...DEFAULT_TEMPLATE_ORDER.filter(id => !seen.has(id))];
+  })();
+
+  const sectionMap: Record<string, string> = {
+    logo: logoHtml,
+    discount: discountPctHtml,
+    price: priceRowHtml,
+    priceTag: priceTagHtml,
+    ahorro: ahorroHtml,
+    desdeLabel: desdeLabelHtml,
+    name: `<div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:600;color:rgba(255,255,255,0.9);margin-top:6px;line-height:1.4;word-break:break-word;overflow-wrap:break-word;">${name}</div>`,
+  };
+
+  const rightContent = resolvedOrder.map(id => sectionMap[id] ?? "").join("\n");
+
   return `<tr>
   <td style="padding:${p.top}px ${p.right}px ${p.bottom}px ${p.left}px; background:${bgColor}; font-family:Arial,Helvetica,sans-serif; vertical-align:top; ${borderStyle} ${outerRadius}">
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout:fixed;">
@@ -296,13 +319,7 @@ export function productDdTemplate({
         <!-- RIGHT COLUMN: fondo de color, precio grande, ahorro, desde -->
         <td width="50%" valign="middle" style="background-color:${rightBgColor};padding:0;vertical-align:middle;max-width:50%;overflow:hidden; ${rightColRadius}">
           <a href="${blockHref}" target="_blank" style="text-decoration:none;display:block;padding:12px 14px;color:inherit;">
-            ${logoHtml}
-            ${discountPctHtml}
-            ${priceRowHtml}
-            ${ahorroHtml}
-            ${desdeLabelHtml}
-            ${priceTagHtml}
-            <div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:600;color:rgba(255,255,255,0.9);margin-top:6px;line-height:1.4;word-break:break-word;overflow-wrap:break-word;">${name}</div>
+            ${rightContent}
             ${ctaHtml}
           </a>
         </td>
