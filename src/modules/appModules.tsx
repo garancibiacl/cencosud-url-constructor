@@ -50,18 +50,18 @@ export function canAccessModule(mod: AppModuleDefinition, role: AppRole | null):
 
 export const appModules: AppModuleDefinition[] = [
   {
-    id: "ampscript-builder",
-    label: "AMPscript Builder",
-    icon: Zap,
-    path: "/ampscript-builder",
-    allowedRoles: AMPSCRIPT_MODULE_ROLES,
-  },
-  {
     id: "mailing-builder",
     label: "Mailing Builder",
     icon: Mail,
     path: "/mailing-builder",
     allowedRoles: MAILING_BUILDER_ROLES,
+  },
+  {
+    id: "ampscript-builder",
+    label: "AMPscript Builder",
+    icon: Zap,
+    path: "/ampscript-builder",
+    allowedRoles: AMPSCRIPT_MODULE_ROLES,
   },
   {
     id: "constructor-url",
