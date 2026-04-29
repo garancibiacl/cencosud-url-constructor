@@ -843,7 +843,6 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
 
   const cardStyle: React.CSSProperties = {
     minHeight: 220,
-    backgroundColor: block.layout.backgroundColor ?? "#ffffff",
     borderRadius: hasRadius ? `${tl}px ${tr}px ${brr}px ${bl}px` : undefined,
     border: block.layout.borderWidth
       ? `${block.layout.borderWidth}px solid ${block.layout.borderColor ?? "#e5e7eb"}`
@@ -872,6 +871,7 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
         paddingRight: block.layout.padding?.right ?? 0,
         paddingBottom: block.layout.padding?.bottom ?? 0,
         paddingLeft: block.layout.padding?.left ?? 0,
+        backgroundColor: block.layout.backgroundColor,
       }}
       onClickCapture={(e) => {
         if ((e.target as HTMLElement).closest("[data-section-toolbar]")) return;
