@@ -1548,9 +1548,7 @@ export default function MailingBuilderPage() {
                 <DropdownMenuItem onClick={() => void handleSaveDraft()} disabled={!user || saving}>
                   <Save className="mr-2 h-4 w-4" />Guardar borrador
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleSaveAsPdf}>
-                  <FileDown className="mr-2 h-4 w-4" />Guardar como PDF
-                </DropdownMenuItem>
+                {/* PDF export — hidden, pending integration */}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => {
