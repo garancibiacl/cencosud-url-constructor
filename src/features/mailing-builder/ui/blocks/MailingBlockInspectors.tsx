@@ -11,7 +11,7 @@ import {
   BoxSelect, Frame, Menu, MoveHorizontal,
   AlertCircle, Check, ChevronDown, ChevronRight, ChevronUp, ChevronsUpDown, ClipboardPaste,
   Image as ImageIcon, Link2, Monitor,
-  MonitorSmartphone, PenLine, PenSquare, Plus, RotateCcw, Settings2, Smartphone,
+  MonitorSmartphone, PenLine, PenSquare, Pipette, Plus, RotateCcw, Settings2, Smartphone,
   Upload,
   Zap,
 } from "lucide-react";
@@ -871,6 +871,21 @@ function ColorSwatch({
     applyHex(initialColor.current);
   }, [applyHex]);
 
+  const supportsEyeDropper = typeof window !== "undefined" && "EyeDropper" in window;
+
+  const handleEyeDropper = useCallback(async () => {
+    if (!supportsEyeDropper) return;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const dropper = new (window as any).EyeDropper();
+      const result = await dropper.open();
+      const hex = result.sRGBHex;
+      if (isValidHex(hex)) applyHex(hex);
+    } catch {
+      // user cancelled — do nothing
+    }
+  }, [supportsEyeDropper, applyHex]);
+
   return (
     <Popover open={open} onOpenChange={handleClose}>
       <PopoverTrigger asChild>
@@ -968,6 +983,18 @@ function ColorSwatch({
               </div>
             )}
           </div>
+
+          {/* Eyedropper */}
+          {supportsEyeDropper && (
+            <button
+              type="button"
+              title="Cuentagotas — seleccionar color de pantalla"
+              onClick={handleEyeDropper}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground/50 transition hover:border-primary/40 hover:text-foreground"
+            >
+              <Pipette className="h-3.5 w-3.5" />
+            </button>
+          )}
 
           {/* Reset */}
           <button
