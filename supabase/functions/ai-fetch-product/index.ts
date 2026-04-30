@@ -215,27 +215,14 @@ function normalizeCencoResponse(
 
 // ── Fetch desde Cencosud sm-web-api ──────────────────────────────────────────
 
-async function fetchFromCenco(sku: string, brand: Brand): Promise<ProductData | null> {
-  const apiKey = Deno.env.get("CENCOSUD_CATALOG_API_KEY");
-  if (!apiKey) {
-    console.error("[ai-fetch-product] CENCOSUD_CATALOG_API_KEY not configured");
-    return null;
-  }
-
-  // El endpoint actual no segmenta por marca en la URL; la apiKey ya está
-  // ligada al tenant. Si en el futuro hay endpoints por marca, se mapean acá.
-  void brand;
-
-  const baseUrl = (Deno.env.get("CENCOSUD_CATALOG_API_URL") ?? "").trim() || CATALOG_BASE_DEFAULT;
-  // Aceptamos URL completa al endpoint o solo al host (sin path)
-  const endpoint = baseUrl.includes("/products")
-    ? baseUrl.replace(/\/+$/, "")
-    : `${baseUrl.replace(/\/+$/, "")}/catalog/api/v1/products`;
-  const url = `${endpoint}?ft=${encodeURIComponent(sku)}&_from=0&_to=9`;
-
+async function fetchCencoUrl(
+  url: string,
+  apiKey: string,
+  sku: string,
+  label: string,
+): Promise<CencoSearchResponse | null> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 25_000);
-
   try {
     const res = await fetch(url, {
       signal: controller.signal,
@@ -245,36 +232,76 @@ async function fetchFromCenco(sku: string, brand: Brand): Promise<ProductData | 
         "User-Agent": "Mozilla/5.0 (compatible; AguaApp/1.0)",
       },
     });
-
     if (!res.ok) {
-      console.error(`[ai-fetch-product] Cenco API returned ${res.status} for SKU ${sku}`);
-      // Consumir body para evitar leaks
+      console.error(`[ai-fetch-product] ${label} returned ${res.status} for SKU ${sku}`);
       try { await res.text(); } catch { /* noop */ }
       return null;
     }
-
     const ct = res.headers.get("content-type") ?? "";
     if (!ct.includes("application/json")) {
       const txt = await res.text();
       console.error(
-        `[ai-fetch-product] Cenco API returned non-JSON (${ct}) for SKU ${sku}. First 200 chars:`,
+        `[ai-fetch-product] ${label} returned non-JSON (${ct}) for SKU ${sku}. First 200 chars:`,
         txt.slice(0, 200),
       );
       return null;
     }
-
-    const data = await res.json() as CencoSearchResponse;
-    return normalizeCencoResponse(data, sku, brand);
+    return await res.json() as CencoSearchResponse;
   } catch (err) {
     if ((err as Error).name === "AbortError") {
-      console.error(`[ai-fetch-product] Timeout fetching SKU ${sku}`);
+      console.error(`[ai-fetch-product] Timeout (${label}) fetching SKU ${sku}`);
     } else {
-      console.error(`[ai-fetch-product] Fetch error for SKU ${sku}:`, err);
+      console.error(`[ai-fetch-product] Fetch error (${label}) for SKU ${sku}:`, err);
     }
     return null;
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+async function fetchFromCenco(sku: string, brand: Brand): Promise<ProductData | null> {
+  const apiKey = Deno.env.get("CENCOSUD_CATALOG_API_KEY");
+  if (!apiKey) {
+    console.error("[ai-fetch-product] CENCOSUD_CATALOG_API_KEY not configured");
+    return null;
+  }
+
+  void brand;
+
+  const baseUrl = (Deno.env.get("CENCOSUD_CATALOG_API_URL") ?? "").trim() || CATALOG_BASE_DEFAULT;
+  const endpoint = baseUrl.includes("/products")
+    ? baseUrl.replace(/\/+$/, "")
+    : `${baseUrl.replace(/\/+$/, "")}/catalog/api/v1/products`;
+  const directUrl = `${endpoint}?ft=${encodeURIComponent(sku)}&_from=0&_to=9`;
+
+  // Intento 1: directo (rápido, funciona para SKUs no geo-restringidos)
+  const direct = await fetchCencoUrl(directUrl, apiKey, sku, "Cenco direct");
+  if (direct) {
+    const normalized = normalizeCencoResponse(direct, sku, brand);
+    if (normalized) return normalized;
+    // Si directo devolvió 0 productos, probamos proxy (puede ser geo-restricción)
+    if ((direct.products ?? []).length === 0) {
+      console.log(`[ai-fetch-product] Direct returned 0 products for SKU ${sku}, trying proxy fallback`);
+    } else {
+      // Devolvió productos pero ninguno hizo match → no probamos proxy
+      return null;
+    }
+  }
+
+  // Intento 2: vía proxy público (workaround geo-IP)
+  const proxies = [
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(directUrl)}`,
+    `https://corsproxy.io/?${encodeURIComponent(directUrl)}`,
+  ];
+  for (const proxyUrl of proxies) {
+    const data = await fetchCencoUrl(proxyUrl, apiKey, sku, `Cenco proxy (${new URL(proxyUrl).host})`);
+    if (data) {
+      const normalized = normalizeCencoResponse(data, sku, brand);
+      if (normalized) return normalized;
+    }
+  }
+
+  return null;
 }
 
 // ── Handler principal ─────────────────────────────────────────────────────────
