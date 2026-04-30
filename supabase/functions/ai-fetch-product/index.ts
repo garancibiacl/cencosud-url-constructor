@@ -143,12 +143,16 @@ function normalizeCencoResponse(
   brand: Brand,
 ): ProductData | null {
   const products = data.products ?? [];
+  console.log(`[ai-fetch-product] Cenco returned ${products.length} products for SKU ${sku} (recordsFiltered=${data.recordsFiltered ?? "?"})`);
   if (products.length === 0) return null;
 
-  // Preferimos un match exacto por SKU; si ninguno coincide, no devolvemos
-  // el primer resultado para evitar mostrar un producto incorrecto.
   const product = products.find((p) => productMatchesSku(p, sku));
-  if (!product) return null;
+  if (!product) {
+    const refs = products.map((p) => `productRef=${p.productReference} itemIds=[${(p.items ?? []).map(i => i.itemId).join(",")}]`).join(" | ");
+    console.error(`[ai-fetch-product] No match for SKU ${sku}. Candidates: ${refs}`);
+    return null;
+  }
+
 
   const items = product.items ?? [];
   // Item correspondiente al SKU; si no, el primero
