@@ -1406,7 +1406,7 @@ export default function MailingBuilderPage() {
 
   useEffect(() => {
     if (!isInspectorOpen) return;
-    const handler = (event: MouseEvent) => {
+    const onMouseDown = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null;
       if (!target) return;
       if (inspectorRef.current?.contains(target)) return;
@@ -1416,8 +1416,15 @@ export default function MailingBuilderPage() {
       if (target.closest('[role="dialog"]') || target.closest('[data-radix-dialog-overlay]')) return;
       handleCloseInspector();
     };
-    window.document.addEventListener("mousedown", handler);
-    return () => window.document.removeEventListener("mousedown", handler);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") handleCloseInspector();
+    };
+    window.document.addEventListener("mousedown", onMouseDown);
+    window.document.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.document.removeEventListener("mousedown", onMouseDown);
+      window.document.removeEventListener("keydown", onKeyDown);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isInspectorOpen]);
 
@@ -2209,7 +2216,7 @@ export default function MailingBuilderPage() {
               })()}
 
               {/* Contenido scrollable */}
-              <div className="min-h-0 flex-1 overflow-y-auto">
+              <div className="min-h-0 flex-1 overflow-y-auto" data-inspector-scroll="true">
                 <div className="space-y-3 px-4 py-4">
 
                   {/* Inspector de bloque seleccionado */}

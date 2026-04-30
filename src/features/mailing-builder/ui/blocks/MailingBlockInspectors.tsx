@@ -2273,13 +2273,15 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
       requestAnimationFrame(() => requestAnimationFrame(() => {
         const el = sectionRefs[section]?.current;
         if (!el) return;
-        const viewport = el.closest("[data-radix-scroll-area-viewport]") as HTMLElement | null;
+        const viewport = el.closest("[data-inspector-scroll]") as HTMLElement | null;
         if (viewport) {
           const elTop = el.getBoundingClientRect().top;
           const vpTop = viewport.getBoundingClientRect().top;
-          viewport.scrollBy({ top: elTop - vpTop - 12, behavior: "smooth" });
+          // Centrar verticalmente: restar la mitad de la altura del viewport
+          const offset = elTop - vpTop - (viewport.clientHeight / 2 - el.clientHeight / 2);
+          viewport.scrollBy({ top: offset, behavior: "smooth" });
         } else {
-          el.scrollIntoView({ behavior: "smooth", block: "start" });
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
         }
         setFocusedSection(null);
       }));

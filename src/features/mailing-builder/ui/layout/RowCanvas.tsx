@@ -961,18 +961,42 @@ const BlockItem = memo(function BlockItem({
     });
   }, [block.id, onDuplicateBlock, onRemoveBlock]);
 
+  // Scroll-to-center: espera la transición del inspector (300ms) antes de centrar
+  const blockRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isSelected) return;
+    const id = setTimeout(() => {
+      blockRef.current?.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    }, 320);
+    return () => clearTimeout(id);
+  }, [isSelected]);
+
   const handleChange = useCallback(
     (nextBlock: typeof block) => onUpdateBlock(nextBlock as MailingBlock),
     [onUpdateBlock],
   );
 
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        onSelectBlock(block.id, rowId, colId);
+      }
+    },
+    [block.id, rowId, colId, onSelectBlock],
+  );
+
   return (
-    <div className="relative" data-mailing-block="true">
+    <div className="relative" data-mailing-block="true" ref={blockRef}>
       {/* data-block-drop: marcador para que ColumnCanvas calcule la posición del indicador */}
       <div
         data-block-drop
         data-mailing-block="true"
-        className={`group/block relative rounded-lg border transition-all ${
+        role="button"
+        tabIndex={0}
+        aria-label={`Bloque ${block.type.replace("-", " ")}`}
+        aria-pressed={isSelected}
+        className={`group/block relative rounded-lg border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
           isSelected ? "shadow-sm" : "border-transparent bg-card hover:border-border/60"
         }`}
         style={isSelected ? {
@@ -980,6 +1004,7 @@ const BlockItem = memo(function BlockItem({
           backgroundColor: LEVEL.block.bg,
         } : undefined}
         onClick={handleSelect}
+        onKeyDown={handleKeyDown}
         onClickCapture={() => inspectorFocusBridge.focus(block.id, "apariencia")}
       >
         <div className="p-1.5">
