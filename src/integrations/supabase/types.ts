@@ -44,6 +44,122 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_generation_jobs: {
+        Row: {
+          block_type: string
+          brand: string | null
+          campaign_id: string | null
+          completed_at: string | null
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          fal_request_id: string | null
+          id: string
+          prompt: string | null
+          quality: string
+          sku: string | null
+          status: string
+          style: string
+          user_id: string
+        }
+        Insert: {
+          block_type: string
+          brand?: string | null
+          campaign_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          fal_request_id?: string | null
+          id?: string
+          prompt?: string | null
+          quality?: string
+          sku?: string | null
+          status?: string
+          style?: string
+          user_id: string
+        }
+        Update: {
+          block_type?: string
+          brand?: string | null
+          campaign_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          fal_request_id?: string | null
+          id?: string
+          prompt?: string | null
+          quality?: string
+          sku?: string | null
+          status?: string
+          style?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_images: {
+        Row: {
+          created_at: string
+          file_size_bytes: number | null
+          height: number | null
+          id: string
+          is_selected: boolean
+          job_id: string
+          metadata: Json
+          model: string | null
+          prompt: string | null
+          public_url: string
+          seed: number | null
+          storage_path: string
+          user_id: string
+          variant_index: number
+          width: number | null
+        }
+        Insert: {
+          created_at?: string
+          file_size_bytes?: number | null
+          height?: number | null
+          id?: string
+          is_selected?: boolean
+          job_id: string
+          metadata?: Json
+          model?: string | null
+          prompt?: string | null
+          public_url: string
+          seed?: number | null
+          storage_path: string
+          user_id: string
+          variant_index?: number
+          width?: number | null
+        }
+        Update: {
+          created_at?: string
+          file_size_bytes?: number | null
+          height?: number | null
+          id?: string
+          is_selected?: boolean
+          job_id?: string
+          metadata?: Json
+          model?: string | null
+          prompt?: string | null
+          public_url?: string
+          seed?: number | null
+          storage_path?: string
+          user_id?: string
+          variant_index?: number
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_images_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "ai_generation_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       files: {
         Row: {
           created_at: string
@@ -184,6 +300,57 @@ export type Database = {
         }
         Relationships: []
       }
+      product_catalog: {
+        Row: {
+          attributes: Json
+          brand: string
+          category: string | null
+          description: string | null
+          discount: number | null
+          fetched_at: string
+          id: string
+          image_url: string | null
+          name: string
+          original_price: number | null
+          price: number | null
+          raw_payload: Json
+          sku: string
+          subcategory: string | null
+        }
+        Insert: {
+          attributes?: Json
+          brand: string
+          category?: string | null
+          description?: string | null
+          discount?: number | null
+          fetched_at?: string
+          id?: string
+          image_url?: string | null
+          name: string
+          original_price?: number | null
+          price?: number | null
+          raw_payload?: Json
+          sku: string
+          subcategory?: string | null
+        }
+        Update: {
+          attributes?: Json
+          brand?: string
+          category?: string | null
+          description?: string | null
+          discount?: number | null
+          fetched_at?: string
+          id?: string
+          image_url?: string | null
+          name?: string
+          original_price?: number | null
+          price?: number | null
+          raw_payload?: Json
+          sku?: string
+          subcategory?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -321,6 +488,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ai_rate_limit_ok: {
+        Args: { p_limit?: number; p_user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
