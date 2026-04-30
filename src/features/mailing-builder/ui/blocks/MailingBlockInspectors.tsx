@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import React from "react";
+import { AISection } from "./AISection";
+import { useMailingDocContext } from "./MailingDocContext";
 import { inspectorFocusBridge } from "../inspectorFocusBridge";
 import { ColorPickerCanvas, hexToHsv, hsvToHex } from "../editor/ColorPickerCanvas";
 import type { ReactNode } from "react";
@@ -1404,6 +1406,7 @@ function ImageFieldInput({
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function HeroBlockInspector({ block, onChange }: SharedProps<HeroBlock>) {
+  const { campaignId } = useMailingDocContext();
   return (
     <div className="space-y-3">
 
@@ -1450,6 +1453,17 @@ export function HeroBlockInspector({ block, onChange }: SharedProps<HeroBlock>) 
             onChange={(v) => onChange({ ...block, layout: { ...block.layout, backgroundColor: v } })}
           />
         </InspRow>
+      </InspSection>
+
+      <InspSection title="IA · SKU a imagen">
+        <AISection
+          blockId={block.id}
+          blockType="hero"
+          campaignId={campaignId}
+          onUpdateBlock={(_id, fields) =>
+            onChange({ ...block, props: { ...block.props, ...fields } })
+          }
+        />
       </InspSection>
 
     </div>
@@ -1672,6 +1686,7 @@ export function TextBlockInspector({ block, onChange }: SharedProps<TextBlock>) 
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function ImageBlockInspector({ block, onChange }: SharedProps<ImageBlock>) {
+  const { campaignId } = useMailingDocContext();
   return (
     <div className="space-y-3">
 
@@ -1710,6 +1725,17 @@ export function ImageBlockInspector({ block, onChange }: SharedProps<ImageBlock>
             onChange={(href) => onChange({ ...block, props: { ...block.props, href } })}
           />
         </div>
+      </InspSection>
+
+      <InspSection title="IA · SKU a imagen">
+        <AISection
+          blockId={block.id}
+          blockType="banner"
+          campaignId={campaignId}
+          onUpdateBlock={(_id, fields) =>
+            onChange({ ...block, props: { ...block.props, ...fields } })
+          }
+        />
       </InspSection>
 
       <InspSection title="Espaciado" help={showSpacingHelp}>
@@ -1790,6 +1816,7 @@ export function ButtonBlockInspector({ block, onChange }: SharedProps<ButtonBloc
 export function ProductBlockInspector({ block, onChange }: SharedProps<ProductBlock>) {
   const setProps = (patch: Partial<typeof block.props>) =>
     onChange({ ...block, props: { ...block.props, ...patch } });
+  const { campaignId } = useMailingDocContext();
 
   return (
     <div className="space-y-3">
@@ -1806,6 +1833,30 @@ export function ProductBlockInspector({ block, onChange }: SharedProps<ProductBl
           onChange={(imageUrl) => setProps({ imageUrl })}
           blockId={block.id}
           field="imageUrl"
+        />
+      </InspSection>
+
+      <InspSection title="IA · SKU a imagen">
+        <AISection
+          blockId={block.id}
+          blockType="product"
+          campaignId={campaignId}
+          onUpdateBlock={(_id, fields) => {
+            const aiFields = { ...fields };
+            const next: typeof block = {
+              ...block,
+              props: {
+                ...block.props,
+                ...(aiFields.imageUrl ? { imageUrl: aiFields.imageUrl } : {}),
+                ...(aiFields.productName ? { name: aiFields.productName } : {}),
+                ...(aiFields.productPrice != null
+                  ? { price: `$ ${new Intl.NumberFormat("es-CL").format(aiFields.productPrice)}` }
+                  : {}),
+                ...aiFields,
+              },
+            };
+            onChange(next);
+          }}
         />
       </InspSection>
 
@@ -2250,6 +2301,7 @@ function BadgeRadiusEditor({
 export function ProductDdBlockInspector({ block, onChange }: SharedProps<ProductDdBlock>) {
   const setProps = (patch: Partial<typeof block.props>) =>
     onChange({ ...block, props: { ...block.props, ...patch } });
+  const { campaignId } = useMailingDocContext();
 
   // ── Foco inteligente desde el canvas ──────────────────────────────────────
   const [focusedSection, setFocusedSection] = useState<string | null>(null);
@@ -2387,6 +2439,17 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
           </InspRow>
         </div>
 
+      </InspSectionCollapsible>
+
+      <InspSectionCollapsible title="IA · SKU a imagen" defaultOpen={false}>
+        <AISection
+          blockId={block.id}
+          blockType="product"
+          campaignId={campaignId}
+          onUpdateBlock={(_id, fields) =>
+            onChange({ ...block, props: { ...block.props, ...fields } })
+          }
+        />
       </InspSectionCollapsible>
 
       {/* 2. Badge principal */}

@@ -107,6 +107,23 @@ export async function saveMailingDraft(params: {
   return data?.id ?? null;
 }
 
+export async function deleteAllMailings(): Promise<boolean> {
+  // Eliminar versiones primero (registros hijo), luego los mailings
+  const { error: vErr } = await db
+    .from("mailing_versions")
+    .delete()
+    .neq("id", "00000000-0000-0000-0000-000000000000");
+  if (vErr) { console.error("deleteAllMailings:versions", vErr); return false; }
+
+  const { error: mErr } = await db
+    .from("mailings")
+    .delete()
+    .neq("id", "00000000-0000-0000-0000-000000000000");
+  if (mErr) { console.error("deleteAllMailings:mailings", mErr); return false; }
+
+  return true;
+}
+
 export async function createMailingVersion(params: {
   mailingId: string;
   userId: string;

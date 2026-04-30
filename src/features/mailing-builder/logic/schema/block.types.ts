@@ -1,4 +1,5 @@
 import type { BlockLayout } from "./layout.types";
+import type { AIBlockFields } from "../ai/ai.types";
 
 export type MailingBlockType = "hero" | "text" | "image" | "button" | "spacer" | "product" | "product-dd" | "raw-html";
 
@@ -20,7 +21,7 @@ export interface HeroBlock extends BaseBlock<"hero", {
   imageUrl: string;
   ctaLabel?: string;
   href?: string;
-}> {}
+} & AIBlockFields> {}
 
 export interface TextBlock extends BaseBlock<"text", {
   html: string;
@@ -33,7 +34,7 @@ export interface ImageBlock extends BaseBlock<"image", {
   src: string;
   alt: string;
   href?: string;
-}> {}
+} & AIBlockFields> {}
 
 export interface ButtonBlock extends BaseBlock<"button", {
   label: string;
@@ -53,7 +54,10 @@ export interface ProductBlock extends BaseBlock<"product", {
   unit?: string;
   href: string;
   ctaLabel?: string;
-}> {}
+} & AIBlockFields> {}
+
+// Re-export AIBlockFields so consumers can import from this module if needed
+export type { AIBlockFields } from "../ai/ai.types";
 
 export interface ProductDdBlock extends BaseBlock<"product-dd", {
   // ── Imagen del producto ───────────────────────────────────────────
@@ -150,7 +154,7 @@ export interface ProductDdBlock extends BaseBlock<"product-dd", {
   ofertaBorderRadius?: number;  // default 6
   // ── Orden de secciones en la columna derecha ──────────────────────
   sectionOrder?: string[];      // e.g. ["discount","price","priceTag","name"]
-}> {}
+} & AIBlockFields> {}
 
 export interface RawHtmlBlock extends BaseBlock<"raw-html", {
   html: string;

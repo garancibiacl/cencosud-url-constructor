@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import type { MailingDocument } from "../logic/schema/mailing.types";
 import {
   createMailingVersion,
+  deleteAllMailings as deleteAllMailingsService,
   listMailings,
   listMailingVersions,
   saveMailingDraft,
@@ -80,6 +81,14 @@ export function useMailings() {
     }
   }, []);
 
+  const deleteAllMailings = useCallback(async () => {
+    setLoading(true);
+    const ok = await deleteAllMailingsService();
+    if (ok) { setMailings([]); setVersions([]); }
+    setLoading(false);
+    return ok;
+  }, []);
+
   return {
     mailings,
     versions,
@@ -91,5 +100,6 @@ export function useMailings() {
     saveVersion,
     scheduleAutosave,
     cancelAutosave,
+    deleteAllMailings,
   };
 }

@@ -51,6 +51,7 @@ const DevModePanel = React.lazy(() =>
 import type { ScratchMode } from "./NewTemplateModal";
 import type { BrandId } from "../logic/brands/brand.types";
 import { brandThemes } from "../logic/brands/brandThemes";
+import { MailingDocContext } from "./blocks/MailingDocContext";
 
 const CATEGORY_LABELS = {
   content: "Contenido",
@@ -884,7 +885,7 @@ function formatDateTime(iso: string): string {
 }
 
 export default function MailingBuilderPage() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const {
     document,
     selectedBlockId,
@@ -934,7 +935,7 @@ export default function MailingBuilderPage() {
   }, [openImageLibrary]);
 
   const { toast } = useToast();
-  const { mailings, versions, loading, saving, refreshMailings, loadVersions, saveDraft, saveVersion, scheduleAutosave, cancelAutosave } = useMailings();
+  const { mailings, versions, loading, saving, refreshMailings, loadVersions, saveDraft, saveVersion, scheduleAutosave, cancelAutosave, deleteAllMailings } = useMailings();
   const [versionNote, setVersionNote] = useState("");
   const [previewMode, setPreviewMode] = useState<"canvas" | "split" | "html">("canvas");
   const [devicePreview, setDevicePreview] = useState<"desktop" | "mobile">("desktop");
@@ -1276,6 +1277,33 @@ export default function MailingBuilderPage() {
   // ── Handlers de documento ────────────────────────────────────────────────
 
   const handleNewDraft = () => setShowNewModal(true);
+
+  const handleDeleteAllMailings = async () => {
+    const { isConfirmed } = await Swal.fire({
+      title: "¿Eliminar todas las campañas?",
+      html: `<p style="color:#64748b;font-size:13px;margin:0">Se eliminarán <strong>todas las campañas y sus versiones</strong> de forma permanente.<br/>Esta acción <strong>no se puede deshacer</strong>.</p>`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Sí, eliminar todo",
+      cancelButtonText: "Cancelar",
+      buttonsStyling: false,
+      customClass: {
+        popup: "swal-mb-popup",
+        title: "swal-mb-title",
+        confirmButton: "swal-mb-confirm !bg-red-600 hover:!bg-red-700",
+        cancelButton: "swal-mb-cancel",
+      },
+      reverseButtons: true,
+    });
+    if (!isConfirmed) return;
+    const ok = await deleteAllMailings();
+    if (ok) {
+      setActiveMailingId(null);
+      toast({ title: "Campañas eliminadas", description: "Todas las campañas fueron eliminadas correctamente." });
+    } else {
+      toast({ title: "Error al eliminar", variant: "destructive" });
+    }
+  };
 
   const handleScratch = (mode: ScratchMode) => {
     if (mode === "dragdrop") {
@@ -1664,7 +1692,7 @@ export default function MailingBuilderPage() {
                 value="guardado"
                 className="h-full flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none"
               >
-                Guardado
+                Campañas
               </TabsTrigger>
             </TabsList>
 
@@ -1715,61 +1743,130 @@ export default function MailingBuilderPage() {
             </TabsContent>
 
             {/* Tab Guardado */}
-            <TabsContent value="guardado" className="m-0 min-h-0 flex-1">
-              <ScrollArea className="h-full">
-                <div className="space-y-4 p-4">
-                  <Input value={versionNote} onChange={(e) => setVersionNote(e.target.value)} placeholder="Nota para la versión" />
-                  <div className="grid gap-1.5">
-                    {loading ? <p className="text-xs text-muted-foreground">Cargando…</p> : null}
-                    {mailings.slice(0, 6).map((mailing) => (
+            <TabsContent value="guardado" className="m-0 min-h-0 flex-1 overflow-hidden">
+              <div className="flex h-full flex-col">
+                {/* Header del panel */}
+                <div className="flex shrink-0 items-center justify-between border-b border-border/50 px-3 py-2.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/60">
+                    Campañas
+                    {loading && <Loader2 className="ml-1.5 inline h-2.5 w-2.5 animate-spin" />}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {/* Admin: eliminar todas */}
+                    {role === "admin" && mailings.length > 0 && (
                       <button
-                        key={mailing.id}
                         type="button"
-                        onClick={() => void handleLoadMailing(mailing.id)}
-                        className={`rounded-md border px-3 py-2 text-left transition ${
-                          activeMailingId === mailing.id
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/40"
-                        }`}
+                        onClick={() => void handleDeleteAllMailings()}
+                        title="Eliminar todas las campañas (admin)"
+                        className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground/40 transition-all duration-150 hover:bg-red-50 hover:text-red-500"
                       >
-                        <p className="text-sm font-medium text-foreground">{mailing.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          v{mailing.currentVersion} · {new Date(mailing.updatedAt).toLocaleDateString("es-CL")}
-                        </p>
+                        <Trash2 className="h-3.5 w-3.5" />
                       </button>
-                    ))}
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleNewDraft}
+                      className="flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1 text-[10px] font-semibold text-primary-foreground transition-all duration-150 hover:opacity-90 active:scale-95"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Nueva
+                    </button>
                   </div>
+                </div>
 
-                  {versions.length > 0 && (
-                    <div className="space-y-2 rounded-md border border-border p-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">Historial</p>
-                      {versions.map((version) => (
-                        <div key={version.id} className="flex items-start justify-between gap-2 text-xs">
-                          <div>
-                            <p className="font-medium text-foreground">v{version.versionNumber}</p>
-                            {version.note ? (() => {
-                              const { author, email, template } = parseDraftNote(version.note);
-                              return (
-                                <>
-                                  {author   && <p className="text-foreground/80">{author}</p>}
-                                  {email    && <p className="text-muted-foreground truncate">{email}</p>}
-                                  {template && <p className="text-muted-foreground/70 truncate italic">{template}</p>}
-                                </>
-                              );
-                            })() : <p className="text-muted-foreground">Sin nota</p>}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground">{new Date(version.createdAt).toLocaleDateString("es-CL")}</span>
-                            <Button size="icon" variant="ghost" onClick={() => handleRestoreVersion(version.id)}>
-                              <RotateCcw className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
+                {/* Grid de campañas */}
+                <div className="min-h-0 flex-1 overflow-y-auto p-3">
+                  {!loading && mailings.length === 0 ? (
+                    /* Empty state */
+                    <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/60">
+                        <Mail className="h-5 w-5 text-muted-foreground/40" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[13px] font-medium text-foreground/70">Sin campañas guardadas</p>
+                        <p className="text-[11px] text-muted-foreground/50">Guarda tu mailing para verlo aquí</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      {mailings.map((mailing) => {
+                        const isActive = activeMailingId === mailing.id;
+                        const brandId = (mailing as { brand?: string }).brand ?? undefined;
+                        const brandColor = brandId ? (brandThemes[brandId as keyof typeof brandThemes]?.primaryColor ?? "#6366f1") : "#6366f1";
+                        const brandName  = brandId ? (brandThemes[brandId as keyof typeof brandThemes]?.name ?? "") : "";
+                        const relativeDate = (() => {
+                          const diff = Date.now() - new Date(mailing.updatedAt).getTime();
+                          const mins = Math.floor(diff / 60000);
+                          const hrs  = Math.floor(diff / 3600000);
+                          const days = Math.floor(diff / 86400000);
+                          if (mins < 2)   return "Ahora";
+                          if (mins < 60)  return `Hace ${mins}m`;
+                          if (hrs < 24)   return `Hace ${hrs}h`;
+                          if (days < 7)   return `Hace ${days}d`;
+                          return new Date(mailing.updatedAt).toLocaleDateString("es-CL", { day: "numeric", month: "short" });
+                        })();
+                        return (
+                          <button
+                            key={mailing.id}
+                            type="button"
+                            onClick={() => void handleLoadMailing(mailing.id)}
+                            className={`group relative flex flex-col overflow-hidden rounded-xl border text-left transition-all duration-150 ${
+                              isActive
+                                ? "shadow-[0_0_0_2px_var(--brand-border)]"
+                                : "border-border/60 bg-card hover:border-border hover:shadow-sm"
+                            }`}
+                            style={isActive ? {
+                              border: `2px solid ${brandColor}`,
+                              boxShadow: `0 0 0 3px ${brandColor}18`,
+                              backgroundColor: `${brandColor}06`,
+                            } : undefined}
+                          >
+                            {/* Franja de color de marca */}
+                            <div
+                              className="h-[5px] w-full shrink-0"
+                              style={{ background: brandColor }}
+                            />
+
+                            {/* Cuerpo */}
+                            <div className="flex flex-1 flex-col gap-1.5 p-2.5 pt-2">
+                              {/* Brand badge */}
+                              {brandName && (
+                                <span
+                                  className="inline-flex w-fit items-center rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide"
+                                  style={{ background: `${brandColor}18`, color: brandColor }}
+                                >
+                                  {brandName}
+                                </span>
+                              )}
+
+                              {/* Nombre */}
+                              <p className="line-clamp-2 text-[11px] font-semibold leading-tight text-foreground">
+                                {mailing.name}
+                              </p>
+
+                              {/* Meta: versión + fecha */}
+                              <div className="flex items-center justify-between">
+                                <span className="rounded-full bg-muted/70 px-1.5 py-0.5 text-[8px] font-bold text-muted-foreground/70">
+                                  v{mailing.currentVersion}
+                                </span>
+                                <span className="text-[9px] text-muted-foreground/50">{relativeDate}</span>
+                              </div>
+                            </div>
+
+                            {/* Indicador activo */}
+                            {isActive && (
+                              <div className="absolute right-2 top-2 flex h-4 w-4 items-center justify-center rounded-full"
+                                style={{ background: brandColor }}>
+                                <CheckCircle2 className="h-3 w-3 text-white" />
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
-              </ScrollArea>
+              </div>
             </TabsContent>
           </Tabs>
         </aside>
@@ -2222,7 +2319,9 @@ export default function MailingBuilderPage() {
                     <>
                       {/* Inspector específico del bloque */}
                       {SelectedInspector && (
-                        <SelectedInspector block={selectedBlock as never} onChange={updateBlock} />
+                        <MailingDocContext.Provider value={{ campaignId: document.settings.linkTracking.utmCampaign ?? "" }}>
+                          <SelectedInspector block={selectedBlock as never} onChange={updateBlock} />
+                        </MailingDocContext.Provider>
                       )}
                     </>
                   ) : showStylesPanel ? (
