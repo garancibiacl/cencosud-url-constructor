@@ -57,7 +57,7 @@ interface FetchProductRequest {
 // El path es el mismo, cambia el query param `tenant` (algunos endpoints lo
 // usan, en otros se infiere por la apiKey). Por ahora la apiKey es global.
 
-const CATALOG_BASE = "https://sm-web-api.ecomm.cencosud.com/catalog/api/v1/products";
+const CATALOG_BASE_DEFAULT = "https://sm-web-api.ecomm.cencosud.com/catalog/api/v1/products";
 
 // ── Normalización de respuesta sm-web-api ────────────────────────────────────
 
