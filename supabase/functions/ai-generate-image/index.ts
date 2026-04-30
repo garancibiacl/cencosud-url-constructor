@@ -1,5 +1,5 @@
 /**
- * Edge Function: ai-generate-image
+ * Edge Function: ai-generate-image (PLAI)
  * POST /functions/v1/ai-generate-image
  *
  * Body: {
@@ -13,17 +13,14 @@
  * Flujo:
  * 1. Valida JWT
  * 2. Verifica rate limit (10 generaciones / hora / user)
- * 3. Crea job en ai_generation_jobs (status: pending)
- * 4. Llama Claude Haiku para construir el prompt óptimo
- * 5. Genera 2 variantes con fal.ai (FLUX.1-schnell o FLUX.1-dev)
- * 6. Sube imágenes a Supabase Storage (bucket: ai-images)
- * 7. Guarda registros en ai_images
- * 8. Actualiza job a status: done
- * 9. Retorna { jobId, images: GeneratedImage[] }
+ * 3. Construye prompt con plantilla local (sin IA externa)
+ * 4. Llama a plai POST /images/create con x-api-key
+ * 5. Sube imágenes a Supabase Storage (bucket: ai-images)
+ * 6. Guarda registros en ai_images y actualiza job
+ * 7. Retorna { jobId, prompt, images: GeneratedImage[] }
  */
 
 import { createClient } from "npm:@supabase/supabase-js@2";
-import Anthropic from "npm:@anthropic-ai/sdk@0.27.3";
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 const CORS_HEADERS = {
@@ -41,10 +38,10 @@ function json(data: unknown, status = 200) {
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
-type Brand = "jumbo" | "sisa";
+type Brand     = "jumbo" | "sisa";
 type BlockType = "hero" | "product" | "banner" | "text";
-type Style = "auto" | "lifestyle" | "promo";
-type Quality = "fast" | "hd";
+type Style     = "auto" | "lifestyle" | "promo";
+type Quality   = "fast" | "hd";
 
 interface ProductData {
   sku: string;
@@ -78,159 +75,150 @@ interface GeneratedImage {
   variantIndex: number;
 }
 
-// ── Configuración fal.ai ──────────────────────────────────────────────────────
+// ── Configuración PLAI ────────────────────────────────────────────────────────
 
-const FAL_MODELS: Record<Quality, string> = {
-  fast: "fal-ai/flux/schnell",
-  hd:   "fal-ai/flux/dev",
+// Modelos plai (mapeo fast / hd → modelos disponibles)
+const PLAI_MODELS: Record<Quality, string> = {
+  fast: "gemini-2.5-flash",
+  hd:   "gemini-2.5-pro",
 };
 
-// Dimensiones según blockType (ratio aproximado para email)
+// Aspect ratio según blockType
+const BLOCK_ASPECT: Record<BlockType, string> = {
+  hero:    "16:9",
+  product: "1:1",
+  banner:  "16:9",
+  text:    "16:9",
+};
+
+// Dimensiones aproximadas para el registro en BD (plai no necesariamente las respeta)
 const BLOCK_DIMENSIONS: Record<BlockType, { width: number; height: number }> = {
-  hero:    { width: 600, height: 300 },
-  product: { width: 400, height: 400 },
-  banner:  { width: 600, height: 200 },
-  text:    { width: 600, height: 200 },
+  hero:    { width: 1024, height: 576 },
+  product: { width: 1024, height: 1024 },
+  banner:  { width: 1024, height: 576 },
+  text:    { width: 1024, height: 576 },
 };
 
-// ── Colores de marca para el prompt ──────────────────────────────────────────
-
-const BRAND_COLORS: Record<Brand, { primary: string; secondary: string; name: string }> = {
-  jumbo: { primary: "#E8001C", secondary: "#FFFFFF", name: "Jumbo" },
-  sisa:  { primary: "#DA291C", secondary: "#FFFFFF", name: "Santa Isabel" },
+const BRAND_INFO: Record<Brand, { primary: string; name: string }> = {
+  jumbo: { primary: "#E8001C", name: "Jumbo" },
+  sisa:  { primary: "#DA291C", name: "Santa Isabel" },
 };
 
-// ── Seed determinista por campaña ─────────────────────────────────────────────
-// Un mismo campaignId siempre produce el mismo seed base → coherencia visual
+const NUM_IMAGES = 2;
+
+// ── Seed determinista por campaña (para registro/coherencia) ─────────────────
 
 function campaignSeed(campaignId: string): number {
   let hash = 0;
   for (let i = 0; i < campaignId.length; i++) {
-    const char = campaignId.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash |= 0;
+    hash = ((hash << 5) - hash + campaignId.charCodeAt(i)) | 0;
   }
-  // fal.ai acepta seeds positivos de 32 bits
   return Math.abs(hash) % 2_147_483_647;
 }
 
-// ── Construcción del prompt con Claude Haiku ─────────────────────────────────
+// ── Construcción del prompt (plantilla local, sin IA) ────────────────────────
 
-async function buildPromptWithClaude(
-  anthropic: Anthropic,
-  productData: ProductData,
+function buildPromptLocal(
+  product: ProductData,
   blockType: BlockType,
   style: Style,
-): Promise<string> {
-  const brandInfo = BRAND_COLORS[productData.brand];
+): string {
+  const brand = BRAND_INFO[product.brand];
 
-  const systemPrompt = `Eres un experto en fotografía publicitaria y diseño de mailings de retail chileno.
-Tu tarea es generar un prompt en inglés para un modelo de imagen por IA (FLUX).
-El prompt debe ser preciso, descriptivo y orientado a resultados fotorrealistas de alta calidad.
-Responde ÚNICAMENTE con el prompt en inglés, sin explicaciones ni texto adicional.
-Máximo 120 palabras.`;
-
-  const blockGuidelines: Record<BlockType, string> = {
-    hero: `Imagen lifestyle y ambiental. El producto debe estar integrado en un escenario de vida real.
-Composición amplia, luz natural, espacio para texto superpuesto a la izquierda.
-Estilo editorial de revista de cocina o supermercado premium.`,
-    product: `Product shot limpio sobre fondo blanco o degradado muy suave.
-El producto ocupa 70-80% del encuadre. Luz de estudio, sombra suave.
-Sin elementos distractores. Fotorrealista.`,
-    banner: `Composición horizontal. Producto a la derecha, espacio vacío a la izquierda para texto.
-Colores de marca ${brandInfo.name}: ${brandInfo.primary}. Estilo promo/oferta.
-Fondo sólido o degradado de marca. Clean y moderno.`,
-    text: `Imagen de apoyo simple y limpia. Fondo neutro o de marca.
-Composición sencilla, no ocupa atención principal.`,
+  // Composición según bloque
+  const composition: Record<BlockType, string> = {
+    hero:
+      "Wide editorial composition, lifestyle scene, natural lighting, generous empty space on the left for text overlay, magazine-quality photography",
+    product:
+      "Clean product shot on a soft white-to-light-gray gradient background, studio lighting, soft shadow, the product fills 70-80% of the frame, no distracting elements, photorealistic",
+    banner:
+      "Horizontal composition, product on the right, empty colored area on the left for promotional text, vibrant brand colors, clean and modern look",
+    text:
+      "Simple supporting image, neutral or brand-colored background, minimal composition, low visual weight",
   };
 
-  const styleModifiers: Record<Style, string> = {
-    auto:      "",
-    lifestyle: "Escena de vida cotidiana, ambiente hogareño, familia o individuo usando el producto.",
-    promo:     "Estilo promocional vibrante. Énfasis en el descuento y urgencia. Colores saturados.",
+  // Modificador de estilo
+  const styleMod: Record<Style, string> = {
+    auto: "",
+    lifestyle:
+      "Real-life everyday scene, warm home environment, person or family naturally interacting with the product",
+    promo:
+      "Bold promotional aesthetic, saturated colors, sense of urgency and discount energy",
   };
 
-  const attrs = Object.entries(productData.attributes)
+  // Atributos relevantes
+  const attrs = Object.entries(product.attributes ?? {})
     .slice(0, 3)
     .map(([k, v]) => `${k}: ${v}`)
     .join(", ");
 
-  const userMessage = `Producto: ${productData.name}
-Marca retail: ${brandInfo.name}
-Categoría: ${productData.category ?? "General"}${productData.subcategory ? ` > ${productData.subcategory}` : ""}
-${attrs ? `Atributos: ${attrs}` : ""}
-${productData.discount ? `Descuento: ${productData.discount}%` : ""}
-Tipo de bloque: ${blockType}
-Directrices de composición: ${blockGuidelines[blockType]}
-${styleModifiers[style] ? `Estilo adicional: ${styleModifiers[style]}` : ""}
+  const discount = product.discount ? ` Discount badge: ${product.discount}% off.` : "";
 
-Genera un prompt profesional para FLUX.`;
+  // Prompt final
+  const parts = [
+    `Professional advertising photography of "${product.name}".`,
+    product.category ? `Category: ${product.category}${product.subcategory ? ` / ${product.subcategory}` : ""}.` : "",
+    attrs ? `Product attributes: ${attrs}.` : "",
+    `Retail brand: ${brand.name} (Chilean supermarket).`,
+    `Brand color accent: ${brand.primary}.${discount}`,
+    composition[blockType] + ".",
+    styleMod[style],
+    "Photorealistic, sharp focus, high detail, commercial-grade lighting, suitable for an email marketing campaign.",
+  ].filter(Boolean);
 
-  const message = await anthropic.messages.create({
-    model: "claude-haiku-4-5",
-    max_tokens: 200,
-    system: systemPrompt,
-    messages: [{ role: "user", content: userMessage }],
-  });
-
-  const content = message.content[0];
-  if (content.type !== "text") throw new Error("Claude no devolvió texto");
-
-  return content.text.trim();
+  return parts.join(" ").replace(/\s+/g, " ").trim();
 }
 
-// ── Llamada a fal.ai ──────────────────────────────────────────────────────────
+// ── Llamada a plai POST /images/create ───────────────────────────────────────
 
-interface FalImageResult {
-  url: string;
-  width: number;
-  height: number;
-  content_type: string;
+interface PlaiImage { url: string }
+interface PlaiGenerated {
+  id: string;
+  prompt: string;
+  aspectRatio: string;
+  createdAt: string;
+  images: PlaiImage[];
+}
+interface PlaiResponse {
+  status: "success" | string;
+  data: { generatedImages: PlaiGenerated[] };
 }
 
-interface FalResponse {
-  images: FalImageResult[];
-  seed: number;
-}
-
-async function generateWithFal(
-  falApiKey: string,
+async function generateWithPlai(
+  baseUrl: string,
+  apiKey: string,
   model: string,
   prompt: string,
-  dimensions: { width: number; height: number },
-  seed: number,
-  numImages: number,
-): Promise<FalResponse> {
+  numberOfImages: number,
+  aspectRatio: string,
+): Promise<PlaiResponse> {
   const controller = new AbortController();
-  // 55s de timeout — la Edge Function tiene 60s en total para generate-image
   const timeoutId = setTimeout(() => controller.abort(), 55_000);
 
-  try {
-    const body = {
-      prompt,
-      image_size: { width: dimensions.width, height: dimensions.height },
-      num_images: numImages,
-      seed,
-      enable_safety_checker: true,
-      ...(model.includes("dev") ? { guidance_scale: 7.5, num_inference_steps: 28 } : {}),
-    };
+  const url = `${baseUrl.replace(/\/+$/, "")}/images/create`;
 
-    const res = await fetch(`https://fal.run/${model}`, {
+  try {
+    const res = await fetch(url, {
       method: "POST",
       signal: controller.signal,
       headers: {
-        "Authorization": `Key ${falApiKey}`,
+        "x-api-key": apiKey,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        prompt,
+        model,
+        numberOfImages,
+        parameters: { aspectRatio },
+      }),
     });
 
     if (!res.ok) {
       const errText = await res.text();
-      throw new Error(`fal.ai error ${res.status}: ${errText.slice(0, 200)}`);
+      throw new Error(`plai error ${res.status}: ${errText.slice(0, 300)}`);
     }
 
-    return await res.json() as FalResponse;
+    return await res.json() as PlaiResponse;
   } finally {
     clearTimeout(timeoutId);
   }
@@ -246,19 +234,19 @@ async function uploadImageToStorage(
   variantIndex: number,
 ): Promise<{ storagePath: string; publicUrl: string; fileSize: number }> {
   const imgRes = await fetch(imageUrl);
-  if (!imgRes.ok) throw new Error(`No se pudo descargar imagen de fal.ai: ${imgRes.status}`);
+  if (!imgRes.ok) throw new Error(`No se pudo descargar imagen de plai: ${imgRes.status}`);
 
   const buffer = await imgRes.arrayBuffer();
   const fileSize = buffer.byteLength;
-  const ext = "jpg"; // fal.ai devuelve JPEG por defecto
+
+  // Detectar extensión por content-type (plai puede devolver jpg o png)
+  const ct = imgRes.headers.get("content-type") ?? "image/jpeg";
+  const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
   const storagePath = `${userId}/${jobId}/variant_${variantIndex}.${ext}`;
 
   const { error: uploadError } = await svcClient.storage
     .from("ai-images")
-    .upload(storagePath, buffer, {
-      contentType: "image/jpeg",
-      upsert: true,
-    });
+    .upload(storagePath, buffer, { contentType: ct, upsert: true });
 
   if (uploadError) throw new Error(`Storage upload error: ${uploadError.message}`);
 
@@ -270,25 +258,19 @@ async function uploadImageToStorage(
 // ── Handler principal ─────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: CORS_HEADERS });
-  }
-
-  if (req.method !== "POST") {
-    return json({ error: "Método no permitido" }, 405);
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
+  if (req.method !== "POST")    return json({ error: "Método no permitido" }, 405);
 
   const startTime = Date.now();
 
   // ── Env vars ──────────────────────────────────────────────
-  const supabaseUrl   = Deno.env.get("SUPABASE_URL")!;
-  const supabaseAnon  = Deno.env.get("SUPABASE_ANON_KEY")!;
-  const supabaseSvc   = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const anthropicKey  = Deno.env.get("ANTHROPIC_API_KEY");
-  const falApiKey     = Deno.env.get("FAL_API_KEY");
+  const supabaseUrl  = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnon = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const supabaseSvc  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const plaiApiKey   = Deno.env.get("PLAI_API_KEY");
+  const plaiBaseUrl  = Deno.env.get("PLAI_API_BASE_URL") ?? "https://plai-api-core.cencosud.ai";
 
-  if (!anthropicKey) return json({ error: "ANTHROPIC_API_KEY no configurada" }, 500);
-  if (!falApiKey)    return json({ error: "FAL_API_KEY no configurada" }, 500);
+  if (!plaiApiKey) return json({ error: "PLAI_API_KEY no configurada" }, 500);
 
   // ── 1. Autenticación JWT ──────────────────────────────────
   const authHeader = req.headers.get("Authorization");
@@ -301,9 +283,7 @@ Deno.serve(async (req: Request) => {
   });
 
   const { data: { user }, error: userError } = await userClient.auth.getUser();
-  if (userError || !user) {
-    return json({ error: "Token inválido o expirado" }, 401);
-  }
+  if (userError || !user) return json({ error: "Token inválido o expirado" }, 401);
 
   const svcClient = createClient(supabaseUrl, supabaseSvc);
 
@@ -314,12 +294,8 @@ Deno.serve(async (req: Request) => {
   if (rateLimitError) {
     console.error("[ai-generate-image] Rate limit check error:", rateLimitError);
   }
-
   if (rateLimitOk === false) {
-    return json(
-      { error: "Límite de generaciones alcanzado (10 por hora). Intenta más tarde." },
-      429,
-    );
+    return json({ error: "Límite de generaciones alcanzado (10 por hora). Intenta más tarde." }, 429);
   }
 
   // ── 3. Parse y validación del body ────────────────────────
@@ -366,7 +342,6 @@ Deno.serve(async (req: Request) => {
 
   const jobId = jobData.id as string;
 
-  // ── Función para marcar el job como fallido ───────────────
   async function failJob(message: string) {
     await svcClient
       .from("ai_generation_jobs")
@@ -375,52 +350,50 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // ── 5. Construir prompt con Claude Haiku ─────────────────
-    const anthropic = new Anthropic({ apiKey: anthropicKey });
-    let prompt: string;
+    // ── 5. Construir prompt (plantilla local, sin IA externa) ─
+    const prompt = buildPromptLocal(productData, blockType, style);
 
+    // ── 6. Generar imágenes con plai ──────────────────────────
+    const model       = PLAI_MODELS[quality];
+    const aspectRatio = BLOCK_ASPECT[blockType];
+    const dimensions  = BLOCK_DIMENSIONS[blockType];
+    const seed        = campaignId ? campaignSeed(campaignId) : Math.floor(Math.random() * 2_147_483_647);
+
+    let plaiResponse: PlaiResponse;
     try {
-      prompt = await buildPromptWithClaude(anthropic, productData, blockType, style);
-    } catch (claudeErr) {
-      console.error("[ai-generate-image] Claude error:", claudeErr);
-      // Fallback a prompt básico si Claude falla
-      prompt = `Professional product photography of ${productData.name}, clean studio lighting, high quality, photorealistic`;
-    }
-
-    // ── 6. Generar imágenes con fal.ai ────────────────────────
-    const model      = FAL_MODELS[quality];
-    const dimensions = BLOCK_DIMENSIONS[blockType];
-    const seed       = campaignId ? campaignSeed(campaignId) : Math.floor(Math.random() * 2_147_483_647);
-    const numImages  = 2; // 2 variantes por generación
-
-    let falResponse: FalResponse;
-    try {
-      falResponse = await generateWithFal(falApiKey, model, prompt, dimensions, seed, numImages);
-    } catch (falErr) {
-      await failJob((falErr as Error).message);
+      plaiResponse = await generateWithPlai(plaiBaseUrl, plaiApiKey, model, prompt, NUM_IMAGES, aspectRatio);
+    } catch (plaiErr) {
+      const msg = (plaiErr as Error).message;
+      console.error("[ai-generate-image] plai error:", msg);
+      await failJob(msg);
       return json({ error: "Error en la generación de imagen. Puedes usar la imagen del catálogo como fallback." }, 502);
     }
+
+    const plaiImages = plaiResponse?.data?.generatedImages?.[0]?.images ?? [];
+    if (plaiImages.length === 0) {
+      await failJob("plai devolvió 0 imágenes");
+      return json({ error: "El proveedor no devolvió imágenes" }, 502);
+    }
+
+    const plaiGenerationId = plaiResponse?.data?.generatedImages?.[0]?.id ?? "";
 
     // ── 7. Subir imágenes a Storage y guardar en BD ───────────
     const generatedImages: GeneratedImage[] = [];
 
-    for (let i = 0; i < falResponse.images.length; i++) {
-      const falImg = falResponse.images[i];
+    for (let i = 0; i < plaiImages.length; i++) {
+      const plaiImg = plaiImages[i];
 
-      let storagePath: string;
-      let publicUrl: string;
-      let fileSize: number;
+      let storagePath = "";
+      let publicUrl   = plaiImg.url;
+      let fileSize    = 0;
 
       try {
         ({ storagePath, publicUrl, fileSize } = await uploadImageToStorage(
-          svcClient, falImg.url, user.id, jobId, i,
+          svcClient, plaiImg.url, user.id, jobId, i,
         ));
       } catch (uploadErr) {
-        console.error(`[ai-generate-image] Upload error for variant ${i}:`, uploadErr);
-        // Si falla el upload, usar la URL directa de fal.ai como fallback temporal
-        publicUrl  = falImg.url;
-        storagePath = "";
-        fileSize    = 0;
+        console.error(`[ai-generate-image] Upload error variant ${i}:`, uploadErr);
+        // Fallback: usar URL directa de plai (puede expirar)
       }
 
       const { data: imgRecord, error: imgError } = await svcClient
@@ -430,29 +403,30 @@ Deno.serve(async (req: Request) => {
           user_id:          user.id,
           storage_path:     storagePath,
           public_url:       publicUrl,
-          width:            falImg.width,
-          height:           falImg.height,
+          width:            dimensions.width,
+          height:           dimensions.height,
           file_size_bytes:  fileSize,
           prompt,
-          seed:             falResponse.seed,
-          model:            model.split("/").pop() ?? model,
+          seed,
+          model,
           variant_index:    i,
           is_selected:      false,
+          metadata:         { provider: "plai", plaiGenerationId, aspectRatio },
         })
         .select("id")
         .single();
 
       if (imgError) {
-        console.error(`[ai-generate-image] ai_images insert error for variant ${i}:`, imgError);
+        console.error(`[ai-generate-image] ai_images insert error variant ${i}:`, imgError);
       }
 
       generatedImages.push({
         id:           (imgRecord?.id as string | undefined) ?? crypto.randomUUID(),
         url:          publicUrl,
-        width:        falImg.width,
-        height:       falImg.height,
+        width:        dimensions.width,
+        height:       dimensions.height,
         prompt,
-        seed:         falResponse.seed,
+        seed,
         variantIndex: i,
       });
     }
@@ -462,11 +436,11 @@ Deno.serve(async (req: Request) => {
     await svcClient
       .from("ai_generation_jobs")
       .update({
-        status:        "done",
+        status:         "done",
         prompt,
-        fal_request_id: String(falResponse.seed),
-        duration_ms:   durationMs,
-        completed_at:  new Date().toISOString(),
+        fal_request_id: plaiGenerationId, // reutilizamos la columna para el ID de plai
+        duration_ms:    durationMs,
+        completed_at:   new Date().toISOString(),
       })
       .eq("id", jobId);
 
@@ -478,9 +452,10 @@ Deno.serve(async (req: Request) => {
       model,
       durationMs,
     });
-  } catch (unexpectedErr) {
-    console.error("[ai-generate-image] Unexpected error:", unexpectedErr);
-    await failJob((unexpectedErr as Error).message ?? "Error inesperado");
-    return json({ error: "Error interno inesperado" }, 500);
+  } catch (err) {
+    const msg = (err as Error).message ?? "Error desconocido";
+    console.error("[ai-generate-image] Unexpected error:", err);
+    await failJob(msg);
+    return json({ error: msg }, 500);
   }
 });
