@@ -14,6 +14,7 @@ import {
   MonitorSmartphone, PenLine, PenSquare, Pipette, Plus, RotateCcw, Settings2, Smartphone,
   Upload,
   Zap,
+  HelpCircle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -37,6 +38,7 @@ import type {
   ButtonBlock, HeroBlock, ImageBlock, ProductBlock, ProductDdBlock, RawHtmlBlock, SpacerBlock, TextBlock,
 } from "../../logic/schema/block.types";
 import { imageLibraryBridge } from "../imageLibraryBridge";
+import Swal from "sweetalert2";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AMPscript Dialog + UrlInput
@@ -1148,7 +1150,17 @@ function PaddingEditor({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-foreground/70">Margen interior</span>
+        <span className="flex items-center gap-1 text-xs text-foreground/70">
+          Margen interior
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); showSpacingHelp(); }}
+            className="flex items-center justify-center w-4 h-4 rounded-full text-muted-foreground/40 hover:text-violet-500 hover:bg-violet-50 transition-colors"
+            title="¿Qué es el espaciado?"
+          >
+            <HelpCircle size={11} strokeWidth={1.75} />
+          </button>
+        </span>
         <CheckboxToggle
           checked={linked}
           onChange={() => setLinked((v) => !v)}
@@ -1191,16 +1203,96 @@ function PaddingEditor({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// showSpacingHelp — modal explicativo de espaciado
+// ─────────────────────────────────────────────────────────────────────────────
+
+function showSpacingHelp() {
+  Swal.fire({
+    html: `
+      <div style="text-align:left;font-family:inherit;">
+        <p style="font-size:1rem;font-weight:700;color:#111827;margin:0 0 18px;display:flex;align-items:center;gap:8px;">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#ede9fe;border-radius:50%;">
+            <svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='#7c3aed' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='22 12 18 12 15 21 9 3 6 12 2 12'/></svg>
+          </span>
+          Espaciado
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+
+          <!-- Margen interior (padding) -->
+          <div style="background:#f8fafc;border-radius:12px;padding:14px 12px;">
+            <div style="margin-bottom:10px;">
+              <svg xmlns='http://www.w3.org/2000/svg' width='100%' height='72' viewBox='0 0 130 80'>
+                <defs>
+                  <pattern id='sph' width='6' height='6' patternUnits='userSpaceOnUse' patternTransform='rotate(45)'>
+                    <line x1='0' y1='0' x2='0' y2='6' stroke='#c4b5fd' stroke-width='3'/>
+                  </pattern>
+                </defs>
+                <rect x='6' y='6' width='118' height='68' rx='7' fill='url(#sph)' stroke='#7c3aed' stroke-width='1.5' stroke-dasharray='5,3'/>
+                <rect x='22' y='20' width='86' height='40' rx='4' fill='white'/>
+                <line x1='32' y1='35' x2='98' y2='35' stroke='#94a3b8' stroke-width='2.5' stroke-linecap='round'/>
+                <line x1='32' y1='45' x2='85' y2='45' stroke='#cbd5e1' stroke-width='2' stroke-linecap='round'/>
+                <text x='65' y='14' font-size='7' fill='#7c3aed' text-anchor='middle' font-family='Arial' font-weight='600'>padding</text>
+              </svg>
+            </div>
+            <p style="font-size:0.8rem;font-weight:700;color:#374151;margin:0 0 5px;">Margen interior</p>
+            <p style="font-size:0.73rem;color:#6b7280;line-height:1.55;margin:0;">Espacio entre el contenido y el borde del elemento. Expande el área interna sin mover el bloque.</p>
+          </div>
+
+          <!-- Margen (margin) -->
+          <div style="background:#f8fafc;border-radius:12px;padding:14px 12px;">
+            <div style="margin-bottom:10px;">
+              <svg xmlns='http://www.w3.org/2000/svg' width='100%' height='72' viewBox='0 0 130 80'>
+                <defs>
+                  <pattern id='spm' width='6' height='6' patternUnits='userSpaceOnUse' patternTransform='rotate(45)'>
+                    <line x1='0' y1='0' x2='0' y2='6' stroke='#fcd34d' stroke-width='3'/>
+                  </pattern>
+                </defs>
+                <rect x='0' y='0' width='130' height='80' rx='7' fill='url(#spm)'/>
+                <rect x='18' y='14' width='94' height='52' rx='6' fill='white' stroke='#f59e0b' stroke-width='1.5'/>
+                <line x1='30' y1='34' x2='102' y2='34' stroke='#94a3b8' stroke-width='2.5' stroke-linecap='round'/>
+                <line x1='30' y1='44' x2='88' y2='44' stroke='#cbd5e1' stroke-width='2' stroke-linecap='round'/>
+                <text x='65' y='9' font-size='7' fill='#d97706' text-anchor='middle' font-family='Arial' font-weight='600'>margin</text>
+              </svg>
+            </div>
+            <p style="font-size:0.8rem;font-weight:700;color:#374151;margin:0 0 5px;">Margen</p>
+            <p style="font-size:0.73rem;color:#6b7280;line-height:1.55;margin:0;">Espacio exterior al elemento. Aleja este bloque de los elementos vecinos.</p>
+          </div>
+
+        </div>
+      </div>
+    `,
+    confirmButtonText: "Entendido",
+    showCancelButton: false,
+    width: 480,
+    customClass: {
+      popup:         "swal-mb-popup",
+      confirmButton: "swal-mb-confirm-neutral",
+    },
+    buttonsStyling: false,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // InspSection — sección con separador estilo Brevo
 // ─────────────────────────────────────────────────────────────────────────────
 
-function InspSection({ title, children }: { title: string; children: ReactNode }) {
+function InspSection({ title, children, help }: { title: string; children: ReactNode; help?: () => void }) {
   return (
     <div className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
-      <div className="border-b border-border/50 bg-secondary/30 px-4 py-2.5">
+      <div className="border-b border-border/50 bg-secondary/30 px-4 py-2.5 flex items-center justify-between">
         <span className="text-[13px] font-bold tracking-tight text-foreground">
           {title}
         </span>
+        {help && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); help(); }}
+            className="flex items-center justify-center w-5 h-5 rounded-full text-muted-foreground hover:text-violet-600 hover:bg-violet-100 transition-colors"
+            title="¿Qué es el espaciado?"
+          >
+            <HelpCircle size={14} strokeWidth={2} />
+          </button>
+        )}
       </div>
       <div className="space-y-3 p-4">{children}</div>
     </div>
@@ -1354,7 +1446,7 @@ export function HeroBlockInspector({ block, onChange }: SharedProps<HeroBlock>) 
         </div>
       </InspSection>
 
-      <InspSection title="Espaciado">
+      <InspSection title="Espaciado" help={showSpacingHelp}>
         <PaddingEditor
           value={padVal(block)}
           onChange={(padding) => onChange({ ...block, layout: { ...block.layout, padding } })}
@@ -1442,7 +1534,7 @@ export function TextBlockInspector({ block, onChange }: SharedProps<TextBlock>) 
       </InspSection>
 
       {/* ── Espaciado ──────────────────────────────────────────────────────── */}
-      <InspSection title="Espaciado">
+      <InspSection title="Espaciado" help={showSpacingHelp}>
         <PaddingEditor
           value={padVal(block)}
           onChange={(padding) => setLayout({ padding })}
@@ -1630,7 +1722,7 @@ export function ImageBlockInspector({ block, onChange }: SharedProps<ImageBlock>
         </div>
       </InspSection>
 
-      <InspSection title="Espaciado">
+      <InspSection title="Espaciado" help={showSpacingHelp}>
         <PaddingEditor
           value={padVal(block)}
           onChange={(padding) => onChange({ ...block, layout: { ...block.layout, padding } })}
@@ -1681,7 +1773,7 @@ export function ButtonBlockInspector({ block, onChange }: SharedProps<ButtonBloc
         </InspRow>
       </InspSection>
 
-      <InspSection title="Espaciado">
+      <InspSection title="Espaciado" help={showSpacingHelp}>
         <PaddingEditor
           value={padVal(block)}
           onChange={(padding) => onChange({ ...block, layout: { ...block.layout, padding } })}
@@ -1787,7 +1879,7 @@ export function ProductBlockInspector({ block, onChange }: SharedProps<ProductBl
         </div>
       </InspSection>
 
-      <InspSection title="Espaciado">
+      <InspSection title="Espaciado" help={showSpacingHelp}>
         <PaddingEditor
           value={padVal(block)}
           onChange={(padding) => onChange({ ...block, layout: { ...block.layout, padding } })}
@@ -2262,7 +2354,12 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
 
         {/* Espaciado */}
         <div className="mt-1 border-t border-border/50 pt-2.5 space-y-3">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-foreground">Espaciado</p>
+          <div className="flex items-center gap-1">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-foreground">Espaciado</p>
+            <button type="button" onClick={(e) => { e.stopPropagation(); showSpacingHelp(); }} className="flex items-center justify-center w-4 h-4 rounded-full text-muted-foreground/40 hover:text-violet-500 hover:bg-violet-50 transition-colors" title="¿Qué es el espaciado?">
+              <HelpCircle size={11} strokeWidth={1.75} />
+            </button>
+          </div>
           <PaddingEditor
             value={{
               top:    block.props.imagePadding?.top    ?? 0,
@@ -2418,6 +2515,10 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
 
         {/* Espaciado del bloque de descuento */}
         <div className="mt-1 border-t border-border/50 pt-2.5 space-y-3">
+          <div className="flex items-center gap-1.5">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-foreground">Espaciado</p>
+            <button type="button" onClick={(e) => { e.stopPropagation(); showSpacingHelp(); }} className="flex items-center justify-center w-4 h-4 rounded-full text-muted-foreground hover:text-violet-600 hover:bg-violet-100 transition-colors" title="¿Qué es el espaciado?"><HelpCircle size={12} strokeWidth={2} /></button>
+          </div>
           <PaddingEditor
             value={{
               top:    block.props.discountPadding?.top    ?? 0,
@@ -2501,6 +2602,10 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
 
         {/* Espaciado del bloque de precio */}
         <div className="mt-1 border-t border-border/50 pt-2.5 space-y-3">
+          <div className="flex items-center gap-1.5">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-foreground">Espaciado</p>
+            <button type="button" onClick={(e) => { e.stopPropagation(); showSpacingHelp(); }} className="flex items-center justify-center w-4 h-4 rounded-full text-muted-foreground hover:text-violet-600 hover:bg-violet-100 transition-colors" title="¿Qué es el espaciado?"><HelpCircle size={12} strokeWidth={2} /></button>
+          </div>
           <PaddingEditor
             value={{
               top:    block.props.pricePadding?.top    ?? 0,
@@ -2687,6 +2792,10 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
 
         {/* Espaciado del nombre/descripción */}
         <div className="mt-1 border-t border-border/50 pt-2.5 space-y-3">
+          <div className="flex items-center gap-1.5">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-foreground">Espaciado</p>
+            <button type="button" onClick={(e) => { e.stopPropagation(); showSpacingHelp(); }} className="flex items-center justify-center w-4 h-4 rounded-full text-muted-foreground hover:text-violet-600 hover:bg-violet-100 transition-colors" title="¿Qué es el espaciado?"><HelpCircle size={12} strokeWidth={2} /></button>
+          </div>
           <PaddingEditor
             value={{
               top:    block.props.namePadding?.top    ?? 0,
@@ -2788,6 +2897,10 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
 
         {/* ── Espaciado ──────────────────────────────────────────────────── */}
         <div className="border-t border-border/50 pt-2.5 mt-1 space-y-3">
+          <div className="flex items-center gap-1.5">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-foreground">Espaciado</p>
+            <button type="button" onClick={(e) => { e.stopPropagation(); showSpacingHelp(); }} className="flex items-center justify-center w-4 h-4 rounded-full text-muted-foreground hover:text-violet-600 hover:bg-violet-100 transition-colors" title="¿Qué es el espaciado?"><HelpCircle size={12} strokeWidth={2} /></button>
+          </div>
           <PaddingEditor
             value={padVal(block)}
             onChange={(padding) => onChange({ ...block, layout: { ...block.layout, padding } })}

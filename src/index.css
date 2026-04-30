@@ -348,3 +348,23 @@
 .swal-mb-trash-line {
   animation: swal-mb-lines-drop 0.35s ease 0.25s both;
 }
+
+/* Spacing help modal – confirm neutral button */
+.swal-mb-confirm-neutral {
+  background: #7c3aed !important;
+  color: #fff !important;
+  border-radius: 10px !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  padding: 0.6rem 1.8rem !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: background 0.15s !important;
+}
+.swal-mb-confirm-neutral:hover {
+  background: #6d28d9 !important;
+}
+.swal-mb-confirm-neutral:focus {
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.3) !important;
+  outline: none !important;
+}
