@@ -125,7 +125,7 @@ export function PromptFilters({ filters, onChange, totalResults }: Props) {
         <FilterChip
           options={BRANDS}
           value={filters.brand}
-          onChange={(v) => onChange({ ...filters, brand: v })}
+          onChange={(v) => onChange({ ...filters, brand: v as PromptFilters["brand"] })}
         />
       </div>
 
@@ -134,7 +134,7 @@ export function PromptFilters({ filters, onChange, totalResults }: Props) {
         <FilterChip
           options={TONES}
           value={filters.tone}
-          onChange={(v) => onChange({ ...filters, tone: v })}
+          onChange={(v) => onChange({ ...filters, tone: v as PromptFilters["tone"] })}
         />
       </div>
 

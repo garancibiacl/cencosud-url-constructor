@@ -25,7 +25,8 @@ function applyImageToBlock(block: MailingBlock, field: string, url: string): Mai
     return { ...block, props: { ...block.props, src: url } };
   }
   if (field === "imageUrl" && (block.type === "hero" || block.type === "product" || block.type === "product-dd")) {
-    return { ...block, props: { ...block.props, imageUrl: url } };
+    // Cast a any para evitar inferencia de unión: cada variante de props tiene su propio shape
+    return { ...block, props: { ...(block.props as any), imageUrl: url } } as MailingBlock;
   }
   if (field === "logoUrl" && block.type === "product-dd") {
     return { ...block, props: { ...block.props, logoUrl: url } };
