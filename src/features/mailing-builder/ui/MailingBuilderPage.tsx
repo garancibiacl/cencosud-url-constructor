@@ -5,7 +5,7 @@ import { RowDropIndicator } from "./layout/RowDropIndicator";
 import {
   AlertCircle, ArrowLeft, CheckCircle2, CodeXml, Copy, Download, Eye, FileCode2, FileDown,
   FileImage, GripVertical,
-  History, Image as ImageIcon, Inbox, Loader2, Mail, Monitor, MoreHorizontal,
+  History, Image as ImageIcon, Inbox, Loader2, Mail, Minus, Monitor, MoreHorizontal,
   MousePointerClick, PenSquare, Plus, RectangleHorizontal, RotateCcw, Save,
   Send, Settings2, Smartphone, Trash2, Type, UserRound, X,
 } from "lucide-react";
@@ -936,6 +936,10 @@ export default function MailingBuilderPage() {
   const [versionNote, setVersionNote] = useState("");
   const [previewMode, setPreviewMode] = useState<"canvas" | "split" | "html">("canvas");
   const [devicePreview, setDevicePreview] = useState<"desktop" | "mobile">("desktop");
+  const [canvasZoom, setCanvasZoom] = useState(100);
+  const zoomIn  = useCallback(() => setCanvasZoom(z => Math.min(200, z + 10)), []);
+  const zoomOut = useCallback(() => setCanvasZoom(z => Math.max(50,  z - 10)), []);
+  const zoomReset = useCallback(() => setCanvasZoom(100), []);
   const [lastAutosaveAt, setLastAutosaveAt] = useState<string | null>(null);
   const [showGlobalInspector, setShowGlobalInspector] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
@@ -1765,7 +1769,14 @@ export default function MailingBuilderPage() {
           {...canvasDropHandlers}
         >
           <div className="h-full overflow-y-auto" style={{ scrollBehavior: "smooth" }}>
-          <div className="px-8 py-6">
+          <div
+            className="px-8 py-6"
+            style={{
+              transform: `scale(${canvasZoom / 100})`,
+              transformOrigin: "top center",
+              transition: "transform 0.12s ease",
+            }}
+          >
           <div
             className="mx-auto flex max-w-[820px] flex-col rounded-lg bg-card transition-colors duration-250"
             style={{
@@ -2060,6 +2071,47 @@ export default function MailingBuilderPage() {
           </div>
           </div>
           </div>
+
+          {/* ── Zoom pill — aparece solo con inspector abierto (bloque seleccionado) ── */}
+          {isInspectorOpen && previewMode === "canvas" && (
+            <div className="pointer-events-none absolute inset-0 z-30">
+              <div className="sticky bottom-5 flex justify-end pr-5" style={{ top: "calc(100% - 56px)" }}>
+                <div
+                  className="pointer-events-auto flex items-center rounded-full shadow-xl"
+                  style={{ backgroundColor: "rgba(15,15,20,0.88)", backdropFilter: "blur(8px)" }}
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); zoomOut(); }}
+                    disabled={canvasZoom <= 50}
+                    title="Alejar"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-30"
+                  >
+                    <Minus className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); zoomReset(); }}
+                    title="Restablecer zoom"
+                    className="min-w-[52px] text-center text-[13px] font-semibold tabular-nums text-white transition-colors hover:text-white/70 select-none"
+                  >
+                    {canvasZoom}%
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); zoomIn(); }}
+                    disabled={canvasZoom >= 200}
+                    title="Acercar"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-30"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* ── Panel derecho — inspector ────────────────────────────────────── */}
