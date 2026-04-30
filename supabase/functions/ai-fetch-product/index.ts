@@ -7,7 +7,7 @@
  * 1. Valida JWT y extrae user_id
  * 2. Sanitiza SKU (solo alfanumérico)
  * 3. Busca en product_catalog (cache < 24h)
- * 4. Si cache miss: llama a la API pública de Jumbo/SISA
+ * 4. Si cache miss: llama a la API Cencosud (sm-web-api) buscando por productReference
  * 5. Normaliza al formato ProductData
  * 6. Upsert en product_catalog
  * 7. Retorna ProductData
@@ -52,17 +52,63 @@ interface FetchProductRequest {
   brand: Brand;
 }
 
-// ── URL de APIs por marca ─────────────────────────────────────────────────────
+// ── Endpoints Cencosud (sm-web-api) ──────────────────────────────────────────
+// Tenants conocidos de la plataforma de catálogo de Cencosud.
+// El path es el mismo, cambia el query param `tenant` (algunos endpoints lo
+// usan, en otros se infiere por la apiKey). Por ahora la apiKey es global.
 
-const CATALOG_ENDPOINTS: Record<Brand, string> = {
-  jumbo: "https://www.jumbo.cl/api/catalog_system/pub/products/search",
-  sisa:  "https://www.santaisabel.cl/api/catalog_system/pub/products/search",
-};
+const CATALOG_BASE = "https://sm-web-api.ecomm.cencosud.com/catalog/api/v1/products";
 
-// ── Normalización de respuesta de VTEX ───────────────────────────────────────
+// ── Normalización de respuesta sm-web-api ────────────────────────────────────
 
-function parsePrice(raw: unknown): number | null {
-  if (typeof raw === "number") return raw;
+interface CencoCommertialOffer {
+  Price?: number;
+  ListPrice?: number;
+  PriceWithoutDiscount?: number;
+  AvailableQuantity?: number;
+}
+interface CencoSeller {
+  commertialOffer?: CencoCommertialOffer;
+}
+interface CencoImage {
+  imageUrl?: string;
+}
+interface CencoItem {
+  itemId?: string | number;
+  name?: string;
+  ean?: string;
+  images?: CencoImage[];
+  sellers?: CencoSeller[];
+  referenceId?: { Key: string; Value: string }[];
+}
+interface CencoSpec {
+  name?: string;
+  values?: string[];
+}
+interface CencoSpecGroup {
+  name?: string;
+  specifications?: CencoSpec[];
+}
+interface CencoProduct {
+  productId?: string | number;
+  productName?: string;
+  productReference?: string;
+  brand?: string;
+  description?: string | null;
+  linkText?: string;
+  categories?: string[];
+  items?: CencoItem[];
+  specificationGroups?: CencoSpecGroup[];
+  [key: string]: unknown;
+}
+interface CencoSearchResponse {
+  redirect?: unknown;
+  products?: CencoProduct[];
+  recordsFiltered?: number;
+}
+
+function num(raw: unknown): number | null {
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
   if (typeof raw === "string") {
     const n = parseFloat(raw.replace(/[^\d.]/g, ""));
     return isNaN(n) ? null : n;
@@ -70,100 +116,149 @@ function parsePrice(raw: unknown): number | null {
   return null;
 }
 
-// La API VTEX devuelve un array de productos.
-// Cada producto tiene `items` con SKUs; filtramos por el SKU solicitado.
-function normalizeVtexResponse(data: unknown[], sku: string, brand: Brand): ProductData | null {
-  if (!Array.isArray(data) || data.length === 0) return null;
+/**
+ * Devuelve true si el producto coincide con el SKU pedido. Se considera match
+ * si productReference coincide, o si algún item tiene itemId / referenceId.Value
+ * igual al SKU buscado.
+ */
+function productMatchesSku(p: CencoProduct, sku: string): boolean {
+  const target = String(sku).trim();
+  if (!target) return false;
 
-  // Un producto puede tener múltiples SKUs; buscamos el que coincide
-  const product = data[0] as Record<string, unknown>;
+  if (String(p.productReference ?? "").trim() === target) return true;
 
-  const items = Array.isArray(product.items) ? product.items as Record<string, unknown>[] : [];
-  const item = items.find((i) => String(i.itemId) === String(sku)) ?? items[0];
+  for (const it of p.items ?? []) {
+    if (String(it.itemId ?? "").trim() === target) return true;
+    for (const ref of it.referenceId ?? []) {
+      if (String(ref?.Value ?? "").trim() === target) return true;
+    }
+    if (String(it.ean ?? "").trim() === target) return true;
+  }
+  return false;
+}
 
-  // Precio: VTEX tiene una estructura sellers → commertialOffer
+function normalizeCencoResponse(
+  data: CencoSearchResponse,
+  sku: string,
+  brand: Brand,
+): ProductData | null {
+  const products = data.products ?? [];
+  if (products.length === 0) return null;
+
+  // Preferimos un match exacto por SKU; si ninguno coincide, no devolvemos
+  // el primer resultado para evitar mostrar un producto incorrecto.
+  const product = products.find((p) => productMatchesSku(p, sku));
+  if (!product) return null;
+
+  const items = product.items ?? [];
+  // Item correspondiente al SKU; si no, el primero
+  const item =
+    items.find((it) => {
+      if (String(it.itemId ?? "") === sku) return true;
+      return (it.referenceId ?? []).some((r) => String(r?.Value ?? "") === sku);
+    }) ?? items[0];
+
+  // Precios
   let price: number | null = null;
   let originalPrice: number | null = null;
-
   if (item) {
-    const sellers = Array.isArray(item.sellers) ? item.sellers as Record<string, unknown>[] : [];
-    const mainSeller = sellers[0];
-    if (mainSeller) {
-      const offer = mainSeller.commertialOffer as Record<string, unknown> | undefined;
-      if (offer) {
-        price = parsePrice(offer.Price);
-        originalPrice = parsePrice(offer.ListPrice);
-      }
+    const seller = (item.sellers ?? [])[0];
+    const offer = seller?.commertialOffer;
+    if (offer) {
+      price = num(offer.Price);
+      originalPrice = num(offer.ListPrice ?? offer.PriceWithoutDiscount);
     }
   }
-
   const discount =
     price != null && originalPrice != null && originalPrice > price
       ? Math.round(((originalPrice - price) / originalPrice) * 100)
       : null;
 
-  // Imagen: primer item → primer imageUrl
-  const images = Array.isArray(item?.images) ? item.images as Record<string, unknown>[] : [];
-  const imageUrl = (images[0]?.imageUrl as string | undefined) ?? null;
+  // Imagen
+  const imageUrl = (item?.images ?? [])[0]?.imageUrl ?? null;
 
-  // Categorías: categoryTree es un array de objetos con name
-  const categoryTree = Array.isArray(product.categoryTree)
-    ? (product.categoryTree as Record<string, unknown>[])
-    : [];
-  const category    = (categoryTree[0]?.name as string | undefined) ?? null;
-  const subcategory = (categoryTree[1]?.name as string | undefined) ?? null;
+  // Categorías: vienen como string tipo "/Bebidas/Bebidas Gaseosas/Light/"
+  const catRaw = (product.categories ?? [])[0] ?? "";
+  const catParts = catRaw.split("/").filter(Boolean);
+  const category = catParts[0] ?? null;
+  const subcategory = catParts[1] ?? null;
 
-  // Atributos especificaciones (peso, volumen, etc.)
+  // Atributos (desde specificationGroups + brand + cantidad)
   const attributes: Record<string, string> = {};
-  const specs = product.Specifications as Record<string, string[]> | undefined;
-  if (specs && typeof specs === "object") {
-    for (const [key, val] of Object.entries(specs)) {
-      attributes[key] = Array.isArray(val) ? val.join(", ") : String(val);
+  if (product.brand) attributes["Marca"] = product.brand;
+  for (const group of product.specificationGroups ?? []) {
+    for (const spec of group.specifications ?? []) {
+      if (!spec.name) continue;
+      const v = (spec.values ?? []).join(", ");
+      if (v) attributes[spec.name] = v;
     }
   }
 
   return {
     sku,
     brand,
-    name: (product.productName as string | undefined) ?? (product.productTitle as string | undefined) ?? "Producto sin nombre",
+    name: product.productName ?? item?.name ?? "Producto sin nombre",
     category,
     subcategory,
     price,
     originalPrice,
     discount,
     imageUrl,
-    description: (product.description as string | undefined) ?? null,
+    description: product.description ?? null,
     attributes,
   };
 }
 
-// ── Fetch de la API VTEX con timeout ─────────────────────────────────────────
+// ── Fetch desde Cencosud sm-web-api ──────────────────────────────────────────
 
-async function fetchFromVtex(sku: string, brand: Brand): Promise<ProductData | null> {
-  const url = `${CATALOG_ENDPOINTS[brand]}?fq=skuId:${encodeURIComponent(sku)}&_from=0&_to=0`;
+async function fetchFromCenco(sku: string, brand: Brand): Promise<ProductData | null> {
+  const apiKey = Deno.env.get("CENCOSUD_CATALOG_API_KEY");
+  if (!apiKey) {
+    console.error("[ai-fetch-product] CENCOSUD_CATALOG_API_KEY not configured");
+    return null;
+  }
+
+  // El endpoint actual no segmenta por marca en la URL; la apiKey ya está
+  // ligada al tenant. Si en el futuro hay endpoints por marca, se mapean acá.
+  void brand;
+
+  const url = `${CATALOG_BASE}?ft=${encodeURIComponent(sku)}&_from=0&_to=9`;
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 28_000); // 28s (Edge Function timeout es 30s)
+  const timeoutId = setTimeout(() => controller.abort(), 25_000);
 
   try {
     const res = await fetch(url, {
       signal: controller.signal,
       headers: {
+        "apiKey": apiKey,
         "Accept": "application/json",
         "User-Agent": "Mozilla/5.0 (compatible; AguaApp/1.0)",
       },
     });
 
     if (!res.ok) {
-      console.error(`[ai-fetch-product] VTEX ${brand} returned ${res.status} for SKU ${sku}`);
+      console.error(`[ai-fetch-product] Cenco API returned ${res.status} for SKU ${sku}`);
+      // Consumir body para evitar leaks
+      try { await res.text(); } catch { /* noop */ }
       return null;
     }
 
-    const data = await res.json() as unknown[];
-    return normalizeVtexResponse(data, sku, brand);
+    const ct = res.headers.get("content-type") ?? "";
+    if (!ct.includes("application/json")) {
+      const txt = await res.text();
+      console.error(
+        `[ai-fetch-product] Cenco API returned non-JSON (${ct}) for SKU ${sku}. First 200 chars:`,
+        txt.slice(0, 200),
+      );
+      return null;
+    }
+
+    const data = await res.json() as CencoSearchResponse;
+    return normalizeCencoResponse(data, sku, brand);
   } catch (err) {
     if ((err as Error).name === "AbortError") {
-      console.error(`[ai-fetch-product] Timeout fetching SKU ${sku} from ${brand}`);
+      console.error(`[ai-fetch-product] Timeout fetching SKU ${sku}`);
     } else {
       console.error(`[ai-fetch-product] Fetch error for SKU ${sku}:`, err);
     }
@@ -176,11 +271,9 @@ async function fetchFromVtex(sku: string, brand: Brand): Promise<ProductData | n
 // ── Handler principal ─────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
-  // Preflight CORS
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS_HEADERS });
   }
-
   if (req.method !== "POST") {
     return json({ error: "Método no permitido" }, 405);
   }
@@ -212,7 +305,6 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Body JSON inválido" }, 400);
   }
 
-  // Sanitizar SKU: solo alfanumérico (evita inyección en URLs)
   const rawSku = String(body.sku ?? "").trim();
   const sku = rawSku.replace(/[^a-zA-Z0-9]/g, "");
   if (sku.length === 0 || sku.length > 40) {
@@ -240,7 +332,6 @@ Deno.serve(async (req: Request) => {
 
   if (cacheError) {
     console.error("[ai-fetch-product] Cache query error:", cacheError);
-    // No abortamos — intentamos hacer fetch igualmente
   }
 
   if (cached) {
@@ -260,8 +351,8 @@ Deno.serve(async (req: Request) => {
     return json({ data: product, source: "cache" });
   }
 
-  // ── 4. Fetch desde VTEX ───────────────────────────────────
-  const productData = await fetchFromVtex(sku, brand);
+  // ── 4. Fetch desde Cencosud sm-web-api ───────────────────
+  const productData = await fetchFromCenco(sku, brand);
 
   if (!productData) {
     return json(
@@ -284,14 +375,13 @@ Deno.serve(async (req: Request) => {
       image_url: productData.imageUrl,
       description: productData.description,
       attributes: productData.attributes,
-      raw_payload: {},         // no guardamos el payload completo por tamaño
+      raw_payload: {},
       fetched_at: new Date().toISOString(),
     },
     { onConflict: "sku,brand" },
   );
 
   if (upsertError) {
-    // Error no fatal: devolvemos el dato igualmente
     console.error("[ai-fetch-product] Cache upsert error:", upsertError);
   }
 
