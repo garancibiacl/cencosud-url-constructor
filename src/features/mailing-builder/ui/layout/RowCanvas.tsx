@@ -13,8 +13,45 @@
 
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Copy, GripHorizontal, GripVertical, LayoutGrid, MoveDown, MoveUp, Plus, Trash2 } from "lucide-react";
+import Swal from "sweetalert2";
 import { inspectorFocusBridge } from "../inspectorFocusBridge";
 import { blockActionBridge } from "../blockActionBridge";
+
+// ---------------------------------------------------------------------------
+// Confirmación de eliminación — SweetAlert2
+// ---------------------------------------------------------------------------
+
+async function confirmDelete(title: string, text: string): Promise<boolean> {
+  const result = await Swal.fire({
+    title,
+    text,
+    iconHtml: `<svg class="swal-mb-trash-svg" xmlns="http://www.w3.org/2000/svg" width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <g class="swal-mb-trash-lid">
+        <path d="M3 6h18"/>
+        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+      </g>
+      <path class="swal-mb-trash-body" d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+      <line class="swal-mb-trash-line" x1="10" y1="11" x2="10" y2="17"/>
+      <line class="swal-mb-trash-line" x1="14" y1="11" x2="14" y2="17"/>
+    </svg>`,
+    showCancelButton: true,
+    confirmButtonText: "Eliminar",
+    cancelButtonText: "Cancelar",
+    reverseButtons: true,
+    focusCancel: true,
+    width: 380,
+    customClass: {
+      popup:         "swal-mb-popup",
+      title:         "swal-mb-title",
+      htmlContainer: "swal-mb-text",
+      confirmButton: "swal-mb-confirm",
+      cancelButton:  "swal-mb-cancel",
+      icon:          "swal-mb-icon",
+    },
+    buttonsStyling: false,
+  });
+  return result.isConfirmed;
+}
 
 // Custom MIME types — permiten distinguir tipo de drag en dragOver (sin leer contenido)
 const SECTION_DRAG_TYPE = "application/mailing-section";
@@ -346,6 +383,14 @@ export const RowCanvas = memo(function RowCanvas({
     dragRef.current = null;
   }, [dragRef, onInsertBlock, onMoveBlockWithinColumn, onMoveBlockToColumn]);
 
+  const handleRemoveRow = useCallback(async () => {
+    const ok = await confirmDelete(
+      "¿Eliminar sección?",
+      "Se eliminarán todos los bloques dentro de esta sección.",
+    );
+    if (ok) onRemoveRow(row.id);
+  }, [row.id, onRemoveRow]);
+
   // Stable callbacks for column-level selection
   const handleSelectRow = useCallback(() => onSelectRow(row.id), [onSelectRow, row.id]);
 
@@ -513,7 +558,7 @@ export const RowCanvas = memo(function RowCanvas({
           </Tip>
           <Tip label="Eliminar fila">
             <Button size="icon" variant="ghost" className="h-7 w-7 hover:bg-red-50 hover:text-red-500"
-              onClick={() => onRemoveRow(row.id)}>
+              onClick={handleRemoveRow}>
               <Trash2 size={14} strokeWidth={1.75} />
             </Button>
           </Tip>
@@ -890,8 +935,16 @@ const BlockItem = memo(function BlockItem({
   );
 
   const handleRemove = useCallback(
-    (e: React.MouseEvent) => { e.stopPropagation(); onRemoveBlock(block.id); },
-    [block.id, onRemoveBlock],
+    async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      const label = BLOCK_LABELS[block.type] ?? "bloque";
+      const ok = await confirmDelete(
+        `¿Eliminar ${label.toLowerCase()}?`,
+        "Esta acción no se puede deshacer.",
+      );
+      if (ok) onRemoveBlock(block.id);
+    },
+    [block.id, block.type, onRemoveBlock],
   );
 
   const handleDragStart = useCallback(

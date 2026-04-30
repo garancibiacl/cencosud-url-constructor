@@ -227,3 +227,124 @@
   background: linear-gradient(135deg, #7c3aed, #6d28d9) !important;
   border-radius: 4px !important;
 }
+
+/* ── SweetAlert2 – canvas delete confirmation ───────────────────────────── */
+.swal-mb-popup {
+  border-radius: 18px !important;
+  padding: 2rem 2rem 1.75rem !important;
+  font-family: inherit !important;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.14) !important;
+}
+
+.swal-mb-title {
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+  color: #111827 !important;
+  padding: 0 !important;
+  margin-bottom: 0.4rem !important;
+}
+
+.swal-mb-text {
+  font-size: 0.85rem !important;
+  color: #6b7280 !important;
+  margin-bottom: 0 !important;
+}
+
+.swal-mb-icon {
+  border: none !important;
+  margin: 0 auto 1rem !important;
+  width: 64px !important;
+  height: 64px !important;
+  background: #fef2f2 !important;
+  border-radius: 50% !important;
+}
+.swal-mb-icon .swal2-icon-content {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.swal2-actions {
+  gap: 0.5rem !important;
+  margin-top: 1.5rem !important;
+}
+
+.swal-mb-confirm {
+  background: #ef4444 !important;
+  color: #fff !important;
+  border-radius: 10px !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  padding: 0.6rem 1.4rem !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: background 0.15s, box-shadow 0.15s !important;
+  box-shadow: 0 4px 12px rgba(239,68,68,0.3) !important;
+}
+.swal-mb-confirm:hover {
+  background: #dc2626 !important;
+  box-shadow: 0 6px 18px rgba(239,68,68,0.4) !important;
+}
+.swal-mb-confirm:focus {
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.3) !important;
+  outline: none !important;
+}
+
+.swal-mb-cancel {
+  background: #f3f4f6 !important;
+  color: #374151 !important;
+  border-radius: 10px !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  padding: 0.6rem 1.4rem !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: background 0.15s !important;
+}
+.swal-mb-cancel:hover {
+  background: #e5e7eb !important;
+}
+.swal-mb-cancel:focus {
+  box-shadow: 0 0 0 3px rgba(107,114,128,0.2) !important;
+  outline: none !important;
+}
+
+/* ── Trash icon animation ─────────────────────────────────────────────────── */
+@keyframes swal-mb-lid-open {
+  0%   { transform: rotate(0deg) translateY(0px); }
+  20%  { transform: rotate(-38deg) translateY(-2px); }
+  55%  { transform: rotate(-38deg) translateY(-2px); }
+  80%  { transform: rotate(5deg) translateY(1px); }
+  100% { transform: rotate(0deg) translateY(0px); }
+}
+
+@keyframes swal-mb-trash-bounce {
+  0%   { transform: scale(0.6); opacity: 0; }
+  55%  { transform: scale(1.12); opacity: 1; }
+  75%  { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+@keyframes swal-mb-lines-drop {
+  0%, 30% { opacity: 0; transform: translateY(-4px); }
+  100%     { opacity: 1; transform: translateY(0); }
+}
+
+.swal-mb-trash-svg {
+  animation: swal-mb-trash-bounce 0.45s cubic-bezier(0.34,1.56,0.64,1) both;
+  overflow: visible;
+}
+
+.swal-mb-trash-lid {
+  transform-origin: 12px 6px;
+  transform-box: fill-box;
+  animation: swal-mb-lid-open 0.9s cubic-bezier(0.34,1.2,0.64,1) 0.15s both;
+}
+
+.swal-mb-trash-body {
+  animation: swal-mb-lines-drop 0.35s ease 0.1s both;
+}
+
+.swal-mb-trash-line {
+  animation: swal-mb-lines-drop 0.35s ease 0.25s both;
+}
