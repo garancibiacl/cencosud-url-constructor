@@ -1008,7 +1008,7 @@ const BlockItem = memo(function BlockItem({
         onClickCapture={() => inspectorFocusBridge.focus(block.id, "apariencia")}
       >
         <div className="p-1.5">
-          <BlockView block={block} isSelected={isSelected} onChange={handleChange as never} />
+          <BlockView block={block as never} isSelected={isSelected} onChange={handleChange as never} />
         </div>
 
         {/* Toolbar inline — visible solo cuando está seleccionado */}
