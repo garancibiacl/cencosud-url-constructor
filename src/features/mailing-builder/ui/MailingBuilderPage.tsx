@@ -2094,10 +2094,14 @@ export default function MailingBuilderPage() {
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); zoomReset(); }}
-                    title="Restablecer zoom"
-                    className="min-w-[52px] text-center text-[13px] font-semibold tabular-nums text-white transition-colors hover:text-white/70 select-none"
+                    className={`group/zoom relative min-w-[52px] px-1 text-center text-[13px] font-semibold tabular-nums select-none transition-colors ${canvasZoom !== 100 ? "cursor-pointer text-white hover:text-amber-300" : "cursor-default text-white/60 pointer-events-none"}`}
                   >
                     {canvasZoom}%
+                    {canvasZoom !== 100 && (
+                      <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2.5 -translate-x-1/2 scale-95 whitespace-nowrap rounded-full bg-gray-900 px-3 py-1.5 text-[11px] font-medium leading-none text-white opacity-0 shadow-xl ring-1 ring-white/10 transition-all duration-150 group-hover/zoom:scale-100 group-hover/zoom:opacity-100">
+                        Restablecer zoom
+                      </span>
+                    )}
                   </button>
                   <button
                     type="button"
