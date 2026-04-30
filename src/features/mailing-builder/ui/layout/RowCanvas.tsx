@@ -1082,53 +1082,68 @@ const BlockItem = memo(function BlockItem({
 });
 
 // ---------------------------------------------------------------------------
-// AddRowButton — selector de layout para agregar filas
+// AddRowButton — barra expandible inline para agregar filas
 // ---------------------------------------------------------------------------
 
 export function AddRowButton({ onAdd }: { onAdd: (layoutId: string) => void }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="relative flex justify-center">
-      <Button
+    <div data-canvas-toolbar="true" className="mt-3">
+      {/* Trigger full-width */}
+      <button
         type="button"
-        variant="outline"
-        size="sm"
-        className="gap-1.5 border-dashed text-muted-foreground"
         onClick={() => setOpen((v) => !v)}
+        className={`group flex w-full items-center justify-center gap-2 py-2.5 text-[11px] font-semibold transition-all duration-200 ${
+          open
+            ? "rounded-t-xl border border-b-0 border-violet-200/80 bg-violet-50/70 text-violet-600"
+            : "rounded-xl border border-dashed border-border/50 bg-transparent text-muted-foreground/50 hover:border-violet-300/70 hover:bg-violet-50/40 hover:text-violet-500"
+        }`}
       >
-        <Plus size={16} strokeWidth={1.5} />
+        <Plus
+          size={13}
+          strokeWidth={2.5}
+          className={`transition-transform duration-300 ${open ? "rotate-45" : "group-hover:rotate-90"}`}
+        />
         Agregar fila
-      </Button>
-      {open && (
-        <div className="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 rounded-lg border border-border bg-card p-2 shadow-lg">
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+      </button>
+
+      {/* Panel expandible inline */}
+      <div
+        className={`overflow-hidden rounded-b-xl border border-t-0 transition-all duration-300 ease-in-out ${
+          open
+            ? "max-h-52 border-violet-200/80 bg-violet-50/40 opacity-100"
+            : "max-h-0 border-transparent opacity-0"
+        }`}
+      >
+        <div className="p-3 pt-2">
+          <p className="mb-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-violet-400/70">
             Elegir layout
           </p>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {layoutRegistry.map((layout) => (
               <button
                 key={layout.id}
                 type="button"
                 title={layout.label}
                 onClick={() => { onAdd(layout.id); setOpen(false); }}
-                className="flex flex-col gap-1 rounded border border-border px-2 py-1.5 transition hover:border-border/80 hover:bg-secondary/60"
+                className="group/layout flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-white px-2.5 py-2 text-[9px] font-medium text-muted-foreground/70 transition-all duration-150 hover:border-violet-400/70 hover:bg-white hover:text-violet-600 hover:shadow-[0_2px_8px_rgba(124,58,237,0.12)]"
               >
-                <div className="flex items-center gap-0.5">
+                <div className="flex items-end gap-[3px]">
                   {layout.columns.map((col, i) => (
                     <span
                       key={i}
-                      className="block h-4 rounded-sm bg-muted-foreground/30"
-                      style={{ width: `${(col.colSpan / 12) * 48}px` }}
+                      className="block rounded-sm bg-muted-foreground/20 transition-colors duration-150 group-hover/layout:bg-violet-400/50"
+                      style={{ width: `${(col.colSpan / 12) * 44}px`, height: "14px" }}
                     />
                   ))}
                 </div>
-                <span className="text-[9px] font-medium text-muted-foreground/70">{layout.label}</span>
+                {layout.label}
               </button>
             ))}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

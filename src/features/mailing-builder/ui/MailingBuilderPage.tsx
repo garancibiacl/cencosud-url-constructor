@@ -1995,9 +1995,7 @@ export default function MailingBuilderPage() {
 
                         {/* Botón añadir fila (solo cuando hay filas) */}
                         {document.rows.length > 0 && (
-                          <div className="mt-3">
-                            <AddRowButton onAdd={(layoutId) => addRowFromLayout(layoutId)} />
-                          </div>
+                          <AddRowButton onAdd={(layoutId) => addRowFromLayout(layoutId)} />
                         )}
                       </div>
                     </div>
