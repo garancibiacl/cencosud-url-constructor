@@ -1268,9 +1268,9 @@ function showSpacingHelp() {
 
 function InspSection({ title, children, help }: { title: string; children: ReactNode; help?: () => void }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
-      <div className="border-b border-border/50 bg-secondary/30 px-4 py-2.5 flex items-center justify-between">
-        <span className="text-[13px] font-bold tracking-tight text-foreground">
+    <div className="overflow-hidden rounded-xl bg-white shadow-[0_1px_3px_rgba(0,0,0,0.07),0_1px_2px_rgba(0,0,0,0.04)]">
+      <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(0,0,0,0.06)", background: "linear-gradient(to right, #f8f7ff, #ffffff)" }}>
+        <span className="text-[13px] font-semibold tracking-tight text-slate-700">
           {title}
         </span>
         {help && (
@@ -2010,27 +2010,27 @@ function InspSectionCollapsible({
   return (
     <div
       ref={resolvedRef}
-      className={`overflow-hidden rounded-xl border bg-card transition-all duration-150 ${
+      className={`overflow-hidden rounded-xl bg-white transition-all duration-200 ${
         open
-          ? "border-violet-400/40 shadow-[0_2px_4px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.08),0_0_0_1px_rgba(139,92,246,0.14)]"
-          : "border-border/60 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.03)]"
+          ? "shadow-[0_0_0_1.5px_rgba(124,58,237,0.22),0_4px_20px_rgba(124,58,237,0.10),0_1px_4px_rgba(0,0,0,0.06)]"
+          : "shadow-[0_1px_3px_rgba(0,0,0,0.07),0_1px_2px_rgba(0,0,0,0.04)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.09),0_1px_3px_rgba(0,0,0,0.06)]"
       }`}
     >
       <button
         type="button"
         onClick={handleToggle}
-        className={`flex w-full items-center justify-between px-4 py-2.5 transition-colors ${
+        className={`flex w-full items-center justify-between px-4 py-3 transition-colors ${
           open
-            ? "bg-violet-50/70 border-b border-violet-200/60 hover:bg-violet-50"
-            : "bg-secondary/30 border-b border-border/50 hover:bg-secondary/50"
+            ? "bg-gradient-to-r from-violet-50/80 to-white border-b border-violet-100/80 hover:from-violet-50"
+            : "bg-white hover:bg-slate-50/80"
         }`}
       >
-        <span className={`text-[13px] font-bold tracking-tight transition-colors ${open ? "text-violet-700" : "text-foreground"}`}>
+        <span className={`text-[13px] font-semibold tracking-tight transition-colors ${open ? "text-violet-700" : "text-slate-700"}`}>
           {title}
         </span>
         <ChevronDown
-          className={`h-4 w-4 transition-all duration-200 ${
-            open ? "text-violet-500 rotate-0" : "text-muted-foreground/60 -rotate-90"
+          className={`h-3.5 w-3.5 transition-all duration-200 ${
+            open ? "text-violet-400 rotate-0" : "text-slate-300 -rotate-90"
           }`}
         />
       </button>

@@ -6,8 +6,8 @@ import {
   AlertCircle, ArrowLeft, CheckCircle2, CodeXml, Copy, Download, Eye, FileCode2, FileDown,
   FileImage, GripVertical,
   History, Image as ImageIcon, Inbox, Loader2, Mail, Minus, Monitor, MoreHorizontal,
-  MousePointerClick, Paintbrush2, PenSquare, Plus, RectangleHorizontal, RotateCcw, Save,
-  Send, Settings2, Smartphone, Trash2, Type, UserRound, X,
+  MousePointerClick, Package, Paintbrush2, PenSquare, Plus, RectangleHorizontal, RotateCcw, Save,
+  Send, Settings2, SlidersHorizontal, Smartphone, Trash2, Type, UserRound, X,
 } from "lucide-react";
 import Swal from "sweetalert2";
 import { Button } from "@/components/ui/button";
@@ -952,7 +952,7 @@ export default function MailingBuilderPage() {
   const [showDevMode, setShowDevMode] = useState(false);
 
   const inspectorRef = useRef<HTMLDivElement | null>(null);
-  const globalInspectorButtonRef = useRef<HTMLButtonElement | null>(null);
+  const configHandleRef = useRef<HTMLButtonElement | null>(null);
   const dragRef = useRef<Parameters<typeof RowCanvas>[0]["dragRef"]["current"]>(null);
   const rowsContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -1394,11 +1394,14 @@ export default function MailingBuilderPage() {
   const handleOpenStylesPanel = () => { selectBlock(null); setShowGlobalInspector(false); setShowStylesPanel(true); };
 
   const blockMeta = selectedBlock ? {
-    hero:   { icon: ImageIcon,           label: "Hero",         detail: "imagen, título, CTA" },
-    text:   { icon: Type,                label: "Texto",        detail: "HTML, tipografía" },
-    image:  { icon: ImageIcon,           label: "Imagen",       detail: "src, alt, link" },
-    button: { icon: MousePointerClick,   label: "Botón",        detail: "label, href, alineación" },
-    spacer: { icon: RectangleHorizontal, label: "Espaciador",   detail: "altura" },
+    hero:         { icon: ImageIcon,           label: "Hero",            detail: "imagen, título, CTA" },
+    text:         { icon: Type,                label: "Texto",           detail: "HTML, tipografía" },
+    image:        { icon: ImageIcon,           label: "Imagen",          detail: "src, alt, link" },
+    button:       { icon: MousePointerClick,   label: "Botón",           detail: "label, href, alineación" },
+    spacer:       { icon: RectangleHorizontal, label: "Espaciador",      detail: "altura" },
+    product:      { icon: Package,             label: "Producto",        detail: "precio, nombre, CTA" },
+    "product-dd": { icon: Package,             label: "Producto DD",     detail: "descuento doble" },
+    "raw-html":   { icon: FileCode2,           label: "HTML libre",      detail: "código personalizado" },
   }[selectedBlock.type] : null;
 
   useEffect(() => {
@@ -1407,7 +1410,7 @@ export default function MailingBuilderPage() {
       const target = event.target as HTMLElement | null;
       if (!target) return;
       if (inspectorRef.current?.contains(target)) return;
-      if (globalInspectorButtonRef.current?.contains(target)) return;
+      if (configHandleRef.current?.contains(target)) return;
       if (target.closest('[data-mailing-block="true"]')) return;
       if (target.closest('[data-canvas-toolbar="true"]')) return;
       if (target.closest('[role="dialog"]') || target.closest('[data-radix-dialog-overlay]')) return;
@@ -1631,7 +1634,7 @@ export default function MailingBuilderPage() {
       {/* ── Cuerpo de 3 columnas ────────────────────────────────────────────── */}
       {!showWelcome && !showCampaignSettings && <div
         className="grid min-h-0 flex-1 gap-0 transition-all duration-300"
-        style={{ gridTemplateColumns: isInspectorOpen ? "272px minmax(0,1fr) 340px" : "272px minmax(0,1fr) 0px" }}
+        style={{ gridTemplateColumns: isInspectorOpen ? "272px minmax(0,1fr) 340px" : "272px minmax(0,1fr) 0px", gridTemplateRows: "minmax(0, 1fr)" }}
       >
 
         {/* ── Panel izquierdo ─────────────────────────────────────────────── */}
@@ -1850,22 +1853,6 @@ export default function MailingBuilderPage() {
                 >
                   <Paintbrush2 className="h-3.5 w-3.5" />
                   <span className="text-[11px] font-semibold">Estilo</span>
-                </button>
-
-                {/* Botón inspector global */}
-                <button
-                  ref={globalInspectorButtonRef}
-                  type="button"
-                  onClick={handleOpenGlobalInspector}
-                  title="Configuración global"
-                  className="flex h-7 w-7 items-center justify-center rounded-full transition-colors"
-                  style={{
-                    backgroundColor: showGlobalInspector && !selectedBlock ? "#f1f5f9" : "transparent",
-                    color: "#64748b",
-                    border: "1px solid #e2e8f0",
-                  }}
-                >
-                  <Settings2 className="h-3.5 w-3.5" />
                 </button>
 
                 {/* Device toggle — estilo oscuro con activo violeta */}
@@ -2143,44 +2130,87 @@ export default function MailingBuilderPage() {
         {/* ── Panel derecho — inspector ────────────────────────────────────── */}
         <aside
           ref={inspectorRef}
-          className={`flex h-full flex-col overflow-hidden border-l border-border bg-card ${
-            isInspectorOpen ? "opacity-100" : "pointer-events-none opacity-0"
-          }`}
+          className="relative flex h-full flex-col border-l border-border"
+          style={{ backgroundColor: "#f8fafc" }}
         >
+          {/* ── Handle flotante — abre/cierra configuración global ── */}
+          <button
+            ref={configHandleRef}
+            type="button"
+            onClick={showGlobalInspector && !selectedBlock && !showStylesPanel ? handleCloseInspector : handleOpenGlobalInspector}
+            className="group/handle absolute left-0 top-6 z-20 -translate-x-full flex h-9 items-center gap-0 overflow-hidden rounded-l-xl border border-r-0 border-border bg-card pl-2 pr-2 transition-all duration-200 hover:gap-1.5 hover:pr-3"
+            style={{
+              boxShadow: "-4px 0 12px rgba(0,0,0,0.10), -1px 0 3px rgba(0,0,0,0.06)",
+              color: showGlobalInspector && !selectedBlock && !showStylesPanel
+                ? (activeBrandColor ?? "#6366f1")
+                : "#94a3b8",
+              backgroundColor: showGlobalInspector && !selectedBlock && !showStylesPanel
+                ? `${(activeBrandColor ?? "#6366f1")}12`
+                : undefined,
+            }}
+          >
+            <Settings2 className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 group-hover/handle:rotate-45" />
+            <span className="max-w-0 overflow-hidden whitespace-nowrap text-[10px] font-semibold uppercase tracking-wide transition-all duration-200 group-hover/handle:max-w-[80px]">
+              Config
+            </span>
+          </button>
+
+          {/* ── Contenido del inspector ── */}
+          <div className={`flex min-h-0 flex-1 flex-col overflow-hidden transition-opacity duration-200 ${
+            isInspectorOpen ? "opacity-100" : "pointer-events-none opacity-0"
+          }`}>
           {isInspectorOpen && (
             <>
               {/* Header del inspector */}
-              <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-3.5">
-                <div className="flex items-center gap-2.5">
-                  {selectedBlock && blockMeta ? (
-                    <>
-                      <blockMeta.icon className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-semibold text-foreground">{blockMeta.label}</span>
-                    </>
-                  ) : showStylesPanel ? (
-                    <>
-                      <Paintbrush2 className="h-4 w-4 text-violet-500" />
-                      <span className="text-sm font-semibold text-foreground">Estilos globales</span>
-                    </>
-                  ) : (
-                    <>
-                      <Settings2 className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-semibold text-foreground">Configuración</span>
-                    </>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={handleCloseInspector}
-                  className="rounded-md p-1 text-muted-foreground transition hover:bg-secondary/60 hover:text-foreground"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
+              {(() => {
+                const hCfg = selectedBlock && blockMeta
+                  ? { Icon: blockMeta.icon,      label: blockMeta.label,    detail: blockMeta.detail,
+                      iconBg: `${activeBrandColor ?? "#6366f1"}18`, iconColor: activeBrandColor ?? "#6366f1",
+                      accent: activeBrandColor ?? "#6366f1" }
+                  : showStylesPanel
+                  ? { Icon: Paintbrush2,          label: "Estilos globales", detail: "tipografía · botones",
+                      iconBg: "rgba(124,58,237,0.12)", iconColor: "#7c3aed", accent: "#7c3aed" }
+                  : { Icon: SlidersHorizontal,    label: "Configuración",    detail: "documento · diseño · tracking",
+                      iconBg: "rgba(100,116,139,0.11)", iconColor: "#64748b", accent: "#64748b" };
+                return (
+                  <div className="relative flex shrink-0 items-center justify-between pl-5 pr-3.5 py-3.5"
+                    style={{
+                      background: "linear-gradient(to bottom, #ffffff 0%, #f9fafb 100%)",
+                      borderBottom: "1px solid rgba(0,0,0,0.07)",
+                      boxShadow: "0 1px 6px rgba(0,0,0,0.05)",
+                    }}
+                  >
+                    {/* Accent bar */}
+                    <div className="absolute left-0 inset-y-0 w-[3px] rounded-r-full transition-colors duration-300"
+                      style={{ background: hCfg.accent }} />
+
+                    {/* Icon + labels */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors duration-300"
+                        style={{ background: hCfg.iconBg }}>
+                        <hCfg.Icon className="h-[15px] w-[15px] transition-colors duration-300" style={{ color: hCfg.iconColor }} />
+                      </div>
+                      <div className="flex flex-col gap-[3px]">
+                        <span className="text-[13px] font-semibold leading-none text-foreground">{hCfg.label}</span>
+                        <span className="text-[10px] leading-none text-muted-foreground/60">{hCfg.detail}</span>
+                      </div>
+                    </div>
+
+                    {/* Close button */}
+                    <button
+                      type="button"
+                      onClick={handleCloseInspector}
+                      className="group/close flex h-7 w-7 items-center justify-center rounded-full transition-all duration-200 hover:bg-red-50"
+                    >
+                      <X className="h-3.5 w-3.5 text-muted-foreground/40 transition-all duration-200 group-hover/close:rotate-90 group-hover/close:scale-110 group-hover/close:text-red-400" />
+                    </button>
+                  </div>
+                );
+              })()}
 
               {/* Contenido scrollable */}
-              <ScrollArea className="flex-1">
-                <div className="space-y-6 px-5 py-5">
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <div className="space-y-3 px-4 py-4">
 
                   {/* Inspector de bloque seleccionado */}
                   {selectedBlock ? (
@@ -2255,9 +2285,10 @@ export default function MailingBuilderPage() {
                     </div>
                   )}
                 </div>
-              </ScrollArea>
+              </div>
             </>
           )}
+          </div>
         </aside>
       </div>}
 
