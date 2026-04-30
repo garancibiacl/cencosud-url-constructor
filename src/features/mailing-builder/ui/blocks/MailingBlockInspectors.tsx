@@ -1150,17 +1150,7 @@ function PaddingEditor({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="flex items-center gap-1 text-xs text-foreground/70">
-          Margen interior
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); showSpacingHelp(); }}
-            className="flex items-center justify-center w-4 h-4 rounded-full text-muted-foreground/40 hover:text-violet-500 hover:bg-violet-50 transition-colors"
-            title="¿Qué es el espaciado?"
-          >
-            <HelpCircle size={11} strokeWidth={1.75} />
-          </button>
-        </span>
+        <span className="text-xs text-foreground/70">Margen interior</span>
         <CheckboxToggle
           checked={linked}
           onChange={() => setLinked((v) => !v)}
