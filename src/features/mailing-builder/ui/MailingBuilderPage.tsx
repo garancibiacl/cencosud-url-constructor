@@ -6,7 +6,7 @@ import {
   AlertCircle, ArrowLeft, CheckCircle2, CodeXml, Copy, Download, Eye, FileCode2, FileDown,
   FileImage, GripVertical,
   History, Image as ImageIcon, Inbox, Loader2, Mail, Minus, Monitor, MoreHorizontal,
-  MousePointerClick, PenSquare, Plus, RectangleHorizontal, RotateCcw, Save,
+  MousePointerClick, Paintbrush2, PenSquare, Plus, RectangleHorizontal, RotateCcw, Save,
   Send, Settings2, Smartphone, Trash2, Type, UserRound, X,
 } from "lucide-react";
 import Swal from "sweetalert2";
@@ -42,6 +42,7 @@ import { mailingTemplates } from "../logic/templates/mailingTemplates";
 import { SectionLayoutPicker } from "./sidebar/SectionLayoutPicker";
 import { RowCanvas, AddRowButton } from "./layout/RowCanvas";
 import { ImageLibraryModal } from "./ImageLibraryModal";
+import { GlobalStylesPanel } from "./GlobalStylesPanel";
 import { imageLibraryBridge } from "./imageLibraryBridge";
 import { NewTemplateModal } from "./NewTemplateModal";
 const DevModePanel = React.lazy(() =>
@@ -915,6 +916,7 @@ export default function MailingBuilderPage() {
     updateDocumentName,
     updateSettings,
     updateLinkTracking,
+    updateGlobalStyles,
     replaceDocument,
     setActiveMailingId,
     showWelcome,
@@ -942,6 +944,7 @@ export default function MailingBuilderPage() {
   const zoomReset = useCallback(() => setCanvasZoom(100), []);
   const [lastAutosaveAt, setLastAutosaveAt] = useState<string | null>(null);
   const [showGlobalInspector, setShowGlobalInspector] = useState(false);
+  const [showStylesPanel, setShowStylesPanel] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
   const [showVersionHistoryModal, setShowVersionHistoryModal] = useState(false);
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
@@ -1384,10 +1387,11 @@ export default function MailingBuilderPage() {
 
   // ── Inspector ─────────────────────────────────────────────────────────────
 
-  const isInspectorOpen = showGlobalInspector || !!selectedBlock;
+  const isInspectorOpen = showGlobalInspector || showStylesPanel || !!selectedBlock;
 
-  const handleOpenGlobalInspector = () => { selectBlock(null); setShowGlobalInspector(true); };
-  const handleCloseInspector = () => { selectBlock(null); setShowGlobalInspector(false); };
+  const handleOpenGlobalInspector = () => { selectBlock(null); setShowGlobalInspector(true); setShowStylesPanel(false); };
+  const handleCloseInspector = () => { selectBlock(null); setShowGlobalInspector(false); setShowStylesPanel(false); };
+  const handleOpenStylesPanel = () => { selectBlock(null); setShowGlobalInspector(false); setShowStylesPanel(true); };
 
   const blockMeta = selectedBlock ? {
     hero:   { icon: ImageIcon,           label: "Hero",         detail: "imagen, título, CTA" },
@@ -1405,6 +1409,7 @@ export default function MailingBuilderPage() {
       if (inspectorRef.current?.contains(target)) return;
       if (globalInspectorButtonRef.current?.contains(target)) return;
       if (target.closest('[data-mailing-block="true"]')) return;
+      if (target.closest('[data-canvas-toolbar="true"]')) return;
       if (target.closest('[role="dialog"]') || target.closest('[data-radix-dialog-overlay]')) return;
       handleCloseInspector();
     };
@@ -1823,6 +1828,7 @@ export default function MailingBuilderPage() {
 
               {/* ── DERECHA: zona blanca — settings + tabs pill ─────────── */}
               <div
+                data-canvas-toolbar="true"
                 className="relative z-10 flex flex-1 items-center justify-end gap-2 pr-4"
                 style={{
                   backgroundColor: "#ffffff",
@@ -1830,6 +1836,22 @@ export default function MailingBuilderPage() {
                   paddingLeft: "0.5rem",
                 }}
               >
+                {/* Boton Estilos globales */}
+                <button
+                  type="button"
+                  onClick={handleOpenStylesPanel}
+                  title="Estilos globales"
+                  className="flex h-7 items-center gap-1.5 rounded-full px-2.5 transition-colors"
+                  style={{
+                    backgroundColor: showStylesPanel && !selectedBlock ? "#ede9fe" : "transparent",
+                    color: showStylesPanel && !selectedBlock ? "#7c3aed" : "#64748b",
+                    border: "1px solid #e2e8f0",
+                  }}
+                >
+                  <Paintbrush2 className="h-3.5 w-3.5" />
+                  <span className="text-[11px] font-semibold">Estilo</span>
+                </button>
+
                 {/* Botón inspector global */}
                 <button
                   ref={globalInspectorButtonRef}
@@ -2135,6 +2157,11 @@ export default function MailingBuilderPage() {
                       <blockMeta.icon className="h-4 w-4 text-primary" />
                       <span className="text-sm font-semibold text-foreground">{blockMeta.label}</span>
                     </>
+                  ) : showStylesPanel ? (
+                    <>
+                      <Paintbrush2 className="h-4 w-4 text-violet-500" />
+                      <span className="text-sm font-semibold text-foreground">Estilos globales</span>
+                    </>
                   ) : (
                     <>
                       <Settings2 className="h-4 w-4 text-primary" />
@@ -2163,6 +2190,11 @@ export default function MailingBuilderPage() {
                         <SelectedInspector block={selectedBlock as never} onChange={updateBlock} />
                       )}
                     </>
+                  ) : showStylesPanel ? (
+                    <GlobalStylesPanel
+                      value={document.settings.globalStyles ?? {}}
+                      onChange={(patch) => updateGlobalStyles(patch)}
+                    />
                   ) : (
                     /* Inspector global */
                     <div className="space-y-5">

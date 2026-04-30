@@ -1,5 +1,30 @@
 import type { MailingRow } from "./row.types";
 
+export interface GlobalStylesTypography {
+  fontFamily?: string;
+  bodyFontSize?: number;
+  bodyColor?: string;
+  headingFontFamily?: string;
+  headingFontSize?: number;
+  headingColor?: string;
+  linkColor?: string;
+}
+
+export interface GlobalStylesButton {
+  fontFamily?: string;
+  fontSize?: number;
+  color?: string;
+  bgColor?: string;
+  borderRadius?: number;
+  borderWidth?: number;
+  borderColor?: string;
+}
+
+export interface GlobalStyles {
+  typography?: GlobalStylesTypography;
+  button?: GlobalStylesButton;
+}
+
 export interface MailingSettings {
   width: number;
   backgroundColor: string;
@@ -17,6 +42,7 @@ export interface MailingSettings {
     utmCampaign: string;
     promoName?: string;
   };
+  globalStyles?: GlobalStyles;
 }
 
 export interface MailingDocument {

@@ -14,7 +14,7 @@
  *   const html = defaultRenderEngine.render(parsedDocument);
  */
 
-import type { MailingDocument } from "../schema/mailing.types";
+import type { MailingDocument, GlobalStyles } from "../schema/mailing.types";
 import type { MailingBlock } from "../schema/block.types";
 import type { MailingColumn, MailingRow } from "../schema/row.types";
 import {
@@ -40,14 +40,28 @@ import { productDdTemplate } from "./templates/block/product-dd.template";
 import type { HeroBlock, TextBlock, ImageBlock, ButtonBlock, SpacerBlock, ProductBlock, ProductDdBlock, RawHtmlBlock } from "../schema/block.types";
 
 // ---------------------------------------------------------------------------
+// Contexto de render — brand + globalStyles como fallbacks en cascada
+// ---------------------------------------------------------------------------
+
+interface RenderCtx {
+  brandColors?: { primary: string; primaryForeground: string };
+  globalStyles?: GlobalStyles;
+}
+
+// Fuente CSS-safe (sin comillas extra que rompan atributos style inline)
+const safeFontFamily = (f?: string) =>
+  f ? f.replace(/"/g, "'") : "Arial,Helvetica,sans-serif";
+
+// ---------------------------------------------------------------------------
 // Preparadores de datos por bloque (lógica ≠ template)
 // ---------------------------------------------------------------------------
 
 function prepareHero(
   block: HeroBlock,
   doc: MailingDocument,
-  brandColors?: { primary: string; primaryForeground: string },
+  ctx: RenderCtx = {},
 ): ReturnType<typeof heroTemplate> {
+  const { brandColors, globalStyles } = ctx;
   return heroTemplate({
     padding:   getBlockPadding(block),
     bgColor:   resolveColor(block.layout.backgroundColor, "transparent"),
@@ -58,23 +72,25 @@ function prepareHero(
     ctaLabel:  block.props.ctaLabel ? escapeHtml(block.props.ctaLabel) : "",
     ctaHref:   block.props.ctaLabel ? escapeHref(buildTrackedUrl(block.props.href, doc)) : "#",
     colors: {
-      foreground:        FALLBACK_COLORS.foreground,
+      foreground:        globalStyles?.typography?.headingColor ?? FALLBACK_COLORS.foreground,
       muted:             FALLBACK_COLORS.muted,
-      primary:           brandColors?.primary          ?? FALLBACK_COLORS.primary,
-      primaryForeground: brandColors?.primaryForeground ?? FALLBACK_COLORS.primaryForeground,
+      primary:           globalStyles?.button?.bgColor ?? brandColors?.primary          ?? FALLBACK_COLORS.primary,
+      primaryForeground: globalStyles?.button?.color   ?? brandColors?.primaryForeground ?? FALLBACK_COLORS.primaryForeground,
     },
   });
 }
 
-function prepareText(block: TextBlock): ReturnType<typeof textTemplate> {
+function prepareText(block: TextBlock, ctx: RenderCtx = {}): ReturnType<typeof textTemplate> {
+  const { globalStyles } = ctx;
   return textTemplate({
     padding:    getBlockPadding(block),
     bgColor:    resolveColor(block.layout.backgroundColor, "transparent"),
-    html:       block.props.html,              // el usuario es responsable del contenido HTML
+    html:       block.props.html,
     align:      block.props.align   ?? "left",
-    fontSize:   block.props.fontSize ?? 16,
+    fontSize:   block.props.fontSize ?? globalStyles?.typography?.bodyFontSize ?? 16,
     lineHeight: block.props.lineHeight ?? 24,
-    color:      FALLBACK_COLORS.foreground,
+    color:      globalStyles?.typography?.bodyColor ?? FALLBACK_COLORS.foreground,
+    fontFamily: safeFontFamily(globalStyles?.typography?.fontFamily),
   });
 }
 
@@ -91,10 +107,12 @@ function prepareImage(block: ImageBlock, doc: MailingDocument): ReturnType<typeo
 function prepareButton(
   block: ButtonBlock,
   doc: MailingDocument,
-  brandColors?: { primary: string; primaryForeground: string },
+  ctx: RenderCtx = {},
 ): ReturnType<typeof buttonTemplate> {
+  const { brandColors, globalStyles } = ctx;
   const raw = block.props.align ?? "center";
   const align = raw === "left" || raw === "right" ? raw : "center";
+  const gb = globalStyles?.button;
   return buttonTemplate({
     padding: getBlockPadding(block),
     bgColor: resolveColor(block.layout.backgroundColor, "transparent"),
@@ -102,9 +120,14 @@ function prepareButton(
     href:    escapeHref(buildTrackedUrl(block.props.href, doc)),
     align,
     colors: {
-      primary:           brandColors?.primary          ?? FALLBACK_COLORS.primary,
-      primaryForeground: brandColors?.primaryForeground ?? FALLBACK_COLORS.primaryForeground,
+      primary:           gb?.bgColor ?? brandColors?.primary          ?? FALLBACK_COLORS.primary,
+      primaryForeground: gb?.color   ?? brandColors?.primaryForeground ?? FALLBACK_COLORS.primaryForeground,
     },
+    btnFontSize:    gb?.fontSize,
+    btnFontFamily:  safeFontFamily(gb?.fontFamily),
+    btnBorderRadius: gb?.borderRadius,
+    btnBorderWidth:  gb?.borderWidth,
+    btnBorderColor:  gb?.borderColor,
   });
 }
 
@@ -115,8 +138,9 @@ function prepareSpacer(block: SpacerBlock): ReturnType<typeof spacerTemplate> {
 function prepareProduct(
   block: ProductBlock,
   doc: MailingDocument,
-  brandColors?: { primary: string; primaryForeground: string },
+  ctx: RenderCtx = {},
 ): ReturnType<typeof productTemplate> {
+  const { brandColors, globalStyles } = ctx;
   return productTemplate({
     padding:          getBlockPadding(block),
     bgColor:          resolveColor(block.layout.backgroundColor, "transparent"),
@@ -127,16 +151,17 @@ function prepareProduct(
     unit:             escapeHtml(block.props.unit ?? ""),
     href:             escapeHref(buildTrackedUrl(block.props.href, doc)),
     ctaLabel:         escapeHtml(block.props.ctaLabel ?? "Agregar"),
-    primaryColor:     brandColors?.primary          ?? FALLBACK_COLORS.primary,
-    primaryForeground: brandColors?.primaryForeground ?? FALLBACK_COLORS.primaryForeground,
+    primaryColor:     globalStyles?.button?.bgColor ?? brandColors?.primary          ?? FALLBACK_COLORS.primary,
+    primaryForeground: globalStyles?.button?.color  ?? brandColors?.primaryForeground ?? FALLBACK_COLORS.primaryForeground,
   });
 }
 
 function prepareProductDd(
   block: ProductDdBlock,
   doc: MailingDocument,
-  brandColors?: { primary: string; primaryForeground: string },
+  ctx: RenderCtx = {},
 ): ReturnType<typeof productDdTemplate> {
+  const { brandColors, globalStyles } = ctx;
   return productDdTemplate({
     padding:          getBlockPadding(block),
     bgColor:          resolveColor(block.layout.backgroundColor, "#ffffff"),
@@ -182,8 +207,8 @@ function prepareProductDd(
     logoAlign:        block.props.logoAlign ?? "left",
     href:             escapeHref(buildTrackedUrl(block.props.href, doc)),
     ctaLabel:         escapeHtml(block.props.ctaLabel ?? "Agregar"),
-    primaryColor:     brandColors?.primary           ?? FALLBACK_COLORS.primary,
-    primaryForeground: brandColors?.primaryForeground ?? FALLBACK_COLORS.primaryForeground,
+    primaryColor:     globalStyles?.button?.bgColor ?? brandColors?.primary           ?? FALLBACK_COLORS.primary,
+    primaryForeground: globalStyles?.button?.color  ?? brandColors?.primaryForeground ?? FALLBACK_COLORS.primaryForeground,
     rightBgColor:     block.props.rightBgColor  ?? "#3DBE4A",
     priceSize:        block.props.priceSize      ?? 50,
     priceFg:          block.props.priceFg        ?? "#ffffff",
@@ -239,16 +264,16 @@ export class RenderEngine {
   renderBlock(
     block: MailingBlock,
     doc: MailingDocument,
-    brandColors?: { primary: string; primaryForeground: string },
+    ctx: RenderCtx = {},
   ): string {
     switch (block.type) {
-      case "hero":    return prepareHero(block, doc, brandColors);
-      case "text":    return prepareText(block);
-      case "image":   return prepareImage(block, doc);
-      case "button":  return prepareButton(block, doc, brandColors);
-      case "spacer":  return prepareSpacer(block);
-      case "product":    return prepareProduct(block, doc, brandColors);
-      case "product-dd": return prepareProductDd(block, doc, brandColors);
+      case "hero":       return prepareHero(block, doc, ctx);
+      case "text":       return prepareText(block, ctx);
+      case "image":      return prepareImage(block, doc);
+      case "button":     return prepareButton(block, doc, ctx);
+      case "spacer":     return prepareSpacer(block);
+      case "product":    return prepareProduct(block, doc, ctx);
+      case "product-dd": return prepareProductDd(block, doc, ctx);
       case "raw-html":   return (block as RawHtmlBlock).props.html;
       default:
         return "";
@@ -260,9 +285,9 @@ export class RenderEngine {
     col: MailingColumn,
     doc: MailingDocument,
     columnWidth: number,
-    brandColors?: { primary: string; primaryForeground: string },
+    ctx: RenderCtx = {},
   ): string {
-    const blocksHtml = col.blocks.map((b) => this.renderBlock(b, doc, brandColors)).join("\n");
+    const blocksHtml = col.blocks.map((b) => this.renderBlock(b, doc, ctx)).join("\n");
     const colPad     = col.meta?.padding;
     return columnTemplate({
       columnWidth,
@@ -279,13 +304,13 @@ export class RenderEngine {
     row: MailingRow,
     doc: MailingDocument,
     totalWidth: number,
-    brandColors?: { primary: string; primaryForeground: string },
+    ctx: RenderCtx = {},
   ): string {
     const totalSpans = row.columns.reduce((s, c) => s + c.colSpan, 0);
     const columnsHtml = row.columns
       .map((col) => {
         const colWidth = Math.round((col.colSpan / totalSpans) * totalWidth);
-        return this.renderColumn(col, doc, colWidth, brandColors);
+        return this.renderColumn(col, doc, colWidth, ctx);
       })
       .join("\n");
 
@@ -318,7 +343,12 @@ export class RenderEngine {
       ? { primary: theme.primaryColor, primaryForeground: theme.primaryForeground }
       : undefined;
 
-    const rowsHtml = doc.rows.map((row) => this.renderRow(row, doc, width, brandColors)).join("\n");
+    const ctx: RenderCtx = {
+      brandColors,
+      globalStyles: doc.settings.globalStyles,
+    };
+
+    const rowsHtml = doc.rows.map((row) => this.renderRow(row, doc, width, ctx)).join("\n");
 
     return documentTemplate({
       subject:       escapeHtml(doc.settings.subject || doc.name),

@@ -19,6 +19,7 @@ export interface TextTemplateData {
   fontSize: number;
   lineHeight: number;
   color: string;
+  fontFamily?: string;
 }
 
 export function textTemplate({
@@ -29,10 +30,11 @@ export function textTemplate({
   fontSize,
   lineHeight,
   color,
+  fontFamily = "Arial,Helvetica,sans-serif",
 }: TextTemplateData): string {
   return `<tr>
   <td valign="top" style="padding:${p.top}px ${p.right}px ${p.bottom}px ${p.left}px;background-color:${bgColor};">
-    <div style="font-family:Arial,Helvetica,sans-serif;font-size:${fontSize}px;line-height:${lineHeight}px;color:${color};text-align:${align};">
+    <div style="font-family:${fontFamily};font-size:${fontSize}px;line-height:${lineHeight}px;color:${color};text-align:${align};">
       ${html}
     </div>
   </td>

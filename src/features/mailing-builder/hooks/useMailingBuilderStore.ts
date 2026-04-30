@@ -92,6 +92,7 @@ interface MailingBuilderState {
   updateBlock: (nextBlock: MailingBlock) => void;
 
   // ── Operaciones de Documento ──────────────────────────────────────────────
+  updateGlobalStyles: (patch: import("../logic/schema/mailing.types").GlobalStyles) => void;
   updateDocumentName: (name: string) => void;
   updateSettings: <K extends keyof MailingSettings>(key: K, value: MailingSettings[K]) => void;
   updateLinkTracking: <K extends keyof MailingSettings["linkTracking"]>(key: K, value: MailingSettings["linkTracking"][K]) => void;
@@ -625,6 +626,16 @@ export const useMailingBuilderStore = create<MailingBuilderState>()(
   })),
 
   // ── Documento ─────────────────────────────────────────────────────────────
+
+  updateGlobalStyles: (patch) => set((state) => ({
+    document: {
+      ...state.document,
+      settings: {
+        ...state.document.settings,
+        globalStyles: { ...state.document.settings.globalStyles, ...patch },
+      },
+    },
+  })),
 
   updateDocumentName: (name) => set((state) => ({
     document: { ...state.document, name },
