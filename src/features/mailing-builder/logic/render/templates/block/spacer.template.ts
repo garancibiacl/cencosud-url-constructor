@@ -1,8 +1,13 @@
 /**
  * Template HTML del bloque Spacer.
  *
- * Usa div con height fijo + &nbsp; para compatibilidad con Outlook
- * (que ignora divs vacíos).
+ * Usa <td> con height explícito + &nbsp; + div con height para compatibilidad
+ * con Outlook (que ignora divs vacíos pero respeta height en td).
+ *
+ * Estándares aplicados:
+ *   - height como atributo HTML en <td> (Outlook lo requiere)
+ *   - font-size y line-height iguales al height para evitar colapso
+ *   - valign="top" en el <td>
  */
 
 export interface SpacerTemplateData {
@@ -12,8 +17,8 @@ export interface SpacerTemplateData {
 
 export function spacerTemplate({ height }: SpacerTemplateData): string {
   return `<tr>
-  <td style="padding:0; background:transparent; line-height:0; font-size:0;" height="${height}">
-    <div style="line-height:${height}px; height:${height}px; font-size:${height}px;">&nbsp;</div>
+  <td valign="top" height="${height}" style="padding:0;background-color:transparent;line-height:${height}px;font-size:${height}px;mso-line-height-rule:exactly;">
+    &nbsp;
   </td>
 </tr>`;
 }

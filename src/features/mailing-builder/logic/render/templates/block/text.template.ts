@@ -3,6 +3,11 @@
  *
  * El campo `html` se inserta sin escape adicional — el caller es responsable
  * de sanitizar el contenido HTML antes de pasar los datos al template.
+ *
+ * Estándares aplicados:
+ *   - font-family explícito en el div contenedor (no depende de herencia)
+ *   - valign="top" en el <td>
+ *   - <div> es correcto aquí: es contenedor de texto, no de layout
  */
 
 export interface TextTemplateData {
@@ -26,8 +31,8 @@ export function textTemplate({
   color,
 }: TextTemplateData): string {
   return `<tr>
-  <td style="padding:${p.top}px ${p.right}px ${p.bottom}px ${p.left}px; background:${bgColor};">
-    <div style="font-size:${fontSize}px; line-height:${lineHeight}px; color:${color}; text-align:${align};">
+  <td valign="top" style="padding:${p.top}px ${p.right}px ${p.bottom}px ${p.left}px;background-color:${bgColor};">
+    <div style="font-family:Arial,Helvetica,sans-serif;font-size:${fontSize}px;line-height:${lineHeight}px;color:${color};text-align:${align};">
       ${html}
     </div>
   </td>

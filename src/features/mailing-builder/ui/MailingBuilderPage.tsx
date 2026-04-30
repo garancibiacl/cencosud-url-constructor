@@ -44,7 +44,9 @@ import { RowCanvas, AddRowButton } from "./layout/RowCanvas";
 import { ImageLibraryModal } from "./ImageLibraryModal";
 import { imageLibraryBridge } from "./imageLibraryBridge";
 import { NewTemplateModal } from "./NewTemplateModal";
-import { DevModePanel } from "./DevModePanel";
+const DevModePanel = React.lazy(() =>
+  import("./DevModePanel").then((m) => ({ default: m.DevModePanel })),
+);
 import type { ScratchMode } from "./NewTemplateModal";
 import type { BrandId } from "../logic/brands/brand.types";
 import { brandThemes } from "../logic/brands/brandThemes";
@@ -2558,12 +2560,14 @@ export default function MailingBuilderPage() {
 
       {/* ── Dev mode panel (full screen overlay) ────────────────────────────── */}
       {showDevMode && (
-        <DevModePanel
-          document={document}
-          activeMailingId={activeMailingId}
-          onClose={() => setShowDevMode(false)}
-          onApply={(doc, mailingId) => replaceDocument(doc, mailingId)}
-        />
+        <React.Suspense fallback={null}>
+          <DevModePanel
+            document={document}
+            activeMailingId={activeMailingId}
+            onClose={() => setShowDevMode(false)}
+            onApply={(doc, mailingId) => replaceDocument(doc, mailingId)}
+          />
+        </React.Suspense>
       )}
     </div>
   );

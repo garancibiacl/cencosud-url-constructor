@@ -6,6 +6,11 @@
  *
  * Los comentarios <!--[if mso]> aseguran que Outlook respete los anchos fijos
  * de cada columna en lugar de redistribuirlos automáticamente.
+ *
+ * Estándares aplicados:
+ *   - Toda tabla tiene role="presentation" border="0" cellpadding="0" cellspacing="0"
+ *   - Todo <td> tiene valign explícito
+ *   - mso-table-lspace/rspace en style inline para Outlook
  */
 
 // ---------------------------------------------------------------------------
@@ -25,12 +30,12 @@ export interface RowTemplateData {
 
 export function rowTemplate({ rowBg, rowPadStyle, totalWidth, columnsHtml }: RowTemplateData): string {
   return `<tr>
-  <td style="${rowPadStyle}background-color:${rowBg};">
+  <td valign="top" style="${rowPadStyle}background-color:${rowBg};">
     <!--[if mso]>
-    <table role="presentation" align="center" border="0" cellpadding="0" cellspacing="0" width="${totalWidth}">
+    <table role="presentation" align="center" border="0" cellpadding="0" cellspacing="0" width="${totalWidth}" style="mso-table-lspace:0pt;mso-table-rspace:0pt;">
       <tr>
     <![endif]-->
-    <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0">
+    <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;">
       <tr>
         ${columnsHtml}
       </tr>
@@ -64,15 +69,15 @@ export function columnTemplate({
   colPadStyle,
   blocksHtml,
 }: ColumnTemplateData): string {
-  const innerHtml = blocksHtml || '<tr><td style="height:16px; line-height:16px; font-size:0;">&nbsp;</td></tr>';
+  const innerHtml = blocksHtml || '<tr><td valign="top" style="height:16px;line-height:16px;font-size:0;">&nbsp;</td></tr>';
 
   return `<td class="mc" width="${columnWidth}" valign="top" align="left"
-   style="width:${columnWidth}px; max-width:${columnWidth}px; ${colPadStyle}background-color:${colBg};">
+   style="width:${columnWidth}px;max-width:${columnWidth}px;${colPadStyle}background-color:${colBg};mso-table-lspace:0pt;mso-table-rspace:0pt;">
   <!--[if mso]>
-  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="${columnWidth}">
-    <tr><td>
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="${columnWidth}" style="mso-table-lspace:0pt;mso-table-rspace:0pt;">
+    <tr><td valign="top">
   <![endif]-->
-  <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0">
+  <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;">
     ${innerHtml}
   </table>
   <!--[if mso]>
