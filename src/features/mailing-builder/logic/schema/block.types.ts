@@ -119,6 +119,9 @@ export interface ProductDdBlock extends BaseBlock<"product-dd", {
   discountText?: string;        // "DCTO."
   discountTextColor?: string;   // "#ffffff"
   discountAlign?: "left" | "center" | "right";
+  discountPadding?: { top: number; right: number; bottom: number; left: number };
+  discountMarginV?: number;     // margen vertical (top/bottom) en px
+  discountMarginH?: number;     // margen horizontal (left/right) en px
   // ── Badge Oferta ─────────────────────────────────────────────
   ofertaShow?: boolean;
   ofertaLabel?: string;         // "Oferta"

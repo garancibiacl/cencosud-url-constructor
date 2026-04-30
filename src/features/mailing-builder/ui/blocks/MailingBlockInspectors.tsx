@@ -2266,6 +2266,42 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
           />
         </InspRow>
 
+        {/* Espaciado del bloque de descuento */}
+        <div className="mt-1 border-t border-border/50 pt-2.5 space-y-3">
+          <PaddingEditor
+            value={{
+              top:    block.props.discountPadding?.top    ?? 0,
+              right:  block.props.discountPadding?.right  ?? 0,
+              bottom: block.props.discountPadding?.bottom ?? 0,
+              left:   block.props.discountPadding?.left   ?? 0,
+            }}
+            onChange={(discountPadding) => setProps({ discountPadding })}
+          />
+          <div className="space-y-2">
+            <span className="text-xs text-foreground/70">Margen</span>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-1">
+                <ArrowUpDown className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+                <PxStepper
+                  value={block.props.discountMarginV ?? 0}
+                  onChange={(v) => setProps({ discountMarginV: v })}
+                  min={0}
+                  max={200}
+                />
+              </div>
+              <div className="flex items-center gap-1">
+                <ArrowLeftRight className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+                <PxStepper
+                  value={block.props.discountMarginH ?? 0}
+                  onChange={(v) => setProps({ discountMarginH: v })}
+                  min={0}
+                  max={200}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Badge Oferta */}
         <div className="mt-1 border-t border-border/50 pt-2.5">
           <div className="flex items-center justify-between mb-2">

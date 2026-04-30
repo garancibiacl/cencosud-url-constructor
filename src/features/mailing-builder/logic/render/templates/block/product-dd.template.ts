@@ -90,6 +90,9 @@ export interface ProductDdTemplateData {
   discountText?: string;
   discountTextColor?: string;
   discountAlign?: "left" | "center" | "right";
+  discountPadding?: { top: number; right: number; bottom: number; left: number };
+  discountMarginV?: number;
+  discountMarginH?: number;
   // ── Badge Oferta ─────────────────────────────────────────────────────────
   ofertaShow?: boolean;
   ofertaLabel?: string;
@@ -165,6 +168,9 @@ export function productDdTemplate({
   discountSymbolColor,
   discountText,
   discountTextColor,
+  discountPadding,
+  discountMarginV,
+  discountMarginH,
   ofertaShow,
   ofertaLabel,
   ofertaLabelFg,
@@ -218,10 +224,18 @@ export function productDdTemplate({
 
   // ── Descuento porcentual: número + símbolo/texto + badge oferta en la misma fila ──
   const discountRowAlign = discountAlign === "center" ? "center" : discountAlign === "right" ? "right" : "left";
+  const dp = discountPadding ?? { top: 0, right: 0, bottom: 0, left: 0 };
+  const dmV = discountMarginV ?? 0;
+  const dmH = discountMarginH ?? 0;
+  const discountWrapStyle = [
+    "border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;margin-bottom:4px;",
+    dmV > 0 || dmH > 0 ? `margin-top:${dmV}px;margin-bottom:${dmV}px;margin-left:${dmH}px;margin-right:${dmH}px;` : "",
+  ].join("");
+  const discountCellPad = `${dp.top}px ${dp.right}px ${dp.bottom}px ${dp.left}px`;
   const discountPctHtml = discountNumber
-    ? `<table border="0" cellspacing="0" cellpadding="0" role="presentation" width="100%" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;margin-bottom:4px;">
+    ? `<table border="0" cellspacing="0" cellpadding="0" role="presentation" width="100%" style="${discountWrapStyle}">
         <tr>
-          <td valign="top" align="${discountRowAlign}">
+          <td valign="top" align="${discountRowAlign}" style="padding:${discountCellPad};">
             <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;">
               <tr>
                 <td valign="middle" style="padding:0;font-family:Arial,Helvetica,sans-serif;font-size:64px;font-weight:900;color:${discountNumberColor ?? "#ffffff"};line-height:1;">${discountNumber}</td>

@@ -1108,6 +1108,13 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
             style={{
               ...sectionRing(`${id}_${idx}`),
               justifyContent: block.props.discountAlign === "center" ? "center" : block.props.discountAlign === "right" ? "flex-end" : "flex-start",
+              padding: block.props.discountPadding
+                ? `${block.props.discountPadding.top}px ${block.props.discountPadding.right}px ${block.props.discountPadding.bottom}px ${block.props.discountPadding.left}px`
+                : undefined,
+              marginTop:    (block.props.discountMarginV ?? 0) || undefined,
+              marginBottom: (block.props.discountMarginV ?? 0) || undefined,
+              marginLeft:   (block.props.discountMarginH ?? 0) || undefined,
+              marginRight:  (block.props.discountMarginH ?? 0) || undefined,
             }}
           >
             {/* Número grande */}
