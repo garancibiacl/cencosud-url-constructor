@@ -59,6 +59,12 @@ interface FetchProductRequest {
 
 const CATALOG_BASE_DEFAULT = "https://sm-web-api.ecomm.cencosud.com/catalog/api/v1/products";
 
+// Hosts VTEX públicos por marca — fallback global sin geo-blocking
+const VTEX_HOSTS: Record<Brand, string> = {
+  jumbo: "jumbocl.vtexcommercestable.com.br",
+  sisa: "santaisabelcl.vtexcommercestable.com.br",
+};
+
 // ── Normalización de respuesta sm-web-api ────────────────────────────────────
 
 interface CencoCommertialOffer {
@@ -288,16 +294,35 @@ async function fetchFromCenco(sku: string, brand: Brand): Promise<ProductData | 
     }
   }
 
-  // Intento 2: vía proxy público (workaround geo-IP)
-  const proxies = [
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(directUrl)}`,
-    `https://corsproxy.io/?${encodeURIComponent(directUrl)}`,
-  ];
-  for (const proxyUrl of proxies) {
-    const data = await fetchCencoUrl(proxyUrl, apiKey, sku, `Cenco proxy (${new URL(proxyUrl).host})`);
-    if (data) {
-      const normalized = normalizeCencoResponse(data, sku, brand);
-      if (normalized) return normalized;
+  // Intento 2: VTEX directo (sin geo-blocking, formato compatible)
+  // Cencosud expone su catálogo público vía VTEX Catalog API por marca.
+  const vtexHost = VTEX_HOSTS[brand];
+  if (vtexHost) {
+    const vtexUrl = `https://${vtexHost}/api/catalog_system/pub/products/search/?fq=alternateIds_RefId:${encodeURIComponent(sku)}`;
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25_000);
+      const res = await fetch(vtexUrl, {
+        signal: controller.signal,
+        headers: {
+          "Accept": "application/json",
+          "User-Agent": "Mozilla/5.0 (compatible; AguaApp/1.0)",
+        },
+      });
+      clearTimeout(timeoutId);
+      if (!res.ok) {
+        console.error(`[ai-fetch-product] VTEX (${vtexHost}) returned ${res.status} for SKU ${sku}`);
+        try { await res.text(); } catch { /* noop */ }
+      } else {
+        const arr = await res.json() as CencoProduct[];
+        console.log(`[ai-fetch-product] VTEX (${vtexHost}) returned ${arr?.length ?? 0} products for SKU ${sku}`);
+        if (Array.isArray(arr) && arr.length > 0) {
+          const normalized = normalizeCencoResponse({ products: arr, recordsFiltered: arr.length }, sku, brand);
+          if (normalized) return normalized;
+        }
+      }
+    } catch (err) {
+      console.error(`[ai-fetch-product] VTEX fetch error for SKU ${sku}:`, err);
     }
   }
 
