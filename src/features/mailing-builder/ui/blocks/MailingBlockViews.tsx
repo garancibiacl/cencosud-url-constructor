@@ -1177,6 +1177,13 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
             data-focus-section="precios"
             style={{
               justifyContent: block.props.priceAlign === "center" ? "center" : block.props.priceAlign === "right" ? "flex-end" : "flex-start",
+              padding: block.props.pricePadding
+                ? `${block.props.pricePadding.top}px ${block.props.pricePadding.right}px ${block.props.pricePadding.bottom}px ${block.props.pricePadding.left}px`
+                : undefined,
+              marginTop:    (block.props.priceMarginV ?? 0) || undefined,
+              marginBottom: (block.props.priceMarginV ?? 0) || undefined,
+              marginLeft:   (block.props.priceMarginH ?? 0) || undefined,
+              marginRight:  (block.props.priceMarginH ?? 0) || undefined,
               ...sectionRing(`${id}_${idx}`),
             }}
           >
@@ -1297,7 +1304,13 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
             data-focus-section="producto"
             style={{
               color: "rgba(255,255,255,0.9)",
-              marginTop: 6,
+              marginTop: (block.props.nameMarginV ?? 0) > 0 ? block.props.nameMarginV : 6,
+              marginBottom: (block.props.nameMarginV ?? 0) || undefined,
+              marginLeft:   (block.props.nameMarginH ?? 0) || undefined,
+              marginRight:  (block.props.nameMarginH ?? 0) || undefined,
+              padding: block.props.namePadding
+                ? `${block.props.namePadding.top}px ${block.props.namePadding.right}px ${block.props.namePadding.bottom}px ${block.props.namePadding.left}px`
+                : undefined,
               fontSize: 24,
               fontWeight: 600,
               wordBreak: "break-word",

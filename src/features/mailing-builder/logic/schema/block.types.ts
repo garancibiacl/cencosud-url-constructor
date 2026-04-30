@@ -122,6 +122,14 @@ export interface ProductDdBlock extends BaseBlock<"product-dd", {
   discountPadding?: { top: number; right: number; bottom: number; left: number };
   discountMarginV?: number;     // margen vertical (top/bottom) en px
   discountMarginH?: number;     // margen horizontal (left/right) en px
+  // ── Espaciado precio ─────────────────────────────────────────────────
+  pricePadding?: { top: number; right: number; bottom: number; left: number };
+  priceMarginV?: number;
+  priceMarginH?: number;
+  // ── Espaciado nombre/descripción ─────────────────────────────────────
+  namePadding?: { top: number; right: number; bottom: number; left: number };
+  nameMarginV?: number;
+  nameMarginH?: number;
   // ── Badge Oferta ─────────────────────────────────────────────
   ofertaShow?: boolean;
   ofertaLabel?: string;         // "Oferta"

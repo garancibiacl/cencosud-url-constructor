@@ -93,6 +93,12 @@ export interface ProductDdTemplateData {
   discountPadding?: { top: number; right: number; bottom: number; left: number };
   discountMarginV?: number;
   discountMarginH?: number;
+  pricePadding?: { top: number; right: number; bottom: number; left: number };
+  priceMarginV?: number;
+  priceMarginH?: number;
+  namePadding?: { top: number; right: number; bottom: number; left: number };
+  nameMarginV?: number;
+  nameMarginH?: number;
   // ── Badge Oferta ─────────────────────────────────────────────────────────
   ofertaShow?: boolean;
   ofertaLabel?: string;
@@ -171,6 +177,12 @@ export function productDdTemplate({
   discountPadding,
   discountMarginV,
   discountMarginH,
+  pricePadding,
+  priceMarginV,
+  priceMarginH,
+  namePadding,
+  nameMarginV,
+  nameMarginH,
   ofertaShow,
   ofertaLabel,
   ofertaLabelFg,
@@ -262,10 +274,18 @@ export function productDdTemplate({
     ? `<td valign="baseline" style="padding:0 0 0 3px;font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;color:${priceFg};line-height:1;">${unit}</td>`
     : "";
   const priceRowAlign = priceAlign === "center" ? "center" : priceAlign === "right" ? "right" : "left";
+  const pp = pricePadding ?? { top: 0, right: 0, bottom: 0, left: 0 };
+  const pmV = priceMarginV ?? 0;
+  const pmH = priceMarginH ?? 0;
+  const priceWrapStyle = [
+    "border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;margin-bottom:6px;",
+    pmV > 0 || pmH > 0 ? `margin-top:${pmV}px;margin-bottom:${pmV}px;margin-left:${pmH}px;margin-right:${pmH}px;` : "",
+  ].join("");
+  const priceCellPad = `${pp.top}px ${pp.right}px ${pp.bottom}px ${pp.left}px`;
   const priceRowHtml = price
-    ? `<table border="0" cellspacing="0" cellpadding="0" role="presentation" width="100%" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;margin-bottom:6px;">
+    ? `<table border="0" cellspacing="0" cellpadding="0" role="presentation" width="100%" style="${priceWrapStyle}">
         <tr>
-          <td valign="top" align="${priceRowAlign}">
+          <td valign="top" align="${priceRowAlign}" style="padding:${priceCellPad};">
             <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;">
               <tr>
                 <td valign="baseline" style="padding:0;font-family:Arial,Helvetica,sans-serif;font-size:${priceSize}px;font-weight:700;color:${priceFg};line-height:1;">${price}</td>
@@ -352,10 +372,20 @@ export function productDdTemplate({
 
   // ── Name section ────────────────────────────────────────────────────────────
   const nameAlign_ = nameAlign ?? "left";
+  const np = namePadding ?? { top: 0, right: 0, bottom: 0, left: 0 };
+  const nmV = nameMarginV ?? 0;
+  const nmH = nameMarginH ?? 0;
+  const nameWrapStyle = [
+    "border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;",
+    `margin-top:${nmV > 0 ? nmV : 6}px;`,
+    nmV > 0 ? `margin-bottom:${nmV}px;` : "",
+    nmH > 0 ? `margin-left:${nmH}px;margin-right:${nmH}px;` : "",
+  ].join("");
+  const nameCellPad = `${np.top}px ${np.right}px ${np.bottom}px ${np.left}px`;
   const nameHtml = name
-    ? `<table border="0" cellspacing="0" cellpadding="0" role="presentation" width="100%" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;margin-top:6px;">
+    ? `<table border="0" cellspacing="0" cellpadding="0" role="presentation" width="100%" style="${nameWrapStyle}">
         <tr>
-          <td valign="top" align="${nameAlign_}" style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:600;color:#e6e6e6;line-height:1.4;word-break:break-word;">${name}</td>
+          <td valign="top" align="${nameAlign_}" style="padding:${nameCellPad};font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:600;color:#e6e6e6;line-height:1.4;word-break:break-word;">${name}</td>
         </tr>
       </table>`
     : "";

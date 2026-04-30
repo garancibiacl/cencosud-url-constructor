@@ -2348,6 +2348,42 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
             onChange={(v) => setProps({ priceAlign: v })}
           />
         </InspRow>
+
+        {/* Espaciado del bloque de precio */}
+        <div className="mt-1 border-t border-border/50 pt-2.5 space-y-3">
+          <PaddingEditor
+            value={{
+              top:    block.props.pricePadding?.top    ?? 0,
+              right:  block.props.pricePadding?.right  ?? 0,
+              bottom: block.props.pricePadding?.bottom ?? 0,
+              left:   block.props.pricePadding?.left   ?? 0,
+            }}
+            onChange={(pricePadding) => setProps({ pricePadding })}
+          />
+          <div className="space-y-2">
+            <span className="text-xs text-foreground/70">Margen</span>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-1">
+                <ArrowUpDown className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+                <PxStepper
+                  value={block.props.priceMarginV ?? 0}
+                  onChange={(v) => setProps({ priceMarginV: v })}
+                  min={0}
+                  max={200}
+                />
+              </div>
+              <div className="flex items-center gap-1">
+                <ArrowLeftRight className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+                <PxStepper
+                  value={block.props.priceMarginH ?? 0}
+                  onChange={(v) => setProps({ priceMarginH: v })}
+                  min={0}
+                  max={200}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       </InspSectionCollapsible>
 
       {/* 4b. Etiqueta dual de precio */}
@@ -2464,8 +2500,8 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
         />
       </InspSectionCollapsible>
 
-      {/* 5. Producto */}
-      <InspSectionCollapsible title="Producto" defaultOpen={false} sectionRef={sectionRefs["producto"]} forceOpen={focusedSection === "producto"} forceClose={focusedSection !== null && focusedSection !== "producto"}>
+      {/* 5. Descripción */}
+      <InspSectionCollapsible title="Descripción" defaultOpen={false} sectionRef={sectionRefs["producto"]} forceOpen={focusedSection === "producto"} forceClose={focusedSection !== null && focusedSection !== "producto"}>
         <InspField
           label="Nombre del producto"
           value={htmlToText(block.props.name)}
@@ -2498,6 +2534,42 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
             onChange={(v) => setProps({ nameAlign: v })}
           />
         </InspRow>
+
+        {/* Espaciado del nombre/descripción */}
+        <div className="mt-1 border-t border-border/50 pt-2.5 space-y-3">
+          <PaddingEditor
+            value={{
+              top:    block.props.namePadding?.top    ?? 0,
+              right:  block.props.namePadding?.right  ?? 0,
+              bottom: block.props.namePadding?.bottom ?? 0,
+              left:   block.props.namePadding?.left   ?? 0,
+            }}
+            onChange={(namePadding) => setProps({ namePadding })}
+          />
+          <div className="space-y-2">
+            <span className="text-xs text-foreground/70">Margen</span>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-1">
+                <ArrowUpDown className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+                <PxStepper
+                  value={block.props.nameMarginV ?? 0}
+                  onChange={(v) => setProps({ nameMarginV: v })}
+                  min={0}
+                  max={200}
+                />
+              </div>
+              <div className="flex items-center gap-1">
+                <ArrowLeftRight className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+                <PxStepper
+                  value={block.props.nameMarginH ?? 0}
+                  onChange={(v) => setProps({ nameMarginH: v })}
+                  min={0}
+                  max={200}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       </InspSectionCollapsible>
 
       {/* 6. Logo de marca */}
