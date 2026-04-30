@@ -929,14 +929,45 @@ export function ProductDdBlockView({ block, isSelected, onChange }: {
               <ImageOff className="h-6 w-6" />
               <span className="text-[10px]">Sin imagen</span>
             </div>
-          ) : (
-            <img
-              src={block.props.imageUrl || "/placeholder.svg"}
-              alt={block.props.name}
-              className="absolute inset-0 w-full h-full object-cover"
-              onError={() => setImgError(true)}
-            />
-          )}
+          ) : (() => {
+            const imgMV = block.props.imageMarginV ?? 0;
+            const imgMH = block.props.imageMarginH ?? 0;
+            const imgP  = block.props.imagePadding;
+            const imgW  = block.props.imageWidth ?? 100;
+            const imgAlign = block.props.imageAlign === "center" ? "center" : block.props.imageAlign === "right" ? "flex-end" : "flex-start";
+            return (
+              <div
+                className="absolute flex items-stretch"
+                style={{
+                  top: imgMV, bottom: imgMV, left: imgMH, right: imgMH,
+                  justifyContent: imgAlign,
+                  padding: imgP ? `${imgP.top}px ${imgP.right}px ${imgP.bottom}px ${imgP.left}px` : undefined,
+                }}
+              >
+                {(() => {
+                  const imgEl = (
+                    <img
+                      src={block.props.imageUrl || "/placeholder.svg"}
+                      alt={block.props.imageAlt || block.props.name}
+                      style={{
+                        width: `${imgW}%`,
+                        height: "100%",
+                        objectFit: "cover",
+                        borderRadius: (block.props.imageRadius ?? 0) > 0 ? `${block.props.imageRadius}px` : undefined,
+                        border: (block.props.imageBorderWidth ?? 0) > 0
+                          ? `${block.props.imageBorderWidth}px solid ${block.props.imageBorderColor ?? "#e5e7eb"}`
+                          : undefined,
+                      }}
+                      onError={() => setImgError(true)}
+                    />
+                  );
+                  return block.props.imageHref
+                    ? <a href={block.props.imageHref} target="_blank" rel="noopener noreferrer" style={{ display: "contents" }}>{imgEl}</a>
+                    : imgEl;
+                })()}
+              </div>
+            );
+          })()}
 
           {/* Badge principal — draggable + doble click para editar */}
           <span

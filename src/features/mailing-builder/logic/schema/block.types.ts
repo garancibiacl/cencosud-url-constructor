@@ -58,6 +58,16 @@ export interface ProductBlock extends BaseBlock<"product", {
 export interface ProductDdBlock extends BaseBlock<"product-dd", {
   // ── Imagen del producto ───────────────────────────────────────────
   imageUrl: string;
+  imageAlt?: string;
+  imageWidth?: number;           // % ancho (default 100)
+  imageAlign?: "left" | "center" | "right";
+  imageRadius?: number;          // border-radius px (default 0)
+  imagePadding?: { top: number; right: number; bottom: number; left: number };
+  imageMarginV?: number;
+  imageMarginH?: number;
+  imageBorderWidth?: number;     // px (default 0)
+  imageBorderColor?: string;     // hex (default #e5e7eb)
+  imageHref?: string;            // enlace independiente de la imagen
   // ── Badge principal (draggable dentro de la imagen) ──────────────
   discountLabel: string;
   discountBadgeBg: string;

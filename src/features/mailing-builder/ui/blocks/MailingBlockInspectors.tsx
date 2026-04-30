@@ -1053,6 +1053,80 @@ function ColorSwatch({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ─── Padding indicator SVG icons ─────────────────────────────────────────────
+
+function PadIconVertical({ className }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <line x1="2" y1="1.5" x2="12" y2="1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="2" y1="12.5" x2="12" y2="12.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="2" y1="1.5" x2="2" y2="12.5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="1.5 1.5" strokeLinecap="round"/>
+      <line x1="12" y1="1.5" x2="12" y2="12.5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="1.5 1.5" strokeLinecap="round"/>
+      <rect x="4.5" y="4.5" width="5" height="5" rx="0.5" stroke="currentColor" strokeWidth="1.2" fill="none" opacity="0.8"/>
+    </svg>
+  );
+}
+
+function PadIconHorizontal({ className }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <line x1="1.5" y1="2" x2="1.5" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="12.5" y1="2" x2="12.5" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="1.5" y1="2" x2="12.5" y2="2" stroke="currentColor" strokeWidth="1.5" strokeDasharray="1.5 1.5" strokeLinecap="round"/>
+      <line x1="1.5" y1="12" x2="12.5" y2="12" stroke="currentColor" strokeWidth="1.5" strokeDasharray="1.5 1.5" strokeLinecap="round"/>
+      <rect x="4.5" y="4.5" width="5" height="5" rx="0.5" stroke="currentColor" strokeWidth="1.2" fill="none" opacity="0.8"/>
+    </svg>
+  );
+}
+
+function PadIconTop({ className }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <line x1="2" y1="1.5" x2="12" y2="1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="2" y1="12.5" x2="12" y2="12.5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="1.5 1.5" strokeLinecap="round"/>
+      <line x1="2" y1="1.5" x2="2" y2="12.5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="1.5 1.5" strokeLinecap="round"/>
+      <line x1="12" y1="1.5" x2="12" y2="12.5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="1.5 1.5" strokeLinecap="round"/>
+      <rect x="4.5" y="4.5" width="5" height="5" rx="0.5" stroke="currentColor" strokeWidth="1.2" fill="none" opacity="0.8"/>
+    </svg>
+  );
+}
+
+function PadIconRight({ className }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <line x1="12.5" y1="2" x2="12.5" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="1.5" y1="2" x2="1.5" y2="12" stroke="currentColor" strokeWidth="1.5" strokeDasharray="1.5 1.5" strokeLinecap="round"/>
+      <line x1="1.5" y1="2" x2="12.5" y2="2" stroke="currentColor" strokeWidth="1.5" strokeDasharray="1.5 1.5" strokeLinecap="round"/>
+      <line x1="1.5" y1="12" x2="12.5" y2="12" stroke="currentColor" strokeWidth="1.5" strokeDasharray="1.5 1.5" strokeLinecap="round"/>
+      <rect x="4.5" y="4.5" width="5" height="5" rx="0.5" stroke="currentColor" strokeWidth="1.2" fill="none" opacity="0.8"/>
+    </svg>
+  );
+}
+
+function PadIconBottom({ className }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <line x1="2" y1="12.5" x2="12" y2="12.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="2" y1="1.5" x2="12" y2="1.5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="1.5 1.5" strokeLinecap="round"/>
+      <line x1="2" y1="1.5" x2="2" y2="12.5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="1.5 1.5" strokeLinecap="round"/>
+      <line x1="12" y1="1.5" x2="12" y2="12.5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="1.5 1.5" strokeLinecap="round"/>
+      <rect x="4.5" y="4.5" width="5" height="5" rx="0.5" stroke="currentColor" strokeWidth="1.2" fill="none" opacity="0.8"/>
+    </svg>
+  );
+}
+
+function PadIconLeft({ className }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <line x1="1.5" y1="2" x2="1.5" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="12.5" y1="2" x2="12.5" y2="12" stroke="currentColor" strokeWidth="1.5" strokeDasharray="1.5 1.5" strokeLinecap="round"/>
+      <line x1="1.5" y1="2" x2="12.5" y2="2" stroke="currentColor" strokeWidth="1.5" strokeDasharray="1.5 1.5" strokeLinecap="round"/>
+      <line x1="1.5" y1="12" x2="12.5" y2="12" stroke="currentColor" strokeWidth="1.5" strokeDasharray="1.5 1.5" strokeLinecap="round"/>
+      <rect x="4.5" y="4.5" width="5" height="5" rx="0.5" stroke="currentColor" strokeWidth="1.2" fill="none" opacity="0.8"/>
+    </svg>
+  );
+}
+
 // PaddingEditor — Agrupar lados: V+H cuando agrupado, 4 lados cuando no
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1086,12 +1160,12 @@ function PaddingEditor({
         <div className="grid grid-cols-2 gap-2">
           {/* Vertical (top + bottom) */}
           <div className="flex items-center gap-1">
-            <BoxSelect size={14} strokeWidth={1.5} className="shrink-0 text-muted-foreground/50" />
+            <PadIconVertical className="shrink-0 text-muted-foreground/70" />
             <PxStepper value={value.top} onChange={setVertical} min={0} max={200} />
           </div>
           {/* Horizontal (left + right) */}
           <div className="flex items-center gap-1">
-            <ArrowLeftRight size={14} strokeWidth={1.5} className="shrink-0 text-muted-foreground/50" />
+            <PadIconHorizontal className="shrink-0 text-muted-foreground/70" />
             <PxStepper value={value.left} onChange={setHorizontal} min={0} max={200} />
           </div>
         </div>
@@ -1099,10 +1173,10 @@ function PaddingEditor({
         <div className="grid grid-cols-2 gap-1.5">
           {(
             [
-              { side: "top"    as const, icon: <ArrowUp    className="h-3 w-3 shrink-0 text-muted-foreground/50" /> },
-              { side: "right"  as const, icon: <ArrowRight className="h-3 w-3 shrink-0 text-muted-foreground/50" /> },
-              { side: "bottom" as const, icon: <ArrowDown  className="h-3 w-3 shrink-0 text-muted-foreground/50" /> },
-              { side: "left"   as const, icon: <ArrowLeft  className="h-3 w-3 shrink-0 text-muted-foreground/50" /> },
+              { side: "top"    as const, icon: <PadIconTop    className="shrink-0 text-muted-foreground/70" /> },
+              { side: "right"  as const, icon: <PadIconRight  className="shrink-0 text-muted-foreground/70" /> },
+              { side: "bottom" as const, icon: <PadIconBottom className="shrink-0 text-muted-foreground/70" /> },
+              { side: "left"   as const, icon: <PadIconLeft   className="shrink-0 text-muted-foreground/70" /> },
             ] as const
           ).map(({ side, icon }) => (
             <div key={side} className="flex items-center gap-1">
@@ -2148,6 +2222,82 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
           blockId={block.id}
           field="imageUrl"
         />
+        <InspField
+          label="Texto alternativo"
+          value={block.props.imageAlt ?? ""}
+          onChange={(v) => setProps({ imageAlt: v })}
+          placeholder="Descripción de la imagen"
+        />
+
+        {/* Enlace */}
+        <div>
+          <span className="text-[11px] font-medium text-muted-foreground/70 block mb-1.5">Enlace</span>
+          <AMPscriptUrlInput
+            value={block.props.imageHref ?? ""}
+            onChange={(imageHref) => setProps({ imageHref })}
+          />
+        </div>
+
+        {/* Diseño */}
+        <div className="mt-1 border-t border-border/50 pt-2.5 space-y-2.5">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Diseño</p>
+          <InspRow label="Ancho">
+            <div className="flex items-center gap-1">
+              <PxStepper value={block.props.imageWidth ?? 100} onChange={(v) => setProps({ imageWidth: v })} min={10} max={100} />
+              <span className="text-[11px] text-muted-foreground/60">%</span>
+            </div>
+          </InspRow>
+          <InspRow label="Alineación">
+            <SegmentedAlign value={block.props.imageAlign ?? "left"} onChange={(v) => setProps({ imageAlign: v })} />
+          </InspRow>
+        </div>
+
+        {/* Esquinas redondeadas */}
+        <div className="mt-1 border-t border-border/50 pt-2.5 space-y-2.5">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Esquinas redondeadas</p>
+          <InspRow label="Radio">
+            <PxStepper value={block.props.imageRadius ?? 0} onChange={(v) => setProps({ imageRadius: v })} min={0} max={60} />
+          </InspRow>
+        </div>
+
+        {/* Espaciado */}
+        <div className="mt-1 border-t border-border/50 pt-2.5 space-y-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Espaciado</p>
+          <PaddingEditor
+            value={{
+              top:    block.props.imagePadding?.top    ?? 0,
+              right:  block.props.imagePadding?.right  ?? 0,
+              bottom: block.props.imagePadding?.bottom ?? 0,
+              left:   block.props.imagePadding?.left   ?? 0,
+            }}
+            onChange={(imagePadding) => setProps({ imagePadding })}
+          />
+          <div className="space-y-2">
+            <span className="text-xs text-foreground/70">Margen</span>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-1">
+                <ArrowUpDown className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+                <PxStepper value={block.props.imageMarginV ?? 0} onChange={(v) => setProps({ imageMarginV: v })} min={0} max={200} />
+              </div>
+              <div className="flex items-center gap-1">
+                <ArrowLeftRight className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+                <PxStepper value={block.props.imageMarginH ?? 0} onChange={(v) => setProps({ imageMarginH: v })} min={0} max={200} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bordes */}
+        <div className="mt-1 border-t border-border/50 pt-2.5 space-y-2.5">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Bordes</p>
+          <InspRow label="Tamaño">
+            <PxStepper value={block.props.imageBorderWidth ?? 0} onChange={(v) => setProps({ imageBorderWidth: v })} min={0} max={20} />
+          </InspRow>
+          <InspRow label="Color">
+            <ColorSwatch value={block.props.imageBorderColor ?? "#e5e7eb"} onChange={(v) => setProps({ imageBorderColor: v ?? "#e5e7eb" })} />
+          </InspRow>
+        </div>
+
       </InspSectionCollapsible>
 
       {/* 2. Badge principal */}

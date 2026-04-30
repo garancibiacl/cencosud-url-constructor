@@ -37,6 +37,16 @@ export interface ProductDdTemplateData {
   borderWidth: number;
   borderColor: string;
   imageUrl: string;
+  imageAlt?: string;
+  imageWidth?: number;
+  imageAlign?: "left" | "center" | "right";
+  imageRadius?: number;
+  imagePadding?: { top: number; right: number; bottom: number; left: number };
+  imageMarginV?: number;
+  imageMarginH?: number;
+  imageBorderWidth?: number;
+  imageBorderColor?: string;
+  imageHref?: string;
   discountLabel: string;
   discountBadgeBg: string;
   discountBadgeFg: string;
@@ -125,6 +135,16 @@ export function productDdTemplate({
   borderWidth,
   borderColor,
   imageUrl,
+  imageAlt,
+  imageWidth,
+  imageAlign,
+  imageRadius,
+  imagePadding,
+  imageMarginV,
+  imageMarginH,
+  imageBorderWidth,
+  imageBorderColor,
+  imageHref,
   discountLabel,
   discountBadgeBg,
   discountBadgeFg,
@@ -432,9 +452,31 @@ export function productDdTemplate({
             <a href="${blockHref}" target="_blank" style="text-decoration:none;display:block;color:inherit;">
             ${badgeRowHtml}
             <tr>
-              <td valign="top" style="padding:0;line-height:0;font-size:0;">
-                  <img src="${imageUrl || "/placeholder.svg"}" alt="${name}" width="100%" border="0"
-                       style="display:block;border:0;outline:none;text-decoration:none;width:100%;height:auto;" />
+              <td valign="top" style="padding:${imageMarginV ?? 0}px ${imageMarginH ?? 0}px;line-height:0;font-size:0;">
+                ${(() => {
+                  const iw = imageWidth ?? 100;
+                  const ia = imageAlign === "center" ? "center" : imageAlign === "right" ? "right" : "left";
+                  const ip = imagePadding ?? { top: 0, right: 0, bottom: 0, left: 0 };
+                  const ir = (imageRadius ?? 0) > 0 ? `border-radius:${imageRadius}px;overflow:hidden;` : "";
+                  const ib = (imageBorderWidth ?? 0) > 0 ? `border:${imageBorderWidth}px solid ${imageBorderColor ?? "#e5e7eb"};` : "";
+                  const ipStyle = (ip.top || ip.right || ip.bottom || ip.left) ? `padding:${ip.top}px ${ip.right}px ${ip.bottom}px ${ip.left}px;` : "";
+                  const needsWrapper = iw < 100 || ia !== "left" || ir || ib || ipStyle;
+                  const imgTag100 = `<img src="${imageUrl}" alt="${imageAlt ?? name}" width="100%" border="0" style="display:block;border:0;outline:none;text-decoration:none;width:100%;height:auto;" />`;
+                  const imgTagW   = `<img src="${imageUrl}" alt="${imageAlt ?? name}" width="${iw}%" border="0" style="display:block;outline:none;text-decoration:none;width:${iw}%;height:auto;${ir}${ib}" />`;
+                  const wrapLink  = (inner: string) => imageHref
+                    ? `<a href="${imageHref}" target="_blank" style="text-decoration:none;display:block;">${inner}</a>`
+                    : inner;
+                  if (!needsWrapper) {
+                    return wrapLink(imgTag100);
+                  }
+                  return `<table border="0" cellpadding="0" cellspacing="0" width="100%" role="presentation" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;${ipStyle}">
+                    <tr>
+                      <td align="${ia}" valign="top" style="padding:0;">
+                        ${wrapLink(imgTagW)}
+                      </td>
+                    </tr>
+                  </table>`;
+                })()}
               </td>
             </tr>
             </a>
