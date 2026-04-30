@@ -222,7 +222,12 @@ async function fetchFromCenco(sku: string, brand: Brand): Promise<ProductData | 
   // ligada al tenant. Si en el futuro hay endpoints por marca, se mapean acá.
   void brand;
 
-  const url = `${CATALOG_BASE}?ft=${encodeURIComponent(sku)}&_from=0&_to=9`;
+  const baseUrl = (Deno.env.get("CENCOSUD_CATALOG_API_URL") ?? "").trim() || CATALOG_BASE_DEFAULT;
+  // Aceptamos URL completa al endpoint o solo al host (sin path)
+  const endpoint = baseUrl.includes("/products")
+    ? baseUrl.replace(/\/+$/, "")
+    : `${baseUrl.replace(/\/+$/, "")}/catalog/api/v1/products`;
+  const url = `${endpoint}?ft=${encodeURIComponent(sku)}&_from=0&_to=9`;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 25_000);
