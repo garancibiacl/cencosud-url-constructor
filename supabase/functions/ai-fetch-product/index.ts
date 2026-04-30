@@ -59,6 +59,12 @@ interface FetchProductRequest {
 
 const CATALOG_BASE_DEFAULT = "https://sm-web-api.ecomm.cencosud.com/catalog/api/v1/products";
 
+// Hosts VTEX públicos por marca — fallback global sin geo-blocking
+const VTEX_HOSTS: Record<Brand, string> = {
+  jumbo: "jumbocl.vtexcommercestable.com.br",
+  sisa: "santaisabelcl.vtexcommercestable.com.br",
+};
+
 // ── Normalización de respuesta sm-web-api ────────────────────────────────────
 
 interface CencoCommertialOffer {
