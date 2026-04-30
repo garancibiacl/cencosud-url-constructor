@@ -2240,7 +2240,7 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
 
         {/* Diseño */}
         <div className="mt-1 border-t border-border/50 pt-2.5 space-y-2.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Diseño</p>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-foreground">Diseño</p>
           <InspRow label="Ancho">
             <div className="flex items-center gap-1">
               <PxStepper value={block.props.imageWidth ?? 100} onChange={(v) => setProps({ imageWidth: v })} min={10} max={100} />
@@ -2254,7 +2254,7 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
 
         {/* Esquinas redondeadas */}
         <div className="mt-1 border-t border-border/50 pt-2.5 space-y-2.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Esquinas redondeadas</p>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-foreground">Esquinas redondeadas</p>
           <InspRow label="Radio">
             <PxStepper value={block.props.imageRadius ?? 0} onChange={(v) => setProps({ imageRadius: v })} min={0} max={60} />
           </InspRow>
@@ -2262,7 +2262,7 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
 
         {/* Espaciado */}
         <div className="mt-1 border-t border-border/50 pt-2.5 space-y-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Espaciado</p>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-foreground">Espaciado</p>
           <PaddingEditor
             value={{
               top:    block.props.imagePadding?.top    ?? 0,
@@ -2289,7 +2289,7 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
 
         {/* Bordes */}
         <div className="mt-1 border-t border-border/50 pt-2.5 space-y-2.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Bordes</p>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-foreground">Bordes</p>
           <InspRow label="Tamaño">
             <PxStepper value={block.props.imageBorderWidth ?? 0} onChange={(v) => setProps({ imageBorderWidth: v })} min={0} max={20} />
           </InspRow>
@@ -2574,7 +2574,7 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
             </div>
 
             {/* Parte izquierda */}
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Parte izquierda</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-foreground">Parte izquierda</p>
             <InspField
               label="Texto"
               value={block.props.priceTagLabel ?? "Ahorro"}
@@ -2593,7 +2593,7 @@ export function ProductDdBlockInspector({ block, onChange }: SharedProps<Product
             </div>
 
             {/* Parte derecha */}
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">Parte derecha</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-foreground">Parte derecha</p>
             <InspField
               label="Texto"
               value={block.props.priceTagValue ?? "$ 1.640"}
