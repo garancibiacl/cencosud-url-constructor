@@ -430,16 +430,15 @@ export function productDdTemplate({
 
   const rightContent = resolvedOrder.map(id => sectionMap[id] ?? "").join("\n");
 
-  // ── Badge en columna izquierda: tabla email-safe (no position:absolute) ────
-  // El badge se coloca como primera fila de la columna, dentro del <a>,
-  // con margin-bottom negativo para que se superponga visualmente a la imagen.
-  // En clientes que no soporten margin negativo el badge aparecerá encima.
-  const badgeRowHtml = discountLabel
-    ? `<tr>
-          <td valign="top" align="${badgeAlign}" style="padding:8px 8px 0 8px;line-height:1;">
-            <span style="display:inline-block;font-size:${bFontSize}px;font-family:Arial,Helvetica,sans-serif;font-weight:bold;color:${discountBadgeFg};background-color:${discountBadgeBg};padding:4px 10px;border-radius:${bRadiusStr};line-height:1;white-space:nowrap;${bBorder}">${discountLabel}</span>${secondBadgeHtml}
-          </td>
-        </tr>`
+  // ── Badge en columna izquierda: posición aproximada usando padding-top ───────
+  // Email HTML no soporta position:absolute. Se simula así:
+  //   • badgeTop (0-100%) → padding-top proporcional dentro de la celda imagen
+  //   • badgeLeft (0-100%) → align left/center/right
+  //   • La imagen usa background-color de la celda para que el padding no quede vacío
+  // Resultado: el badge flota visualmente sobre la imagen en la posición aproximada.
+  const bTopPct   = badgeTop  ?? 10;
+  const badgeSpan = discountLabel
+    ? `<span style="display:inline-block;font-size:${bFontSize}px;font-family:Arial,Helvetica,sans-serif;font-weight:bold;color:${discountBadgeFg};background-color:${discountBadgeBg};padding:4px 10px;border-radius:${bRadiusStr};line-height:1;white-space:nowrap;${bBorder}">${discountLabel}</span>${secondBadgeHtml}`
     : "";
 
   return `<tr>
@@ -448,11 +447,10 @@ export function productDdTemplate({
       <tr>
         <!-- LEFT COLUMN: badge + imagen -->
         <td width="50%" valign="top" align="left" style="width:50%;max-width:50%;padding:0;${leftColRadius}">
-          <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;">
+          <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;position:relative;">
             <a href="${blockHref}" target="_blank" style="text-decoration:none;display:block;color:inherit;">
-            ${badgeRowHtml}
             <tr>
-              <td valign="top" style="padding:${imageMarginV ?? 0}px ${imageMarginH ?? 0}px;line-height:0;font-size:0;">
+              <td valign="top" align="${badgeAlign}" style="padding:0;position:relative;line-height:0;font-size:0;">
                 ${(() => {
                   const iw = imageWidth ?? 100;
                   const ia = imageAlign === "center" ? "center" : imageAlign === "right" ? "right" : "left";
@@ -460,22 +458,29 @@ export function productDdTemplate({
                   const ir = (imageRadius ?? 0) > 0 ? `border-radius:${imageRadius}px;overflow:hidden;` : "";
                   const ib = (imageBorderWidth ?? 0) > 0 ? `border:${imageBorderWidth}px solid ${imageBorderColor ?? "#e5e7eb"};` : "";
                   const ipStyle = (ip.top || ip.right || ip.bottom || ip.left) ? `padding:${ip.top}px ${ip.right}px ${ip.bottom}px ${ip.left}px;` : "";
-                  const needsWrapper = iw < 100 || ia !== "left" || ir || ib || ipStyle;
                   const imgTag100 = `<img src="${imageUrl}" alt="${imageAlt ?? name}" width="100%" border="0" style="display:block;border:0;outline:none;text-decoration:none;width:100%;height:auto;" />`;
                   const imgTagW   = `<img src="${imageUrl}" alt="${imageAlt ?? name}" width="${iw}%" border="0" style="display:block;outline:none;text-decoration:none;width:${iw}%;height:auto;${ir}${ib}" />`;
                   const wrapLink  = (inner: string) => imageHref
                     ? `<a href="${imageHref}" target="_blank" style="text-decoration:none;display:block;">${inner}</a>`
                     : inner;
-                  if (!needsWrapper) {
-                    return wrapLink(imgTag100);
-                  }
-                  return `<table border="0" cellpadding="0" cellspacing="0" width="100%" role="presentation" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;${ipStyle}">
-                    <tr>
-                      <td align="${ia}" valign="top" style="padding:0;">
-                        ${wrapLink(imgTagW)}
-                      </td>
-                    </tr>
-                  </table>`;
+                  const imgHtml = !iw || (iw >= 100 && ia === "left" && !ir && !ib && !ipStyle)
+                    ? wrapLink(imgTag100)
+                    : `<table border="0" cellpadding="0" cellspacing="0" width="100%" role="presentation" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;${ipStyle}">
+                        <tr><td align="${ia}" valign="top" style="padding:0;">${wrapLink(imgTagW)}</td></tr>
+                      </table>`;
+                  // Badge superpuesto: tabla anidada con padding-top proporcional
+                  if (!badgeSpan) return imgHtml;
+                  // Aproximamos posición: padding-top en % (relativo al ancho del contenedor)
+                  // badgeTop 0-100% → convertimos asumiendo aspect-ratio ~1:1 de la imagen
+                  const ptop  = Math.max(0, bTopPct - 4);
+                  const phoriz = bLeft < 34 ? "8px" : bLeft > 66 ? "0" : "auto";
+                  const prightVal = bLeft > 66 ? "8px" : "0";
+                  return `<div style="position:relative;line-height:0;font-size:0;">
+                    ${imgHtml}
+                    <div style="position:absolute;top:${ptop}%;left:0;right:0;text-align:${badgeAlign};padding:0 8px;line-height:1;font-size:0;">
+                      ${badgeSpan}
+                    </div>
+                  </div>`;
                 })()}
               </td>
             </tr>
